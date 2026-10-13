@@ -69,3 +69,11 @@ After pasting the latest `Code.gs` into Apps Script:
 The backend returns a `mustChangePassword` flag for newly created client and employee accounts. The portal requires a password change before normal use. Passwords are hashed; the temporary password is only shown to Admin at creation time or in the import credentials workbook. Treat that workbook as confidential and delete it from shared locations after distributing credentials securely.
 
 This remains an implementation foundation: test with dummy records and review Drive sharing permissions and role-based access before using live client or employee data.
+
+## Portal browser cache and UI updates (13-Oct-2026)
+
+- Successful login stores the server-issued session token, expiry time, and public user profile in Chrome localStorage so the user stays signed in across tab/browser restarts until the session expires. sessionStorage mirrors the same fields for compatibility with older portal code.
+- The portal caches each successfully loaded module/dashboard response in localStorage under a user-specific key. Cache expires after 7 days and is cleared on logout or authentication/session failure. Fresh backend data is requested in the background when the view is opened.
+- Passwords are never saved in localStorage. The portal saves only the server-issued session token and public profile; the backend remains the source of truth.
+- Portal forms use a 3-step wizard, API calls show a small centered spinner, search is in the records-panel header, and Employee Management groups Manage, Time, Attendance, and Leave.
+- Employee Management supports its own Excel template, import, and export. Bulk employee import is limited to 500 rows and returns a credentials workbook for accounts created successfully.
