@@ -86,3 +86,28 @@ body{color:#17324c}
 .site-footer{background:#061d34}
 .footer-bottom{border-top-color:#29435d}
 .nav-link:focus-visible,.button:focus-visible,a:focus-visible{outline:3px solid #7da8d3;outline-offset:2px}
+
+
+/* Shared reference-style masthead and navy navigation on every page */
+.site-header{background:#fff!important;color:#102b46}
+.site-header .brand-row{min-height:96px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.site-header .brand{display:flex;align-items:center;gap:14px;min-width:0}
+.site-header .brand-logo{width:64px;height:64px;object-fit:contain;display:block;flex:0 0 auto}
+.site-header .brand-copy{display:flex;flex-direction:column;line-height:1.02}
+.site-header .brand-copy strong{font:700 29px/1.02 Garamond,Georgia,serif;color:#123f6b;letter-spacing:.035em}
+.site-header .brand-copy small{font:700 12px/1.6 Garamond,Georgia,serif;color:#315f8b;letter-spacing:.13em;white-space:nowrap}
+.site-header .reference-enquiries{display:flex;flex-direction:column;align-items:center;gap:6px;color:#202820;font:13px Arial,sans-serif}
+.site-header .reference-enquiries div{display:flex;align-items:center;gap:14px;font-weight:700}
+.site-header .reference-enquiries a:hover{color:#123f6b}
+.site-header .reference-enquiries i{height:18px;border-left:1px solid #b9b9b9}
+.site-header .login-button{background:#0b3f6b;border:4px solid #315f8b;border-radius:999px;padding:13px 28px;color:#fff;font:700 17px Arial,sans-serif;box-shadow:none;white-space:nowrap}
+.site-header .login-dot{display:none}
+.main-nav{background:#123f6b!important;color:#fff;border:0}
+.main-nav .nav-inner{width:min(1540px,calc(100% - 28px));display:flex;align-items:stretch;justify-content:space-between;gap:0}
+.main-nav .nav-link{color:#fff;font:700 16px Arial,sans-serif;padding:15px 12px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.main-nav .nav-link:hover,.main-nav .nav-link.active{background:#082747;color:#fff}
+.main-nav .dropdown{background:#fff;border-top:3px solid #123f6b;box-shadow:0 10px 24px #08274724}
+.main-nav .dropdown a{font:15px Arial,sans-serif;color:#27372d}
+.main-nav .dropdown a:hover{background:#edf3f9;color:#123f6b}
+@media(max-width:1200px){.main-nav .nav-link{padding:14px 7px;font-size:13px}.site-header .brand-copy strong{font-size:25px}.site-header .brand-logo{width:58px;height:58px}}
+@media(max-width:860px){.site-header .brand-row{min-height:82px}.site-header .reference-enquiries{display:none}.site-header .menu-toggle{display:block}.main-nav .nav-inner{display:none}.main-nav.open .nav-inner{display:flex}.main-nav .nav-link{font-size:16px;padding:12px 15px}.site-header .brand-logo{width:48px;height:48px}.site-header .brand-copy strong{font-size:22px}.site-header .brand-copy small{font-size:9px;letter-spacing:.08em}}
