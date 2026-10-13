@@ -55,3 +55,34 @@ body{font-size:17px;color:#17372b}
 .brand{gap:14px}
 .brand-footer .brand-logo{width:54px;height:54px}
 @media(max-width:600px){.brand-logo,.reference-home .brand-logo{width:48px;height:48px}.brand{gap:9px}.reference-home .brand-copy strong{font-size:22px}.reference-home .brand-copy small{font-size:9px;letter-spacing:.08em}}
+
+
+/* Navy-blue brand theme requested for K Mahesh Manickham and Co. */
+:root{--green:#123f6b;--green-dark:#082747;--green-light:#315f8b;--green-pale:#edf3f9;--ink:#102b46;--muted:#5f7183;--line:#dbe4ed}
+body{color:#17324c}
+.reference-home .brand-copy strong{color:#123f6b}
+.reference-home .brand-copy small{color:#315f8b}
+.reference-enquiries a:hover{color:#123f6b}
+.reference-home .login-button{background:#0b3f6b;border-color:#315f8b;color:#fff}
+.reference-home .main-nav{background:#123f6b}
+.reference-home .nav-link:hover,.reference-home .nav-link.active{background:#082747;color:#fff}
+.reference-home .dropdown{border-top-color:#123f6b;box-shadow:0 10px 24px #08274724}
+.reference-home .reference-intro h1{color:#123f6b}
+.reference-home .reference-intro h1 em{color:#315f8b}
+.reference-home .reference-services{background:#f2f5f9}
+.reference-home .reference-cta{background:#082747;color:#fff}
+.reference-home .section-kicker{color:#315f8b}
+.reference-home .button-primary{background:#123f6b;color:#fff}
+.reference-home .button-outline{border-color:#123f6b;color:#123f6b}
+.reference-home .site-footer{background:#061d34}
+.page-hero{background:linear-gradient(110deg,rgba(6,28,52,.96),rgba(18,63,107,.88)),url("https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1800&q=85") center/cover}
+.page-hero h1 em{color:#a9c7e6}
+.page-hero .section-kicker{color:#c3d9ef}
+.page-columns h2,.form-card h2{color:#123f6b}
+.feature-list li{border-bottom-color:#dbe4ed}
+.button-primary,.form-card button[type=submit]{background:#123f6b;color:#fff}
+.button-outline{border-color:#123f6b;color:#123f6b}
+.service-card a{color:#123f6b}
+.site-footer{background:#061d34}
+.footer-bottom{border-top-color:#29435d}
+.nav-link:focus-visible,.button:focus-visible,a:focus-visible{outline:3px solid #7da8d3;outline-offset:2px}
