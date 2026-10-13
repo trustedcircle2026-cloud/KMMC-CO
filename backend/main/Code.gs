@@ -1,101 +1,304 @@
 /**
- * KMMC Website Backend — Google Apps Script
- * Copy this file into Code.gs in your Apps Script project.
- *
- * IMPORTANT:
- * - This is a starter API scaffold, not production authentication.
- * - Do not store plain-text passwords or expose confidential client records
- *   through a publicly accessible web app.
- * - Configure deployment access and add verified authentication/authorization
- *   before using this API for real client, employee, invoice or tax data.
+ * KMMC ERP Apps Script API — Admin / Employee / Client
+ * Required Script Properties:
+ * KMMC_DATABASE_SPREADSHEET_ID, KMMC_ADMIN_PASSWORD (bootstrap only),
+ * optional KMMC_ADMIN_USERNAME, KMMC_DOCUMENTS_FOLDER_ID.
+ * Run setupKmmcBackend(), then setupKmmcAdminFromProperties().
  */
-const KMMC_CONFIG = {
-  SPREADSHEET_ID: '1TCwQsyuJNWFwhgJVN98Qwn_xTEuS8Yq_y3_DthzK1Bc',
-  DEFAULT_SHEET: 'Records',
-  ALLOWED_SHEETS: ['Records']
+const KMMC = {
+  VERSION:'1.0.0', DB_PROP:'KMMC_DATABASE_SPREADSHEET_ID', SECRET_PROP:'KMMC_SESSION_SECRET',
+  SESSION_HOURS:12, MAX_PAGE:200,
+  M:{
+    users:{s:'DB_USERS',h:['id','username','passwordHash','salt','role','name','email','phone','clientId','employeeId','status','createdAt','updatedAt','lastLoginAt'],r:['ADMIN']},
+    clients:{s:'DB_CLIENTS',h:['id','clientCode','name','email','phone','address','city','state','pincode','pan','gstin','assignedEmployeeId','openingBalance','status','notes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','department','designation','joiningDate','reportingTo','status','address','createdAt','updatedAt'],r:['ADMIN']},
+    tasks:{s:'DB_TASKS',h:['id','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','startTime','endTime','minutes','description','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    attendance:{s:'DB_ATTENDANCE',h:['id','employeeId','workDate','checkIn','checkOut','minutes','status','note','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    leave:{s:'DB_LEAVE',h:['id','employeeId','fromDate','toDate','leaveType','reason','status','approvedBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    documents:{s:'DB_DOCUMENTS',h:['id','clientId','employeeId','taskId','invoiceId','name','mimeType','driveFileId','driveUrl','category','visibility','uploadedBy','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    invoices:{s:'DB_INVOICES',h:['id','invoiceNo','clientId','invoiceDate','dueDate','description','subtotal','taxAmount','discount','totalAmount','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    collections:{s:'DB_COLLECTIONS',h:['id','receiptNo','clientId','invoiceId','collectionDate','amount','mode','referenceNo','notes','receivedBy','status','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    expenses:{s:'DB_EXPENSES',h:['id','expenseDate','category','description','amount','paidTo','paymentMode','referenceNo','employeeId','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    messages:{s:'DB_MESSAGES',h:['id','fromUserId','toUserId','clientId','subject','message','status','createdAt','readAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    notifications:{s:'DB_NOTIFICATIONS',h:['id','userId','title','message','type','readAt','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    activity:{s:'DB_ACTIVITY_LOG',h:['id','userId','username','role','action','module','recordId','details','createdAt'],r:['ADMIN'],ro:true},
+    loginlog:{s:'DB_LOGIN_LOG',h:['id','userId','username','result','createdAt'],r:['ADMIN'],ro:true}
+  }
 };
 
-function doGet(e) {
-  const action = String((e && e.parameter && e.parameter.action) || 'health').toLowerCase();
-
-  if (action === 'health') {
-    return jsonOutput_({
-      ok: true,
-      application: 'KMMC Website Backend',
-      version: '0.1.0',
-      message: 'Apps Script endpoint is responding. Authentication is not configured.'
-    });
-  }
-
-  if (action === 'headers') {
-    const sheetName = safeSheetName_((e.parameter && e.parameter.sheet) || KMMC_CONFIG.DEFAULT_SHEET);
-    const sheet = getSheet_(sheetName, false);
-    if (!sheet) return jsonOutput_({ ok: true, sheet: sheetName, headers: [] });
-    const lastColumn = sheet.getLastColumn();
-    const headers = lastColumn ? sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0] : [];
-    return jsonOutput_({ ok: true, sheet: sheetName, headers: headers });
-  }
-
-  return jsonOutput_({
-    ok: false,
-    error: 'Unsupported GET action.',
-    supportedActions: ['health', 'headers']
-  });
+function doGet(e){
+  const a=(e&&e.parameter&&e.parameter.action)||'health';
+  return out_({ok:true,app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_(),action:a});
 }
-
-function doPost(e) {
-  let payload;
+function doPost(e){
   try {
-    payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-  } catch (err) {
-    return jsonOutput_({ ok: false, error: 'Request body must be valid JSON.' });
+    const q=JSON.parse((e&&e.postData&&e.postData.contents)||'{}');
+    return out_({ok:true,data:route_(q.action,q)});
+  } catch(err) {
+    logError_(err);
+    return out_({ok:false,error:String(err&&err.message||'Request failed')});
   }
-
-  const action = String(payload.action || '').toLowerCase();
-
-  // Intentionally do not provide public read/write or login actions until
-  // authentication and role-based authorization have been implemented.
-  if (action === 'health') {
-    return jsonOutput_({ ok: true, application: 'KMMC Website Backend', version: '0.1.0' });
+}
+function route_(a,q){
+  switch(String(a||'')){
+    case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
+    case 'login':return login_(q);
+    case 'logout':return logout_(q);
+    case 'validateSession':case 'myProfile':return {user:pubUser_(auth_(q))};
+    case 'changePassword':return changePassword_(auth_(q),q);
+    case 'dashboard':return dashboard_(auth_(q));
+    case 'list':return list_(auth_(q),q);
+    case 'get':return get_(auth_(q),q);
+    case 'create':return create_(auth_(q),q);
+    case 'update':return update_(auth_(q),q);
+    case 'delete':return delete_(auth_(q),q);
+    case 'createUser':return createUser_(auth_(q),q);
+    case 'setUserStatus':return setUserStatus_(auth_(q),q);
+    case 'clockIn':return clockIn_(auth_(q));
+    case 'clockOut':return clockOut_(auth_(q));
+    case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
+    case 'completeTask':return taskStatus_(auth_(q),q,'COMPLETED');
+    case 'uploadDocument':return uploadDoc_(auth_(q),q);
+    case 'createInvoice':return createInvoice_(auth_(q),q);
+    case 'recordCollection':return recordCollection_(auth_(q),q);
+    case 'clientOutstanding':return outstanding_(auth_(q),q);
+    case 'outstandingSummary':return outstandingSummary_(auth_(q));
+    default:throw Error('Unknown action: '+a);
   }
+}
 
-  return jsonOutput_({
-    ok: false,
-    error: 'This action is not enabled in the starter scaffold.',
-    supportedActions: ['health']
+/** Run once after setting KMMC_DATABASE_SPREADSHEET_ID in Script Properties. */
+function setupKmmcBackend(){
+  const ss=db_();
+  Object.keys(KMMC.M).forEach(k=>{
+    const d=KMMC.M[k]; let sh=ss.getSheetByName(d.s)||ss.insertSheet(d.s);
+    if(!sh.getLastRow())sh.appendRow(d.h); sh.setFrozenRows(1);
+  });
+  [['DB_SESSIONS',['id','userId','tokenHash','expiresAt','createdAt','revokedAt']],
+   ['DB_SYSTEM_CONFIG',['key','value','updatedAt']],
+   ['DB_ERROR_LOG',['id','action','message','createdAt']]].forEach(x=>{
+    let sh=ss.getSheetByName(x[0])||ss.insertSheet(x[0]);if(!sh.getLastRow())sh.appendRow(x[1]);sh.setFrozenRows(1);
+  });
+  const p=PropertiesService.getScriptProperties();
+  if(!p.getProperty(KMMC.SECRET_PROP))p.setProperty(KMMC.SECRET_PROP,Utilities.getUuid()+Utilities.getUuid());
+  return 'Database tabs initialized. Next run setupKmmcAdminFromProperties().';
+}
+/** Set KMMC_ADMIN_PASSWORD (12+ chars) and optional KMMC_ADMIN_USERNAME in Script Properties, then run once. */
+function setupKmmcAdminFromProperties(){
+  if(!configured_())throw Error('Run setupKmmcBackend() first.');
+  const p=PropertiesService.getScriptProperties(), pass=p.getProperty('KMMC_ADMIN_PASSWORD');
+  if(!pass||pass.length<12)throw Error('Set KMMC_ADMIN_PASSWORD to at least 12 characters in Script Properties.');
+  const username=(p.getProperty('KMMC_ADMIN_USERNAME')||'admin').trim().toLowerCase();
+  const old=rows_('users').find(u=>String(u.username).toLowerCase()===username), salt=Utilities.getUuid(), now=iso_();
+  const u={id:old?old.id:uid_(),username:username,passwordHash:hash_(pass,salt),salt:salt,role:'ADMIN',name:'KMMC Administrator',email:'',phone:'',clientId:'',employeeId:'',status:'ACTIVE',createdAt:old?old.createdAt:now,updatedAt:now,lastLoginAt:''};
+  old?write_('users',u.id,u):append_('users',u);
+  p.deleteProperty('KMMC_ADMIN_PASSWORD');
+  return 'Admin bootstrapped. Temporary password property deleted. Keep the password securely.';
+}
+function login_(q){
+  const name=String(q.username||'').trim().toLowerCase(), pass=String(q.password||'');
+  if(!name||!pass)throw Error('Username and password required.');
+  const u=rows_('users').find(x=>String(x.username).toLowerCase()===name);
+  if(!u||u.status!=='ACTIVE'||hash_(pass,String(u.salt))!==String(u.passwordHash)){loginLog_(u&&u.id||'',name,'FAILED');throw Error('Invalid username or password.');}
+  const token=uid_()+'.'+uid_(), th=sha_(token), now=new Date(), exp=new Date(now.getTime()+KMMC.SESSION_HOURS*3600000);
+  rawAppend_('DB_SESSIONS',{id:uid_(),userId:u.id,tokenHash:th,expiresAt:exp.toISOString(),createdAt:now.toISOString(),revokedAt:''});
+  CacheService.getScriptCache().put('s_'+th,JSON.stringify({userId:u.id,expiresAt:exp.toISOString()}),KMMC.SESSION_HOURS*3600);
+  u.lastLoginAt=iso_();u.updatedAt=iso_();write_('users',u.id,u);loginLog_(u.id,name,'SUCCESS');activity_(u,'LOGIN','auth',u.id,'');
+  return {token:token,expiresAt:exp.toISOString(),user:pubUser_(u)};
+}
+function auth_(q){
+  const t=String(q.token||q.sessionToken||'');if(!t)throw Error('Login required.');
+  const h=sha_(t);let s=CacheService.getScriptCache().get('s_'+h);
+  s=s?JSON.parse(s):rawRows_('DB_SESSIONS').find(x=>x.tokenHash===h&&!x.revokedAt);
+  if(!s||new Date(s.expiresAt).getTime()<=Date.now())throw Error('Session expired. Please log in again.');
+  const u=rows_('users').find(x=>x.id===s.userId);
+  if(!u||u.status!=='ACTIVE')throw Error('Account inactive.');
+  return u;
+}
+function logout_(q){
+  const u=auth_(q),h=sha_(String(q.token||q.sessionToken));
+  rawRows_('DB_SESSIONS').filter(s=>s.tokenHash===h&&!s.revokedAt).forEach(s=>rawWrite_('DB_SESSIONS',s.id,Object.assign({},s,{revokedAt:iso_()})));
+  CacheService.getScriptCache().remove('s_'+h);activity_(u,'LOGOUT','auth',u.id,'');return {loggedOut:true};
+}
+function changePassword_(u,q){
+  if(String(q.newPassword||'').length<12)throw Error('New password must be at least 12 characters.');
+  if(hash_(String(q.currentPassword||''),u.salt)!==u.passwordHash)throw Error('Current password incorrect.');
+  u.salt=uid_();u.passwordHash=hash_(q.newPassword,u.salt);u.updatedAt=iso_();write_('users',u.id,u);return {changed:true};
+}
+function createUser_(admin,q){
+  needAdmin_(admin);const x=q.record||{},username=String(x.username||'').trim().toLowerCase(),pass=String(x.password||''),role=String(x.role||'').toUpperCase();
+  if(!/^[a-z0-9._-]{3,60}$/.test(username))throw Error('Username must be 3–60 letters/numbers/dot/underscore/hyphen.');
+  if(pass.length<12)throw Error('Initial password must be at least 12 characters.');
+  if(['ADMIN','EMPLOYEE','CLIENT'].indexOf(role)<0)throw Error('Role must be ADMIN, EMPLOYEE or CLIENT.');
+  if(rows_('users').some(u=>String(u.username).toLowerCase()===username))throw Error('Username already exists.');
+  if(role==='CLIENT'&&!x.clientId)throw Error('Client login requires clientId.');
+  if(role==='EMPLOYEE'&&!x.employeeId)throw Error('Employee login requires employeeId.');
+  const salt=uid_(),now=iso_(),u={id:uid_(),username,passwordHash:hash_(pass,salt),salt,role,name:String(x.name||username),email:String(x.email||''),phone:String(x.phone||''),clientId:String(x.clientId||''),employeeId:String(x.employeeId||''),status:'ACTIVE',createdAt:now,updatedAt:now,lastLoginAt:''};
+  append_('users',u);activity_(admin,'CREATE_USER','users',u.id,role);return pubUser_(u);
+}
+function setUserStatus_(admin,q){
+  needAdmin_(admin);const u=rows_('users').find(x=>x.id===String(q.id));if(!u)throw Error('User not found.');
+  const st=String(q.status||'').toUpperCase();if(['ACTIVE','INACTIVE','LOCKED'].indexOf(st)<0)throw Error('Invalid status.');
+  if(u.id===admin.id&&st!=='ACTIVE')throw Error('Cannot deactivate own account.');
+  u.status=st;u.updatedAt=iso_();write_('users',u.id,u);return pubUser_(u);
+}
+function dashboard_(u){
+  const role=u.role, keys=role==='ADMIN'?Object.keys(KMMC.M):role==='CLIENT'?['tasks','documents','invoices','collections','messages','notifications']:['clients','tasks','time','attendance','leave','documents','invoices','collections','expenses','messages','notifications'];
+  const counts={};keys.forEach(k=>counts[k]=rows_(k).filter(r=>visible_(u,k,r)).length);
+  return {user:pubUser_(u),counts,outstanding:outstandingSummary_(u)};
+}
+function list_(u,q){
+  const k=module_(q.module);authorize_(u,k,'read');let a=rows_(k).filter(r=>visible_(u,k,r));
+  if(q.filter&&typeof q.filter==='object')Object.keys(q.filter).forEach(f=>{a=a.filter(r=>String(r[f]??'')===String(q.filter[f]));});
+  const limit=Math.min(Math.max(Number(q.limit||100),1),KMMC.MAX_PAGE),offset=Math.max(Number(q.offset||0),0);
+  return {records:a.slice(offset,offset+limit).map(r=>publicRec_(k,r)),total:a.length,limit,offset};
+}
+function get_(u,q){const k=module_(q.module);authorize_(u,k,'read');const r=rows_(k).find(x=>x.id===String(q.id));if(!r||!visible_(u,k,r))throw Error('Record not found/access denied.');return publicRec_(k,r);}
+function create_(u,q){
+  const k=module_(q.module);authorize_(u,k,'create');if(k==='users')throw Error('Use createUser.');
+  const r=sanitize_(k,q.record||{});ownership_(u,k,r,false);const now=iso_();r.id=uid_();r.createdAt=now;if(KMMC.M[k].h.includes('updatedAt'))r.updatedAt=now;
+  if(k==='invoices')invoiceMath_(r);if(k==='collections')collectionMath_(r);
+  append_(k,r);activity_(u,'CREATE',k,r.id,'');return publicRec_(k,r);
+}
+function update_(u,q){
+  const k=module_(q.module);authorize_(u,k,'update');if(['users','activity','loginlog'].includes(k))throw Error('Use a dedicated action; editing disabled.');
+  const old=rows_(k).find(x=>x.id===String(q.id));if(!old||!visible_(u,k,old))throw Error('Record not found/access denied.');
+  const patch=sanitize_(k,q.record||{});ownership_(u,k,patch,true);const r=Object.assign({},old,patch,{id:old.id,createdAt:old.createdAt,updatedAt:iso_()});
+  if(k==='invoices')invoiceMath_(r);write_(k,r.id,r);activity_(u,'UPDATE',k,r.id,'');return publicRec_(k,r);
+}
+function delete_(u,q){
+  const k=module_(q.module);authorize_(u,k,'delete');if(['users','activity','loginlog','invoices','collections','expenses','documents'].includes(k))throw Error('Deletion disabled for audit/financial records.');
+  const r=rows_(k).find(x=>x.id===String(q.id));if(!r||!visible_(u,k,r))throw Error('Record not found/access denied.');
+  const sh=sheet_(KMMC.M[k].s),row=findRow_(sh,r.id);if(row>1)sh.deleteRow(row);activity_(u,'DELETE',k,r.id,'');return {deleted:true,id:r.id};
+}
+function authorize_(u,k,op){
+  const d=KMMC.M[k],role=u.role;if(!d)throw Error('Unknown module.');
+  if(!d.r.includes(role))throw Error('Role cannot access '+k+'.');
+  if(d.ro&&op!=='read')throw Error('Read-only module.');
+  if(role==='CLIENT'&&['update','delete'].includes(op))throw Error('Client edits are not allowed.');
+  if(role==='CLIENT'&&['create'].includes(op)&&!['messages','documents'].includes(k))throw Error('Client cannot create this record.');
+  if(role==='EMPLOYEE'&&k==='clients'&&op!=='read')throw Error('Only Admin can change client master.');
+}
+function visible_(u,k,r){
+  if(u.role==='ADMIN')return true;
+  if(u.role==='CLIENT'){
+    if(k==='clients')return String(r.id)===String(u.clientId);
+    if(k==='users')return String(r.id)===String(u.id);
+    if(r.clientId!=null)return String(r.clientId)===String(u.clientId);
+    return false;
+  }
+  if(k==='users')return String(r.id)===String(u.id);
+  if(k==='employees')return false;
+  if(k==='clients')return !r.assignedEmployeeId||String(r.assignedEmployeeId)===String(u.employeeId);
+  if(k==='tasks'||k==='time'||k==='attendance'||k==='leave')return String(r.employeeId)===String(u.employeeId);
+  if(['invoices','collections','documents'].includes(k)){
+    const c=rows_('clients').find(x=>x.id===r.clientId);return !!c&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId));
+  }
+  return true;
+}
+function ownership_(u,k,r,isUpdate){
+  if(u.role==='ADMIN')return;
+  if(u.role==='CLIENT'){
+    if(r.clientId&&String(r.clientId)!==String(u.clientId))throw Error('Cannot access another client.');
+    if(['messages','documents'].includes(k))r.clientId=u.clientId;
+  }
+  if(u.role==='EMPLOYEE'){
+    if(['time','attendance','leave'].includes(k)){if(r.employeeId&&String(r.employeeId)!==String(u.employeeId))throw Error('Cannot edit another employee.');r.employeeId=u.employeeId;}
+    if(k==='tasks'){if(r.employeeId&&String(r.employeeId)!==String(u.employeeId))throw Error('Cannot assign another employee.');if(!isUpdate)r.employeeId=u.employeeId;}
+  }
+}
+function clockIn_(u){
+  if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee access required.');
+  const eid=u.employeeId;if(!eid)throw Error('User is not linked to an employee record.');
+  const day=iso_().slice(0,10),open=rows_('attendance').find(x=>x.employeeId===eid&&x.workDate===day&&!x.checkOut);
+  if(open)throw Error('Already clocked in.');
+  const r={id:uid_(),employeeId:eid,workDate:day,checkIn:iso_(),checkOut:'',minutes:0,status:'PRESENT',note:'',createdAt:iso_(),updatedAt:iso_()};append_('attendance',r);return r;
+}
+function clockOut_(u){
+  if(!['ADMIN','EMPLOYEE'].includes(u.role)||!u.employeeId)throw Error('Employee access required.');
+  const r=rows_('attendance').filter(x=>x.employeeId===u.employeeId&&!x.checkOut).sort((a,b)=>String(b.checkIn).localeCompare(String(a.checkIn)))[0];
+  if(!r)throw Error('No open clock-in record.');
+  r.checkOut=iso_();r.minutes=Math.max(0,Math.round((new Date(r.checkOut)-new Date(r.checkIn))/60000));r.updatedAt=iso_();write_('attendance',r.id,r);return r;
+}
+function taskStatus_(u,q,status){
+  const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
+  if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
+  r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();write_('tasks',r.id,r);return r;
+}
+function uploadDoc_(u,q){
+  authorize_(u,'documents','create');const folderId=PropertiesService.getScriptProperties().getProperty('KMMC_DOCUMENTS_FOLDER_ID');
+  if(!folderId)throw Error('Set KMMC_DOCUMENTS_FOLDER_ID in Script Properties.');
+  const name=String(q.name||'document').slice(0,180),mime=String(q.mimeType||'application/octet-stream'),b64=String(q.base64Data||'');
+  if(!b64||b64.length>8*1024*1024)throw Error('File required; max encoded size is about 8 MB.');
+  const clientId=String(q.clientId||u.clientId||'');if(u.role==='CLIENT'&&clientId!==String(u.clientId))throw Error('Client access denied.');
+  const blob=Utilities.newBlob(Utilities.base64Decode(b64.replace(/^data:[^,]*,/,'')),mime,name);
+  const f=DriveApp.getFolderById(folderId).createFile(blob),r={id:uid_(),clientId,employeeId:String(q.employeeId||u.employeeId||''),taskId:String(q.taskId||''),invoiceId:String(q.invoiceId||''),name,mimeType:mime,driveFileId:f.getId(),driveUrl:f.getUrl(),category:String(q.category||'GENERAL'),visibility:String(q.visibility||'PRIVATE'),uploadedBy:u.id,createdAt:iso_()};
+  append_('documents',r);activity_(u,'UPLOAD','documents',r.id,name);return r;
+}
+function createInvoice_(u,q){
+  authorize_(u,'invoices','create');const r=sanitize_('invoices',q.record||{});if(!r.clientId)throw Error('clientId required.');
+  if(u.role==='CLIENT'&&String(r.clientId)!==String(u.clientId))throw Error('Access denied.');
+  r.id=uid_();r.createdAt=iso_();r.updatedAt=iso_();r.createdBy=u.id;invoiceMath_(r);append_('invoices',r);activity_(u,'CREATE_INVOICE','invoices',r.id,r.invoiceNo);return r;
+}
+function invoiceMath_(r){
+  const sub=num_(r.subtotal),tax=num_(r.taxAmount),disc=num_(r.discount);
+  if(sub<0||tax<0||disc<0||disc>sub+tax)throw Error('Invalid invoice amounts.');
+  r.totalAmount=round_(sub+tax-disc);r.status=r.status||'ISSUED';
+  if(!r.invoiceNo)r.invoiceNo='KMMC-'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMdd')+'-'+r.id.slice(0,6).toUpperCase();
+}
+function recordCollection_(u,q){
+  authorize_(u,'collections','create');const r=sanitize_('collections',q.record||{});if(!r.clientId||num_(r.amount)<=0)throw Error('clientId and positive amount required.');
+  if(u.role==='CLIENT'&&String(r.clientId)!==String(u.clientId))throw Error('Access denied.');
+  r.id=uid_();r.amount=round_(num_(r.amount));r.collectionDate=r.collectionDate||iso_().slice(0,10);r.receivedBy=u.id;r.createdAt=iso_();r.status=r.status||'RECEIVED';r.receiptNo=r.receiptNo||'RCPT-'+r.id.slice(0,8).toUpperCase();
+  append_('collections',r);activity_(u,'COLLECTION','collections',r.id,String(r.amount));return r;
+}
+function outstanding_(u,q){
+  const cid=u.role==='CLIENT'?String(u.clientId||''):String(q.clientId||'');
+  if(u.role==='CLIENT'&&!cid)throw Error('Client login is not linked to clientId.');
+  if(!['ADMIN','EMPLOYEE','CLIENT'].includes(u.role))throw Error('Access denied.');
+  let clients=rows_('clients').filter(c=>!cid||String(c.id)===cid);
+  if(u.role==='EMPLOYEE')clients=clients.filter(c=>!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId));
+  return clients.map(c=>{
+    const inv=rows_('invoices').filter(i=>String(i.clientId)===String(c.id)&&String(i.status).toUpperCase()!=='CANCELLED');
+    const col=rows_('collections').filter(x=>String(x.clientId)===String(c.id)&&String(x.status||'RECEIVED').toUpperCase()!=='CANCELLED');
+    const invoiced=inv.reduce((s,x)=>s+num_(x.totalAmount),0),received=col.reduce((s,x)=>s+num_(x.amount),0),opening=num_(c.openingBalance);
+    return {clientId:c.id,clientCode:c.clientCode||'',clientName:c.name||'',invoiceCount:inv.length,invoicedAmount:round_(invoiced),collectionAmount:round_(received),openingBalance:round_(opening),outstanding:round_(opening+invoiced-received),invoices:inv.map(i=>({id:i.id,invoiceNo:i.invoiceNo,dueDate:i.dueDate,totalAmount:num_(i.totalAmount),status:i.status}))};
   });
 }
-
-function getSheet_(sheetName, createIfMissing) {
-  const safeName = safeSheetName_(sheetName);
-  const ss = SpreadsheetApp.openById(KMMC_CONFIG.SPREADSHEET_ID);
-  let sheet = ss.getSheetByName(safeName);
-  if (!sheet && createIfMissing) sheet = ss.insertSheet(safeName);
-  return sheet;
+function outstandingSummary_(u){
+  const a=outstanding_(u,{});return {clients:a,totalOutstanding:round_(a.reduce((s,x)=>s+x.outstanding,0)),totalInvoiced:round_(a.reduce((s,x)=>s+x.invoicedAmount,0)),totalCollected:round_(a.reduce((s,x)=>s+x.collectionAmount,0))};
 }
-
-function safeSheetName_(sheetName) {
-  const name = String(sheetName || KMMC_CONFIG.DEFAULT_SHEET).trim();
-  if (KMMC_CONFIG.ALLOWED_SHEETS.indexOf(name) === -1) {
-    throw new Error('Sheet is not allow-listed: ' + name);
-  }
-  return name;
+function module_(k){k=String(k||'').toLowerCase();if(!KMMC.M[k])throw Error('Unknown module: '+k);return k;}
+function sanitize_(k,input){
+  const out={},h=KMMC.M[k].h;
+  h.forEach(key=>{if(['id','createdAt','updatedAt','passwordHash','salt','lastLoginAt','createdBy','receivedBy','uploadedBy'].includes(key))return;if(Object.prototype.hasOwnProperty.call(input,key)){const v=input[key];if(typeof v==='string'&&v.length>20000)throw Error('Field too long: '+key);out[key]=v==null?'':v;}});
+  return out;
 }
-
-function jsonOutput_(value) {
-  return ContentService
-    .createTextOutput(JSON.stringify(value))
-    .setMimeType(ContentService.MimeType.JSON);
+function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
+function publicRec_(k,r){if(k==='users')return pubUser_(r);const o={};Object.keys(r).forEach(x=>{if(!['passwordHash','salt'].includes(x))o[x]=r[x];});return o;}
+function needAdmin_(u){if(u.role!=='ADMIN')throw Error('Admin access required.');}
+function db_(){const id=PropertiesService.getScriptProperties().getProperty(KMMC.DB_PROP);if(!id)throw Error('Set '+KMMC.DB_PROP+' in Script Properties.');return SpreadsheetApp.openById(id);}
+function sheet_(name){const s=db_().getSheetByName(name);if(!s)throw Error('Missing '+name+'; run setupKmmcBackend().');return s;}
+function rows_(k){return rawRows_(KMMC.M[k].s);}
+function rawRows_(name){
+  const v=sheet_(name).getDataRange().getValues();if(v.length<2)return [];
+  const h=v[0].map(String);return v.slice(1).filter(r=>r.some(x=>x!==''&&x!=null)).map(r=>{const o={};h.forEach((x,i)=>o[x]=cell_(r[i]));return o;});
 }
-
-/**
- * Run manually from the Apps Script editor to verify spreadsheet access.
- * Creates the allow-listed Records sheet and writes a header row if empty.
- */
-function setupKmmcBackend() {
-  const sheet = getSheet_(KMMC_CONFIG.DEFAULT_SHEET, true);
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(['RecordID', 'RecordType', 'Name', 'Status', 'CreatedAt', 'UpdatedAt']);
-  }
-  return 'KMMC backend scaffold is connected to spreadsheet: ' + KMMC_CONFIG.SPREADSHEET_ID;
-}
+function append_(k,r){rawAppend_(KMMC.M[k].s,r);}
+function rawAppend_(name,r){const sh=sheet_(name),h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];sh.appendRow(h.map(k=>r[k]==null?'':r[k]));}
+function write_(k,id,r){rawWrite_(KMMC.M[k].s,id,r);}
+function rawWrite_(name,id,r){const sh=sheet_(name),row=findRow_(sh,id);if(row<2)throw Error('Record not found.');const h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];sh.getRange(row,1,1,h.length).setValues([h.map(k=>r[k]==null?'':r[k])]);}
+function findRow_(sh,id){if(sh.getLastRow()<2)return -1;const v=sh.getRange(2,1,sh.getLastRow()-1,1).getDisplayValues();for(let i=0;i<v.length;i++)if(String(v[i][0])===String(id))return i+2;return -1;}
+function activity_(u,a,m,id,d){try{rawAppend_('DB_ACTIVITY_LOG',{id:uid_(),userId:u.id,username:u.username,role:u.role,action:a,module:m,recordId:id,details:String(d||'').slice(0,500),createdAt:iso_()});}catch(e){}}
+function loginLog_(id,n,result){try{rawAppend_('DB_LOGIN_LOG',{id:uid_(),userId:id,username:n,result,createdAt:iso_()});}catch(e){}}
+function logError_(e){try{rawAppend_('DB_ERROR_LOG',{id:uid_(),action:'API',message:String(e&&e.message||e).slice(0,1000),createdAt:iso_()});}catch(x){}}
+function hash_(p,s){return sha_(String(s)+'|'+String(p)+'|'+String(PropertiesService.getScriptProperties().getProperty(KMMC.SECRET_PROP)||''));}
+function sha_(s){return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(s),Utilities.Charset.UTF_8));}
+function configured_(){return !!PropertiesService.getScriptProperties().getProperty(KMMC.DB_PROP)&&!!PropertiesService.getScriptProperties().getProperty(KMMC.SECRET_PROP);}
+function out_(x){return ContentService.createTextOutput(JSON.stringify(x)).setMimeType(ContentService.MimeType.JSON);}
+function uid_(){return Utilities.getUuid();}
+function iso_(){return new Date().toISOString();}
+function num_(x){const n=Number(x);return isFinite(n)?n:0;}
+function round_(n){return Math.round((Number(n)+Number.EPSILON)*100)/100;}
+function cell_(v){return v instanceof Date?v.toISOString():v;}
