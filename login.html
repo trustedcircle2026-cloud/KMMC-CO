@@ -138,7 +138,13 @@
       setStatus('Enter your account details to continue.');
     }
     tabs.forEach(tab=>tab.addEventListener('click',()=>setRole(tab.dataset.role)));
-    form.addEventListener('keydown',event=>{\n      if(event.key==='Enter' && event.target.matches('input:not([type=checkbox])')){\n        event.preventDefault();\n        if(typeof form.requestSubmit==='function')form.requestSubmit(submit);else submit.click();\n      }\n    });\n    form.addEventListener('submit',async event=>{
+    form.addEventListener('keydown',event=>{
+      if(event.key==='Enter' && event.target.matches('input:not([type=checkbox])')){
+        event.preventDefault();
+        if(typeof form.requestSubmit==='function')form.requestSubmit(submit);else submit.click();
+      }
+    });
+    form.addEventListener('submit',async event=>{
       event.preventDefault();if(!form.reportValidity())return;
       const role=roleInput.value,expected=roleData[role].apiRole,userName=username.value.trim(),userPassword=password.value;
       if((role!=='admin'&&!userName)||!userPassword){setStatus(role==='admin'?'Enter the Admin password.':'Enter your username and password.',true);return;}
