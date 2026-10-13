@@ -1,4 +1,4 @@
-# KMMC Chartered Accountants Website
+# K Mahesh Manickham and Co. Chartered Accountants Website
 
 Responsive public-facing homepage for the CA office, built with plain HTML, CSS and JavaScript. No build step or framework is required.
 
@@ -15,7 +15,7 @@ In the repository, open **Settings → Pages**. Select **Deploy from a branch**,
 
 ## Before publishing for clients
 Replace the clearly-marked placeholder items in `index.html`:
-- firm name / logo initials if KMMC is not the final public name
+- firm name / logo initials if K Mahesh Manickham and Co. is not the final public name
 - office telephone number and email address
 - official office address
 - WhatsApp number and client portal URL
