@@ -97,9 +97,20 @@ function setupKmmcAdminFromProperties(){
   return 'Admin bootstrapped. Temporary password property deleted. Keep the password securely.';
 }
 function login_(q){
-  const name=String(q.username||'').trim().toLowerCase(), pass=String(q.password||'');
-  if(!name||!pass)throw Error('Username and password required.');
-  const u=rows_('users').find(x=>String(x.username).toLowerCase()===name);
+  const pass=String(q.password||''), requestedRole=String(q.role||'').trim().toUpperCase();
+  let name=String(q.username||'').trim().toLowerCase(), u=null;
+  if(!pass)throw Error('Password required.');
+  if(requestedRole==='ADMIN'){
+    // Admin login requires only the password. It still validates the stored salted hash.
+    const configuredName=String(PropertiesService.getScriptProperties().getProperty('KMMC_ADMIN_USERNAME')||'').trim().toLowerCase();
+    const admins=rows_('users').filter(x=>String(x.role).toUpperCase()==='ADMIN'&&x.status==='ACTIVE');
+    u=(configuredName?admins.find(x=>String(x.username).toLowerCase()===configuredName):null)||admins[0]||null;
+    name=u?String(u.username).toLowerCase():'admin';
+  }else{
+    if(!name)throw Error('Username required.');
+    u=rows_('users').find(x=>String(x.username).toLowerCase()===name);
+    if(u&&requestedRole&&String(u.role).toUpperCase()!==requestedRole)u=null;
+  }
   if(!u||u.status!=='ACTIVE'||hash_(pass,String(u.salt))!==String(u.passwordHash)){loginLog_(u&&u.id||'',name,'FAILED');throw Error('Invalid username or password.');}
   const token=uid_()+'.'+uid_(), th=sha_(token), now=new Date(), exp=new Date(now.getTime()+KMMC.SESSION_HOURS*3600000);
   rawAppend_('DB_SESSIONS',{id:uid_(),userId:u.id,tokenHash:th,expiresAt:exp.toISOString(),createdAt:now.toISOString(),revokedAt:''});
