@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123f6b">
+  <meta name="description" content="Secure role-based portal login for customers, employees and administrators of K Mahesh Manickham and Co.">
+  <link rel="icon" type="image/png" href="assets/images/CA%20Logo.png">
+  <link rel="apple-touch-icon" href="assets/images/CA%20Logo.png">
+  <title>Portal Login | K Mahesh Manickham and Co. Chartered Accountants</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="pages.css">
+</head>
+<body>
+  <header class="site-header"></header>
+  <nav class="main-nav"></nav>
+  <main class="portal-login-page">
+    <section class="portal-login-intro">
+      <div class="container">
+        <span class="section-kicker">SECURE WORKSPACE</span>
+        <h1>Welcome to the <em>KMMC Portal</em></h1>
+        <p>Choose your account type to access the relevant workspace.</p>
+      </div>
+    </section>
+    <section class="container portal-layout">
+      <div class="portal-access">
+        <div class="portal-role-tabs" role="tablist" aria-label="Choose login type">
+          <button class="portal-role active" type="button" role="tab" aria-selected="true" data-role="customer">
+            <span class="portal-role-icon">♙</span><strong>Customer</strong><small>Documents, invoices and requests</small>
+          </button>
+          <button class="portal-role" type="button" role="tab" aria-selected="false" data-role="employee">
+            <span class="portal-role-icon">▣</span><strong>Employee</strong><small>Tasks, attendance and work updates</small>
+          </button>
+          <button class="portal-role" type="button" role="tab" aria-selected="false" data-role="admin">
+            <span class="portal-role-icon">⚙</span><strong>Admin</strong><small>Firm-wide management workspace</small>
+          </button>
+        </div>
+        <form class="portal-login-form" id="portalLoginForm">
+          <div class="portal-form-heading">
+            <span class="portal-lock">▣</span>
+            <div><h2 id="portalFormTitle">Customer Login</h2><p id="portalFormDescription">Sign in to view your documents and service requests.</p></div>
+          </div>
+          <input type="hidden" id="selectedRole" name="role" value="customer">
+          <label for="portalUsername" id="usernameLabel">Email address / Customer ID</label>
+          <input id="portalUsername" name="username" autocomplete="username" placeholder="Enter your email or customer ID" required>
+          <label for="portalPassword">Password</label>
+          <input id="portalPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+          <div class="portal-form-options"><label class="portal-remember"><input type="checkbox" name="remember"> Remember me</label><a href="contact.html">Need login assistance?</a></div>
+          <button class="portal-submit" type="submit">Sign in as Customer <span>→</span></button>
+          <p class="portal-status" id="portalLoginStatus" role="status" aria-live="polite">Secure sign-in will be enabled after authentication is connected.</p>
+          <p class="portal-security-note">Never share your password or one-time password with anyone.</p>
+        </form>
+      </div>
+      <aside class="portal-side">
+        <div class="portal-side-head"><span class="section-kicker">YOUR WORKSPACE</span><h2 id="portalSideTitle">Your business, organised.</h2><p id="portalSideDescription">Access the latest status of your engagements in one place.</p></div>
+        <ul class="portal-feature-list" id="portalFeatureList">
+          <li><span>✓</span><div><strong>Invoices &amp; payments</strong><small>Review billing records and payment status.</small></div></li>
+          <li><span>✓</span><div><strong>Documents</strong><small>Access shared files and requested records.</small></div></li>
+          <li><span>✓</span><div><strong>Service requests</strong><small>Track queries and ongoing work.</small></div></li>
+        </ul>
+        <div class="portal-help"><strong>Need access?</strong><p>Contact the firm administrator to request an account or reset access.</p><a href="contact.html">Contact our office →</a></div>
+      </aside>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="container footer-bottom"><span>© <span id="year"></span> K Mahesh Manickham and Co. Chartered Accountants</span><a href="privacy.html">Privacy Policy</a></div></footer>
+  <script src="script.js"></script>
+  <script>
+  (() => {
+    const roleData = {
+      customer: {
+        title: "Customer Login", description: "Sign in to view your documents and service requests.",
+        label: "Email address / Customer ID", placeholder: "Enter your email or customer ID", button: "Sign in as Customer",
+        sideTitle: "Your business, organised.", sideDescription: "Access the latest status of your engagements in one place.",
+        features: [["Invoices & payments","Review billing records and payment status."],["Documents","Access shared files and requested records."],["Service requests","Track queries and ongoing work."]]
+      },
+      employee: {
+        title: "Employee Login", description: "Sign in to manage assigned work and attendance.",
+        label: "Employee ID / Work email", placeholder: "Enter your employee ID or work email", button: "Sign in as Employee",
+        sideTitle: "Your workday, in control.", sideDescription: "A central workspace for team activities and internal processes.",
+        features: [["My tasks & deadlines","View assigned work, priority and due dates."],["Attendance & time","Access attendance and working-time records."],["Work updates","Update progress and coordinate with the team."]]
+      },
+      admin: {
+        title: "Administrator Login", description: "Authorised administrators can manage firm operations.",
+        label: "Admin ID / Official email", placeholder: "Enter your administrator ID", button: "Sign in as Admin",
+        sideTitle: "One workspace. Firm-wide control.", sideDescription: "The planned administration area brings operational management into one place.",
+        features: [["Work & time management","Allocate jobs, track deadlines and review time records."],["Invoices & finance","Prepare invoices, monitor payments and outstanding balances."],["Employees & access","Manage employee records, roles and permissions."],["Reports & operations","Review client work, status dashboards and activity logs."]]
+      }
+    };
+    const tabs = document.querySelectorAll(".portal-role");
+    const formTitle = document.getElementById("portalFormTitle");
+    const description = document.getElementById("portalFormDescription");
+    const label = document.getElementById("usernameLabel");
+    const username = document.getElementById("portalUsername");
+    const roleInput = document.getElementById("selectedRole");
+    const submit = document.querySelector(".portal-submit");
+    const sideTitle = document.getElementById("portalSideTitle");
+    const sideDescription = document.getElementById("portalSideDescription");
+    const features = document.getElementById("portalFeatureList");
+    const status = document.getElementById("portalLoginStatus");
+    function setRole(role) {
+      const data = roleData[role] || roleData.customer;
+      roleInput.value = role;
+      tabs.forEach(tab => {
+        const selected = tab.dataset.role === role;
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-selected", String(selected));
+      });
+      formTitle.textContent = data.title;
+      description.textContent = data.description;
+      label.textContent = data.label;
+      username.placeholder = data.placeholder;
+      submit.innerHTML = data.button + " <span>→</span>";
+      sideTitle.textContent = data.sideTitle;
+      sideDescription.textContent = data.sideDescription;
+      features.innerHTML = data.features.map(item => '<li><span>✓</span><div><strong>'+item[0]+'</strong><small>'+item[1]+'</small></div></li>').join("");
+      status.textContent = "Secure sign-in will be enabled after authentication is connected.";
+      status.classList.remove("error");
+    }
+    tabs.forEach(tab => tab.addEventListener("click", () => setRole(tab.dataset.role)));
+    document.getElementById("portalLoginForm").addEventListener("submit", event => {
+      event.preventDefault();
+      status.textContent = "Login interface ready, but authentication is not connected yet. No credentials were sent or stored. Connect a secure authentication backend before using this portal.";
+      status.classList.add("error");
+    });
+    setRole("customer");
+  })();
+  </script>
+</body>
+</html>
