@@ -115,7 +115,8 @@
       const data=roleData[role]||roleData.customer;
       roleInput.value=role;
       tabs.forEach(tab=>tab.setAttribute('aria-pressed',String(tab.dataset.role===role)));
-      usernameLabel.textContent=data.label;username.placeholder=data.placeholder;submit.textContent=data.button;\n      const isAdmin=role==='admin';document.getElementById('usernameField').hidden=isAdmin;username.required=!isAdmin;if(isAdmin)username.value='';
+      usernameLabel.textContent=data.label;username.placeholder=data.placeholder;submit.textContent=data.button;
+      const isAdmin=role==='admin';document.getElementById('usernameField').hidden=isAdmin;username.required=!isAdmin;if(isAdmin)username.value='';
       setStatus('Enter your account details to continue.');
     }
     tabs.forEach(tab=>tab.addEventListener('click',()=>setRole(tab.dataset.role)));
