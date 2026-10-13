@@ -88,7 +88,7 @@ function setupKmmcBackend(){
 function setupKmmcAdminFromProperties(){
   if(!configured_())throw Error('Run setupKmmcBackend() first.');
   const p=PropertiesService.getScriptProperties(), pass=p.getProperty('KMMC_ADMIN_PASSWORD');
-  if(!pass||pass.length<12)throw Error('Set KMMC_ADMIN_PASSWORD to at least 12 characters in Script Properties.');
+  if(pass===null||pass===undefined||pass==='')throw Error('Set a non-empty KMMC_ADMIN_PASSWORD in Script Properties.');
   const username=(p.getProperty('KMMC_ADMIN_USERNAME')||'admin').trim().toLowerCase();
   const old=rows_('users').find(u=>String(u.username).toLowerCase()===username), salt=Utilities.getUuid(), now=iso_();
   const u={id:old?old.id:uid_(),username:username,passwordHash:hash_(pass,salt),salt:salt,role:'ADMIN',name:'KMMC Administrator',email:'',phone:'',clientId:'',employeeId:'',status:'ACTIVE',createdAt:old?old.createdAt:now,updatedAt:now,lastLoginAt:''};
