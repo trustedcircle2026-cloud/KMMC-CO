@@ -169,6 +169,9 @@
           try{await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'logout',token:data.token})});}catch(ignore){}
           throw new Error('This account is registered as '+String(user.role||'unknown')+'. Select the matching login type.');
         }
+        localStorage.setItem('kmmc_session_token',data.token);
+        localStorage.setItem('kmmc_session_expires_at',data.expiresAt||'');
+        localStorage.setItem('kmmc_user',JSON.stringify(user));
         sessionStorage.setItem('kmmc_session_token',data.token);
         sessionStorage.setItem('kmmc_session_expires_at',data.expiresAt||'');
         sessionStorage.setItem('kmmc_user',JSON.stringify(user));
