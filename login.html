@@ -84,7 +84,7 @@
             <a href="contact.html">Need help?</a>
           </div>
           <button class="submit-button" type="submit" id="submitButton">Log In</button>
-          <p class="login-status" id="portalLoginStatus" role="status" aria-live="polite">Secure authentication is not connected yet. Do not enter real credentials until backend integration is completed.</p>
+          <p class="login-status" id="portalLoginStatus" role="status" aria-live="polite">Enter your account details to continue.</p>
           <p class="security-note">Never share your password or one-time password with anyone.</p>
         </form>
       </div>
@@ -96,34 +96,57 @@
   </footer>
   <script>
   (() => {
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxRTYJgXaJ2z16YfYdYxJCey7IuGqEQzEK6Oa8DuMAh5B31nWgVU4xrxzwGJ-ngzTzo/exec';
     const roleData = {
-      customer: {label:'Customer ID / Email',placeholder:'Enter user name',button:'Log In'},
-      employee: {label:'Employee ID / Work email',placeholder:'Enter employee ID',button:'Log In'},
-      admin: {label:'Admin ID / Official email',placeholder:'Enter administrator ID',button:'Log In'}
+      customer: {apiRole:'CLIENT',label:'Customer ID / Email',placeholder:'Enter user name',button:'Log In'},
+      employee: {apiRole:'EMPLOYEE',label:'Employee ID / Work email',placeholder:'Enter employee ID',button:'Log In'},
+      admin: {apiRole:'ADMIN',label:'Admin ID / Official email',placeholder:'Enter administrator ID',button:'Log In'}
     };
     const tabs=document.querySelectorAll('.role-button');
     const roleInput=document.getElementById('selectedRole');
     const usernameLabel=document.getElementById('usernameLabel');
     const username=document.getElementById('portalUsername');
+    const password=document.getElementById('portalPassword');
     const submit=document.getElementById('submitButton');
     const status=document.getElementById('portalLoginStatus');
+    const form=document.getElementById('portalLoginForm');
+    function setStatus(message,error=false){status.textContent=message;status.classList.toggle('error',error);}
     function setRole(role){
       const data=roleData[role]||roleData.customer;
       roleInput.value=role;
       tabs.forEach(tab=>tab.setAttribute('aria-pressed',String(tab.dataset.role===role)));
-      usernameLabel.textContent=data.label;
-      username.placeholder=data.placeholder;
-      submit.textContent=data.button;
-      status.textContent='Secure authentication is not connected yet. Do not enter real credentials until backend integration is completed.';
-      status.classList.remove('error');
+      usernameLabel.textContent=data.label;username.placeholder=data.placeholder;submit.textContent=data.button;
+      setStatus('Enter your account details to continue.');
     }
     tabs.forEach(tab=>tab.addEventListener('click',()=>setRole(tab.dataset.role)));
-    document.getElementById('portalLoginForm').addEventListener('submit',event=>{
-      event.preventDefault();
-      status.textContent='Login is not connected to the backend yet. No credentials were sent or stored.';
-      status.classList.add('error');
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();if(!form.reportValidity())return;
+      const role=roleInput.value,expected=roleData[role].apiRole,userName=username.value.trim(),userPassword=password.value;
+      if(!userName||!userPassword){setStatus('Enter your username and password.',true);return;}
+      submit.disabled=true;submit.textContent='Signing in…';setStatus('Checking your credentials. Please wait.');
+      try{
+        const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',username:userName,password:userPassword})});
+        if(!response.ok)throw new Error('Authentication service returned HTTP '+response.status+'.');
+        const result=await response.json();
+        if(!result||result.ok!==true)throw new Error((result&&result.error)||'Login failed. Check your credentials.');
+        const data=result.data||{},user=data.user;
+        if(!data.token||!user)throw new Error('The server response was incomplete. Contact the administrator.');
+        if(String(user.role||'').toUpperCase()!==expected){
+          try{await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'logout',token:data.token})});}catch(ignore){}
+          throw new Error('This account is registered as '+String(user.role||'unknown')+'. Select the matching login type.');
+        }
+        sessionStorage.setItem('kmmc_session_token',data.token);
+        sessionStorage.setItem('kmmc_session_expires_at',data.expiresAt||'');
+        sessionStorage.setItem('kmmc_user',JSON.stringify(user));
+        password.value='';setStatus('Login successful. Opening your workspace…');window.location.href='portal.html';
+      }catch(error){
+        const message=String(error&&error.message||'Unable to sign in.');
+        if(/Failed to fetch|NetworkError|Load failed/i.test(message)){
+          setStatus('Could not reach Apps Script. Confirm the web app is deployed and accessible. If the browser reports CORS, the API needs a same-origin proxy.',true);
+        }else setStatus(message,true);
+      }finally{submit.disabled=false;submit.textContent=roleData[roleInput.value].button;}
     });
-    document.getElementById('year').textContent=new Date().getFullYear();
+    document.getElementById('year').textContent=new Date().getFullYear();setRole('customer');
   })();
   </script>
 </body>
