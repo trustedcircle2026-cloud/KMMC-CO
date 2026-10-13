@@ -88,7 +88,7 @@
           <button class="role-button" type="button" data-role="admin" aria-pressed="false">Admin</button>
         </div>
         <form id="portalLoginForm">
-          <div class="field">
+          <div class="field" id="usernameField">
             <label for="portalUsername" id="usernameLabel">Customer ID / Email</label>
             <input id="portalUsername" name="username" autocomplete="username" placeholder="Enter user name" required>
           </div>
@@ -154,8 +154,17 @@
         if(!response.ok)throw new Error('Authentication service returned HTTP '+response.status+'.');
         const result=await response.json();
         if(!result||result.ok!==true)throw new Error((result&&result.error)||'Login failed. Check your credentials.');
-        const data=result.data||{},user=data.user;
-        if(!data.token||!user)throw new Error('The server response was incomplete. Contact the administrator.');
+        let data=result;
+        for(let i=0;i<4&&data&&typeof data==='object'&&!data.token;i++){
+          if(data.data&&typeof data.data==='object')data=data.data;
+          else if(data.result&&typeof data.result==='object')data=data.result;
+          else break;
+        }
+        const user=data&&data.user;
+        if(!data||!data.token||!user){
+          const keys=data&&typeof data==='object'?Object.keys(data).join(', '):typeof data;
+          throw new Error('Apps Script responded but did not return a session token. Response fields: '+(keys||'none')+'. Update and redeploy the latest backend Code.gs, then try again.');
+        }
         if(String(user.role||'').toUpperCase()!==expected){
           try{await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'logout',token:data.token})});}catch(ignore){}
           throw new Error('This account is registered as '+String(user.role||'unknown')+'. Select the matching login type.');
