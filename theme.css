@@ -1,0 +1,127 @@
+/* KMMC premium theme: Garamond typography, forest green, warm ivory and antique gold */
+:root {
+  --green: #124b3a;
+  --green-dark: #082f27;
+  --green-light: #8eaa55;
+  --green-pale: #edf3e7;
+  --ink: #172b25;
+  --muted: #66746c;
+  --line: #dce5d9;
+  --serif: Garamond, "EB Garamond", "Apple Garamond", "Times New Roman", serif;
+  --sans: Garamond, "EB Garamond", "Times New Roman", serif;
+  --display: Garamond, "EB Garamond", "Apple Garamond", "Times New Roman", serif;
+}
+body, button { font-family: var(--sans); }
+body { font-size: 17px; color: var(--ink); }
+.announcement { background: #082f27; color: #f2ead8; }
+.site-header { background: linear-gradient(110deg, #fffdf7, #f5f7ed); }
+.brand-mark { color: #124b3a; border-color: #124b3a; }
+.brand-mark i { background: #c5a45b; }
+.brand-copy strong { color: #103f32; letter-spacing: .035em; font-size: 28px; }
+.brand-copy small { color: #a17d39; letter-spacing: .14em; font-size: 11px; }
+.contact-region { color: #345d4b; font-size: 18px; }
+.login-button { background: #124b3a; box-shadow: 0 0 0 4px #e8ead9; }
+.login-button:hover { background: #a17d39; }
+.login-dot { background: #d9bd79; }
+.menu-toggle span { background: #124b3a; }
+.main-nav { background: linear-gradient(90deg, #124b3a, #1e684b 58%, #6e8d48); }
+.nav-link { font-size: 16px; font-weight: 700; }
+.nav-link:hover, .nav-link.active { background: #d0b16c; color: #153b2e; }
+.dropdown { border-top-color: #c5a45b; }
+.dropdown a { font-size: 15px; }
+.dropdown a:hover { background: #f5f0df; color: #124b3a; }
+.hero { background: #1b4436; }
+.hero-shade { background: linear-gradient(90deg, rgba(5,35,28,.88), rgba(10,58,43,.69) 44%, rgba(38,45,25,.14)), linear-gradient(0deg, rgba(5,26,19,.4), transparent 40%); }
+.eyebrow, .section-kicker { font-size: 12px; letter-spacing: .13em; }
+.eyebrow { color: #f2e8cb; }
+.eyebrow span { background: #d9bd79; }
+.hero h1 { font-family: var(--display); font-size: clamp(42px,4.5vw,68px); font-weight: 700; letter-spacing: -.025em; }
+.hero h1 em { color: #e2c77e; }
+.hero-content > p { font-size: 18px; }
+.button { font-size: 16px; border-radius: 4px; }
+.hero .button-primary { background: #d3b36b; color: #173a2c; }
+.hero .button-primary:hover { background: #f0d99c; }
+.button-glass { border-color: #e4d5a7a8; }
+.proof-check { background: #d9bd79; color: #103b2b; }
+.hero-proof { font-size: 14px; }
+.hero-proof i, .caption-line { background: #d9bd79; }
+.hero-caption { font-size: 13px; }
+.trust-strip { background: #f4f3e9; border-bottom-color: #e4dfcb; }
+.trust-grid > div { border-color: #e2ddc9; }
+.trust-icon { background: #e4ead6; color: #124b3a; }
+.trust-grid strong { font-size: 16px; color: #1b4435; }
+.trust-grid small { font-size: 13px; color: #70796b; }
+.section-heading h2, .about-copy h2, .approach-inner h2 { color: #153e30; font-family: var(--display); font-size: clamp(36px,3.2vw,49px); letter-spacing: -.025em; }
+.section-heading h2 em, .about-copy h2 em, .approach-inner h2 em { color: #a17d39; }
+.section-kicker { color: #9a7836; }
+.heading-aside p { font-size: 17px; }
+.text-link { color: #124b3a; font-size: 16px; border-bottom-color: #c5a45b; }
+.services-grid { border-color: #dce5d9; }
+.service-card { background: linear-gradient(145deg, #fffefa, #f9faf4); border-color: #dce5d9; }
+.service-card:hover { background: #f2f5e9; box-shadow: inset 0 4px 0 #c5a45b; }
+.service-icon { background: #e9efdf; color: #124b3a; }
+.service-number { color: #a17d39; }
+.service-card h3 { color: #174b37; font-family: var(--display); font-size: 23px; letter-spacing: 0; }
+.service-card p { color: #65746a; font-size: 16px; }
+.service-card > a { color: #846329; font-size: 15px; }
+.services-bottom { font-size: 16px; }
+.button-outline { color: #124b3a; border-color: #b9c9ad; }
+.button-outline:hover { background: #f0f3e6; }
+.about-section { background: linear-gradient(120deg, #f0f3e8, #f8f3e7); }
+.about-visual::before { border-color: #d7d9bd; }
+.panel-one { background: linear-gradient(145deg, #1c694a, #082f27); }
+.panel-one span, .panel-two span { font-size: 12px; }
+.panel-one strong { font-family: var(--display); font-size: 39px; }
+.panel-two { color: #1e4933; background: #fffdf7; border-color: #e4dfcb; }
+.panel-two span { color: #a17d39; }
+.panel-two strong { font-family: var(--display); font-size: 28px; }
+.panel-two small { font-size: 13px; }
+.about-orbit { color: #173c2e; background: #d9bd79; border-color: #f0f3e8; font-family: var(--display); }
+.about-copy > p { color: #5f7065; font-size: 17px; }
+.approach-points { border-top-color: #dce5d9; }
+.approach-points > div { border-bottom-color: #dce5d9; }
+.approach-points > div > span { color: #a17d39; font-size: 16px; }
+.approach-points strong { font-size: 18px; color: #284a36; }
+.approach-points small { font-size: 15px; }
+.insight-banner { background: linear-gradient(112deg, #082f27, #14543b 68%, #657f42); }
+.insight-banner .section-kicker { color: #e4cc8d; }
+.insight-banner h2 { font-family: var(--display); font-size: clamp(31px,3.2vw,44px); }
+.insight-banner p { color: #e2e8da; font-size: 16px; }
+.button-light { color: #153e30; background: #f6f0dd; }
+.button-light:hover { background: #e4cd91; }
+.site-footer { background: linear-gradient(130deg, #062b23, #103e30 65%, #1b4c36); color: #e0e6d8; }
+.brand-footer .brand-mark { color: #d9bd79; border-color: #d9bd79; }
+.brand-footer .brand-mark i { background: #d9bd79; }
+.brand-footer .brand-copy strong { color: #fffdf7; }
+.brand-footer .brand-copy small { color: #e0c67e; }
+.footer-brand-col > p { font-size: 15px; color: #b9cbbb; }
+.social-links a { border-color: #718c76; color: #f1ead6; font-size: 15px; }
+.social-links a:hover { background: #d0b16c; border-color: #d0b16c; color: #0b3424; }
+.footer-col h4 { color: #f9f1d9; font-size: 17px; }
+.footer-col > a, .footer-contact p { color: #c1d0c2; font-size: 15px; }
+.footer-col > a:hover, .footer-bottom a:hover { color: #e8ce83; }
+.footer-contact-button { border-color: #b4a16d; color: #fff9e8 !important; font-size: 15px !important; }
+.footer-contact-button:hover { background: #1d5940; }
+.footer-bottom { border-top-color: #ffffff2b; color: #a8bca9; font-size: 13px; }
+.footer-bottom a { color: #d0d9c9; }
+.floating-contact a { box-shadow: 0 7px 20px #081f183b; }
+.float-whatsapp { background: #17845a; }
+.float-phone { background: #b94b42; }
+.float-mail { background: #b08a3e; }
+.back-top { color: #124b3a; border-color: #d9dfcf; }
+:focus-visible { outline-color: #c5a45b; }
+@media (max-width: 1120px) { .nav-link { padding: 0 6px; font-size: 14px; } }
+@media (max-width: 860px) { .nav-link { font-size: 16px; } .section-heading h2, .about-copy h2, .approach-inner h2 { font-size: 39px; } }
+@media (max-width: 560px) {
+  .brand-copy strong { font-size: 23px; } .brand-copy small { font-size: 9px; }
+  .contact-region { font-size: 15px; } .eyebrow { font-size: 10px; }
+  .hero h1 { font-size: 43px; } .hero-content > p { font-size: 16px; }
+  .button { font-size: 16px; } .hero-proof { font-size: 12px; }
+  .trust-grid strong { font-size: 13px; } .trust-grid small { font-size: 11px; }
+  .section-heading h2, .about-copy h2, .approach-inner h2 { font-size: 35px; }
+  .heading-aside p, .about-copy > p { font-size: 16px; }
+  .service-card h3 { font-size: 23px; } .service-card p { font-size: 15px; }
+  .insight-banner h2 { font-size: 31px; }
+  .footer-col h4 { font-size: 17px; } .footer-col > a, .footer-contact p { font-size: 14px; }
+  .footer-bottom { font-size: 12px; }
+}
