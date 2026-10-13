@@ -8,7 +8,7 @@
           <span class="brand-copy"><strong>K Mahesh Manickham and Co.</strong><small>CHARTERED ACCOUNTANTS</small></span>
         </a>
         <div class="reference-enquiries"><span>Business Enquiries</span><div><a href="contact.html">Contact our office</a><i></i><a href="contact.html">Send an enquiry</a><i></i><a href="careers.html">Careers</a></div></div>
-        <a class="login-button" href="client-portal.html">Login</a>
+        <a class="login-button" href="login.html">Login</a>
         <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button>
       </div>
     </header>`;
@@ -22,7 +22,7 @@
         <div class="nav-item"><a class="nav-link" href="services.html">Registrations</a><div class="dropdown"><a href="service-gst.html">GST Registration</a><a href="service-pan-tan.html">PAN / TAN</a><a href="service-msme.html">MSME / Udyam</a></div></div>
         <div class="nav-item"><a class="nav-link" href="service-roc.html">MCA</a><div class="dropdown"><a href="service-roc.html">ROC Filings</a><a href="service-company-registration.html">Company Incorporation</a><a href="service-llp.html">LLP Compliance</a></div></div>
         <div class="nav-item"><a class="nav-link" href="services.html">Compliance</a><div class="dropdown"><a href="service-accounting.html">Accounting</a><a href="service-tds.html">Payroll &amp; TDS</a><a href="service-internal-audit.html">Internal Controls</a></div></div>
-        <div class="nav-item"><a class="nav-link" href="about.html">Others</a><div class="dropdown"><a href="resources.html">Resources</a><a href="accountant.html">Accounting Professionals</a><a href="client-portal.html">Client Portal</a></div></div>
+        <div class="nav-item"><a class="nav-link" href="about.html">Others</a><div class="dropdown"><a href="resources.html">Resources</a><a href="accountant.html">Accounting Professionals</a><a href="login.html">Portal Login</a><a href="client-portal.html">Client Portal</a></div></div>
         <div class="nav-item"><a class="nav-link" href="about.html">About</a><div class="dropdown"><a href="about.html">About the Firm</a><a href="about.html#approach">Our Approach</a></div></div>
         <a class="nav-link" href="resources.html">Blog</a>
         <div class="nav-item"><a class="nav-link" href="careers.html">Careers Opportunity</a><div class="dropdown"><a href="careers.html">Join K Mahesh Manickham and Co.</a><a href="accountant.html">Accounting Opportunities</a></div></div>
