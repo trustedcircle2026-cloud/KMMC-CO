@@ -29,6 +29,7 @@
         <a class="nav-link" href="contact.html">Contact Us</a>
       </div>
     </nav>`;
+  document.querySelectorAll(".announcement").forEach((bar) => bar.remove());
   const existingHeader = document.querySelector(".site-header");
   const existingNavigation = document.querySelector(".main-nav");
   if (existingHeader) existingHeader.outerHTML = sharedHeader;
