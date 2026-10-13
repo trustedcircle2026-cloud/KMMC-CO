@@ -1,127 +1,50 @@
-/* KMMC premium theme: Garamond typography, forest green, warm ivory and antique gold */
-:root {
-  --green: #124b3a;
-  --green-dark: #082f27;
-  --green-light: #8eaa55;
-  --green-pale: #edf3e7;
-  --ink: #172b25;
-  --muted: #66746c;
-  --line: #dce5d9;
-  --serif: Garamond, "EB Garamond", "Apple Garamond", "Times New Roman", serif;
-  --sans: Garamond, "EB Garamond", "Times New Roman", serif;
-  --display: Garamond, "EB Garamond", "Apple Garamond", "Times New Roman", serif;
-}
-body, button { font-family: var(--sans); }
-body { font-size: 17px; color: var(--ink); }
-.announcement { background: #082f27; color: #f2ead8; }
-.site-header { background: linear-gradient(110deg, #fffdf7, #f5f7ed); }
-.brand-mark { color: #124b3a; border-color: #124b3a; }
-.brand-mark i { background: #c5a45b; }
-.brand-copy strong { color: #103f32; letter-spacing: .035em; font-size: 28px; }
-.brand-copy small { color: #a17d39; letter-spacing: .14em; font-size: 11px; }
-.contact-region { color: #345d4b; font-size: 18px; }
-.login-button { background: #124b3a; box-shadow: 0 0 0 4px #e8ead9; }
-.login-button:hover { background: #a17d39; }
-.login-dot { background: #d9bd79; }
-.menu-toggle span { background: #124b3a; }
-.main-nav { background: linear-gradient(90deg, #124b3a, #1e684b 58%, #6e8d48); }
-.nav-link { font-size: 16px; font-weight: 700; }
-.nav-link:hover, .nav-link.active { background: #d0b16c; color: #153b2e; }
-.dropdown { border-top-color: #c5a45b; }
-.dropdown a { font-size: 15px; }
-.dropdown a:hover { background: #f5f0df; color: #124b3a; }
-.hero { background: #1b4436; }
-.hero-shade { background: linear-gradient(90deg, rgba(5,35,28,.88), rgba(10,58,43,.69) 44%, rgba(38,45,25,.14)), linear-gradient(0deg, rgba(5,26,19,.4), transparent 40%); }
-.eyebrow, .section-kicker { font-size: 12px; letter-spacing: .13em; }
-.eyebrow { color: #f2e8cb; }
-.eyebrow span { background: #d9bd79; }
-.hero h1 { font-family: var(--display); font-size: clamp(42px,4.5vw,68px); font-weight: 700; letter-spacing: -.025em; }
-.hero h1 em { color: #e2c77e; }
-.hero-content > p { font-size: 18px; }
-.button { font-size: 16px; border-radius: 4px; }
-.hero .button-primary { background: #d3b36b; color: #173a2c; }
-.hero .button-primary:hover { background: #f0d99c; }
-.button-glass { border-color: #e4d5a7a8; }
-.proof-check { background: #d9bd79; color: #103b2b; }
-.hero-proof { font-size: 14px; }
-.hero-proof i, .caption-line { background: #d9bd79; }
-.hero-caption { font-size: 13px; }
-.trust-strip { background: #f4f3e9; border-bottom-color: #e4dfcb; }
-.trust-grid > div { border-color: #e2ddc9; }
-.trust-icon { background: #e4ead6; color: #124b3a; }
-.trust-grid strong { font-size: 16px; color: #1b4435; }
-.trust-grid small { font-size: 13px; color: #70796b; }
-.section-heading h2, .about-copy h2, .approach-inner h2 { color: #153e30; font-family: var(--display); font-size: clamp(36px,3.2vw,49px); letter-spacing: -.025em; }
-.section-heading h2 em, .about-copy h2 em, .approach-inner h2 em { color: #a17d39; }
-.section-kicker { color: #9a7836; }
-.heading-aside p { font-size: 17px; }
-.text-link { color: #124b3a; font-size: 16px; border-bottom-color: #c5a45b; }
-.services-grid { border-color: #dce5d9; }
-.service-card { background: linear-gradient(145deg, #fffefa, #f9faf4); border-color: #dce5d9; }
-.service-card:hover { background: #f2f5e9; box-shadow: inset 0 4px 0 #c5a45b; }
-.service-icon { background: #e9efdf; color: #124b3a; }
-.service-number { color: #a17d39; }
-.service-card h3 { color: #174b37; font-family: var(--display); font-size: 23px; letter-spacing: 0; }
-.service-card p { color: #65746a; font-size: 16px; }
-.service-card > a { color: #846329; font-size: 15px; }
-.services-bottom { font-size: 16px; }
-.button-outline { color: #124b3a; border-color: #b9c9ad; }
-.button-outline:hover { background: #f0f3e6; }
-.about-section { background: linear-gradient(120deg, #f0f3e8, #f8f3e7); }
-.about-visual::before { border-color: #d7d9bd; }
-.panel-one { background: linear-gradient(145deg, #1c694a, #082f27); }
-.panel-one span, .panel-two span { font-size: 12px; }
-.panel-one strong { font-family: var(--display); font-size: 39px; }
-.panel-two { color: #1e4933; background: #fffdf7; border-color: #e4dfcb; }
-.panel-two span { color: #a17d39; }
-.panel-two strong { font-family: var(--display); font-size: 28px; }
-.panel-two small { font-size: 13px; }
-.about-orbit { color: #173c2e; background: #d9bd79; border-color: #f0f3e8; font-family: var(--display); }
-.about-copy > p { color: #5f7065; font-size: 17px; }
-.approach-points { border-top-color: #dce5d9; }
-.approach-points > div { border-bottom-color: #dce5d9; }
-.approach-points > div > span { color: #a17d39; font-size: 16px; }
-.approach-points strong { font-size: 18px; color: #284a36; }
-.approach-points small { font-size: 15px; }
-.insight-banner { background: linear-gradient(112deg, #082f27, #14543b 68%, #657f42); }
-.insight-banner .section-kicker { color: #e4cc8d; }
-.insight-banner h2 { font-family: var(--display); font-size: clamp(31px,3.2vw,44px); }
-.insight-banner p { color: #e2e8da; font-size: 16px; }
-.button-light { color: #153e30; background: #f6f0dd; }
-.button-light:hover { background: #e4cd91; }
-.site-footer { background: linear-gradient(130deg, #062b23, #103e30 65%, #1b4c36); color: #e0e6d8; }
-.brand-footer .brand-mark { color: #d9bd79; border-color: #d9bd79; }
-.brand-footer .brand-mark i { background: #d9bd79; }
-.brand-footer .brand-copy strong { color: #fffdf7; }
-.brand-footer .brand-copy small { color: #e0c67e; }
-.footer-brand-col > p { font-size: 15px; color: #b9cbbb; }
-.social-links a { border-color: #718c76; color: #f1ead6; font-size: 15px; }
-.social-links a:hover { background: #d0b16c; border-color: #d0b16c; color: #0b3424; }
-.footer-col h4 { color: #f9f1d9; font-size: 17px; }
-.footer-col > a, .footer-contact p { color: #c1d0c2; font-size: 15px; }
-.footer-col > a:hover, .footer-bottom a:hover { color: #e8ce83; }
-.footer-contact-button { border-color: #b4a16d; color: #fff9e8 !important; font-size: 15px !important; }
-.footer-contact-button:hover { background: #1d5940; }
-.footer-bottom { border-top-color: #ffffff2b; color: #a8bca9; font-size: 13px; }
-.footer-bottom a { color: #d0d9c9; }
-.floating-contact a { box-shadow: 0 7px 20px #081f183b; }
-.float-whatsapp { background: #17845a; }
-.float-phone { background: #b94b42; }
-.float-mail { background: #b08a3e; }
-.back-top { color: #124b3a; border-color: #d9dfcf; }
-:focus-visible { outline-color: #c5a45b; }
-@media (max-width: 1120px) { .nav-link { padding: 0 6px; font-size: 14px; } }
-@media (max-width: 860px) { .nav-link { font-size: 16px; } .section-heading h2, .about-copy h2, .approach-inner h2 { font-size: 39px; } }
-@media (max-width: 560px) {
-  .brand-copy strong { font-size: 23px; } .brand-copy small { font-size: 9px; }
-  .contact-region { font-size: 15px; } .eyebrow { font-size: 10px; }
-  .hero h1 { font-size: 43px; } .hero-content > p { font-size: 16px; }
-  .button { font-size: 16px; } .hero-proof { font-size: 12px; }
-  .trust-grid strong { font-size: 13px; } .trust-grid small { font-size: 11px; }
-  .section-heading h2, .about-copy h2, .approach-inner h2 { font-size: 35px; }
-  .heading-aside p, .about-copy > p { font-size: 16px; }
-  .service-card h3 { font-size: 23px; } .service-card p { font-size: 15px; }
-  .insight-banner h2 { font-size: 31px; }
-  .footer-col h4 { font-size: 17px; } .footer-col > a, .footer-contact p { font-size: 14px; }
-  .footer-bottom { font-size: 12px; }
-}
+/* Reference-inspired KMMC theme: green navigation, white masthead, Garamond type */
+:root{--green:#69a852;--green-dark:#174b36;--green-light:#79b65f;--green-pale:#eef4e9;--ink:#183329;--muted:#69786c;--line:#e2e8df;--serif:Garamond,"EB Garamond",Georgia,serif;--sans:Garamond,"EB Garamond",Georgia,serif;--display:Garamond,"EB Garamond",Georgia,serif}
+body,button{font-family:Garamond,"EB Garamond",Georgia,serif}
+body{font-size:17px;color:#17372b}
+.reference-home .site-header{background:#fff}
+.reference-home .brand-row{min-height:96px}
+.reference-home .brand-mark{border:0;border-radius:0;color:#174d75;transform:none;width:48px}
+.reference-home .brand-mark>span{font-size:38px;font-style:italic}
+.reference-home .brand-mark i{background:#78b15b;top:23px;right:-1px;width:32px}
+.reference-home .brand-copy strong{font-size:29px;color:#174d75;letter-spacing:.04em}
+.reference-home .brand-copy small{font-size:12px;color:#70a75a;letter-spacing:.13em}
+.reference-enquiries{display:flex;flex-direction:column;align-items:center;gap:6px;color:#202820;font-family:Arial,sans-serif;font-size:13px}
+.reference-enquiries>span{font-size:13px}
+.reference-enquiries div{display:flex;align-items:center;gap:14px;font-weight:700}
+.reference-enquiries a:hover{color:#69a852}
+.reference-enquiries i{height:18px;border-left:1px solid #b9b9b9}
+.reference-home .login-button{background:#064a77;border:4px solid #72b35a;box-shadow:none;border-radius:999px;padding:13px 28px;font:700 17px Arial,sans-serif;color:#fff}
+.reference-home .login-dot{display:none}
+.reference-home .main-nav{background:#69a852}
+.reference-home .nav-inner{width:min(1540px,calc(100% - 28px));gap:0;justify-content:space-between}
+.reference-home .nav-link{color:white;font:700 16px Arial,sans-serif;padding:15px 12px;white-space:nowrap}
+.reference-home .nav-link:hover,.reference-home .nav-link.active{background:#5b9747;color:white}
+.reference-home .dropdown{background:#fff;border-top:3px solid #174b36;box-shadow:0 10px 24px #173d3024}
+.reference-home .dropdown a{font:15px Arial,sans-serif;color:#27372d}
+.reference-home .team-hero{display:block;position:relative;height:min(590px,45vw);min-height:360px;overflow:hidden;background:#eee}
+.reference-home .team-hero img{width:100%;height:100%;display:block;object-fit:cover;object-position:center 42%}
+.reference-home .team-hero-caption{position:absolute;left:5%;bottom:22px;color:#fff;text-shadow:0 2px 8px #0008;font-size:15px;opacity:0;transition:opacity .2s}
+.reference-home .team-hero-caption small{display:block;font-size:13px}
+.reference-home .team-hero:hover .team-hero-caption{opacity:1}
+.reference-home .reference-intro{padding:70px 0 65px;text-align:center;background:#fff}
+.reference-home .reference-intro h1{font:700 clamp(34px,4vw,52px)/1.1 Garamond,Georgia,serif;color:#194a36;margin:16px auto;max-width:850px}
+.reference-home .reference-intro h1 em{font-style:normal;color:#69a852}
+.reference-home .reference-intro p{font-size:20px;line-height:1.6;max-width:780px;margin:0 auto 25px;color:#617267}
+.reference-home .reference-services{background:#f7f8f4}
+.reference-home .reference-cta{background:#174b36;color:#fff;padding:48px 0}
+.reference-home .reference-cta .container{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.reference-home .reference-cta h2{font:700 38px/1.1 Garamond,Georgia,serif;margin:10px 0}
+.reference-home .reference-cta p{font-size:18px;color:#e6eee6;margin-bottom:0}
+.reference-home .floating-contact{position:fixed;z-index:50;right:24px;bottom:22%;display:flex;flex-direction:column;gap:14px}
+.reference-home .floating-contact a{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;color:white;font:28px Arial,sans-serif;box-shadow:0 3px 12px #0002}
+.reference-home .float-whatsapp{background:#16bb73}.reference-home .float-phone{background:#e83c40}.reference-home .float-mail{background:#8eb4ff}
+.reference-home .section-kicker{color:#66974f;font-size:13px;letter-spacing:.12em;font-weight:700}
+.reference-home .button-primary{background:#69a852;color:#fff;border-radius:3px}
+.reference-home .button-outline{border-color:#69a852;color:#28583b;border-radius:3px}
+.reference-home .service-card{border-radius:0;background:white}
+.reference-home .service-card h3{font-family:Garamond,Georgia,serif}
+.reference-home .site-footer{background:#103b2c}
+.reference-home .footer-bottom a{margin-left:20px}
+@media(max-width:1100px){.reference-home .nav-link{padding:14px 7px;font-size:14px}.reference-enquiries div{gap:8px}.reference-home .brand-copy strong{font-size:24px}}
+@media(max-width:860px){.reference-home .brand-row{min-height:82px}.reference-enquiries{display:none}.reference-home .menu-toggle{display:block}.reference-home .main-nav .nav-inner{display:none}.reference-home .main-nav.open .nav-inner{display:flex}.reference-home .main-nav .nav-link{font-size:16px;padding:12px 15px}.reference-home .team-hero{height:58vw;min-height:280px}.reference-home .floating-contact{right:12px;bottom:18%}.reference-home .floating-contact a{width:48px;height:48px;font-size:22px}.reference-home .reference-cta .container{align-items:flex-start;flex-direction:column}}
