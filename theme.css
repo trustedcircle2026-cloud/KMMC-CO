@@ -169,3 +169,58 @@ body{color:#17324c}
   .site-header .brand-copy small{font-size:9px!important;letter-spacing:.035em!important}
   .site-header .login-button{font-size:12px!important;padding:8px 12px!important;border-width:2px!important}
 }
+
+
+/* Site-wide palette: navy blue, white and black */
+:root{
+  --green:#123f6b;
+  --green-dark:#082747;
+  --green-light:#315f8b;
+  --green-pale:#edf3f9;
+  --ink:#111827;
+  --muted:#4b5563;
+  --line:#d7dee7;
+}
+html,body{background:#fff!important;color:#111!important}
+body{--page-bg:#fff}
+h1,h2,h3,h4,h5,h6,.page-columns h2,.form-card h2,.process-grid h3,.values-grid h3,.legal-copy h2{color:#102f50!important}
+p,li,label,small,.page-columns p,.process-grid p,.values-grid p,.legal-copy p{color:#20252b}
+a{color:#123f6b}
+a:hover{color:#082747}
+.site-header{background:#fff!important;color:#111!important}
+.site-header .brand-copy strong{color:#123f6b!important}
+.site-header .brand-copy small{color:#123f6b!important}
+.site-header .reference-enquiries,.site-header .reference-enquiries a{color:#111}
+.site-header .login-button{background:#123f6b!important;border-color:#315f8b!important;color:#fff!important}
+.main-nav{background:#123f6b!important;color:#fff!important}
+.main-nav .nav-link{color:#fff!important}
+.main-nav .nav-link:hover,.main-nav .nav-link.active{background:#082747!important;color:#fff!important}
+.main-nav .dropdown{background:#fff!important;border-top:3px solid #123f6b!important}
+.main-nav .dropdown a{color:#111!important}
+.main-nav .dropdown a:hover{background:#edf3f9!important;color:#123f6b!important}
+.page-hero{background:linear-gradient(110deg,rgba(8,39,71,.96),rgba(18,63,107,.87)),url("https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1800&q=85") center/cover!important}
+.page-hero .section-kicker,.section-kicker{color:#123f6b!important}
+.page-hero .section-kicker{color:#dce8f5!important}
+.page-hero h1,.page-hero p{color:#fff!important}
+.page-hero h1 em{color:#dce8f5!important}
+.reference-home .reference-services,.reference-services{background:#f3f6fa!important}
+.reference-home .reference-cta,.reference-cta{background:#082747!important;color:#fff!important}
+.reference-home .reference-intro h1,.reference-intro h1{color:#123f6b!important}
+.reference-home .reference-intro h1 em,.reference-intro h1 em{color:#315f8b!important}
+.button-primary,.form-card button[type=submit],.button,.btn-primary{background:#123f6b!important;border-color:#123f6b!important;color:#fff!important}
+.button-outline{border-color:#123f6b!important;color:#123f6b!important;background:#fff!important}
+.service-card,.form-card,.content-card,.process-grid>div,.values-grid>div,.summary-card{background:#fff!important;border-color:#d7dee7!important}
+.service-card a,.feature-list a{color:#123f6b!important}
+.contact-info p{background:#f3f6fa!important;color:#111!important}
+.feature-list li{border-bottom-color:#d7dee7!important}
+.page-hero+.section,.page-content,.page-columns,.content-section{background:#fff!important}
+.site-footer{background:#071a2d!important;color:#fff!important}
+.site-footer h2,.site-footer h3,.site-footer p,.site-footer li,.site-footer a{color:#fff!important}
+.footer-bottom{border-top-color:#31465c!important}
+.badge,.pill,.tag{background:#edf3f9!important;color:#123f6b!important}
+.main-nav .chevron{display:none!important}
+@media(max-width:860px){
+  .main-nav .nav-inner{background:#123f6b!important}
+  .main-nav .nav-item{background:transparent!important}
+  .main-nav .dropdown{background:#fff!important}
+}
