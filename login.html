@@ -122,7 +122,7 @@
     form.addEventListener('submit',async event=>{
       event.preventDefault();if(!form.reportValidity())return;
       const role=roleInput.value,expected=roleData[role].apiRole,userName=username.value.trim(),userPassword=password.value;
-      if(!userName||!userPassword){setStatus('Enter your username and password.',true);return;}
+      if((role!=='admin'&&!userName)||!userPassword){setStatus(role==='admin'?'Enter the Admin password.':'Enter your username and password.',true);return;}
       submit.disabled=true;submit.textContent='Signing in…';setStatus('Checking your credentials. Please wait.');
       try{
         const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',role:expected,username:userName,password:userPassword})});
