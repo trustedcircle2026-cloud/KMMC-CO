@@ -100,7 +100,7 @@
     const roleData = {
       customer: {apiRole:'CLIENT',label:'Customer ID / Email',placeholder:'Enter user name',button:'Log In'},
       employee: {apiRole:'EMPLOYEE',label:'Employee ID / Work email',placeholder:'Enter employee ID',button:'Log In'},
-      admin: {apiRole:'ADMIN',label:'Admin ID / Official email',placeholder:'Enter administrator ID',button:'Log In'}
+      admin: {apiRole:'ADMIN',label:'Admin password',placeholder:'Enter admin password',button:'Log In'}
     };
     const tabs=document.querySelectorAll('.role-button');
     const roleInput=document.getElementById('selectedRole');
@@ -115,7 +115,7 @@
       const data=roleData[role]||roleData.customer;
       roleInput.value=role;
       tabs.forEach(tab=>tab.setAttribute('aria-pressed',String(tab.dataset.role===role)));
-      usernameLabel.textContent=data.label;username.placeholder=data.placeholder;submit.textContent=data.button;
+      usernameLabel.textContent=data.label;username.placeholder=data.placeholder;submit.textContent=data.button;\n      const isAdmin=role==='admin';document.getElementById('usernameField').hidden=isAdmin;username.required=!isAdmin;if(isAdmin)username.value='';
       setStatus('Enter your account details to continue.');
     }
     tabs.forEach(tab=>tab.addEventListener('click',()=>setRole(tab.dataset.role)));
@@ -125,7 +125,7 @@
       if(!userName||!userPassword){setStatus('Enter your username and password.',true);return;}
       submit.disabled=true;submit.textContent='Signing in…';setStatus('Checking your credentials. Please wait.');
       try{
-        const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',username:userName,password:userPassword})});
+        const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',role:expected,username:userName,password:userPassword})});
         if(!response.ok)throw new Error('Authentication service returned HTTP '+response.status+'.');
         const result=await response.json();
         if(!result||result.ok!==true)throw new Error((result&&result.error)||'Login failed. Check your credentials.');
