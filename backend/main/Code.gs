@@ -60,6 +60,7 @@ function route_(a,q){
     case 'updateClient':return updateClient_(auth_(q),q);
     case 'deleteClient':return deleteClient_(auth_(q),q);
     case 'bulkImportClients':return bulkImportClients_(auth_(q),q);
+    case 'bulkImportEmployees':return bulkImportEmployees_(auth_(q),q);
     case 'createEmployee':return createEmployee_(auth_(q),q);
     case 'updateEmployee':return updateEmployee_(auth_(q),q);
     case 'deleteEmployee':return deleteEmployee_(auth_(q),q);
