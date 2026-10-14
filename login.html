@@ -175,7 +175,7 @@
         sessionStorage.setItem('kmmc_session_token',data.token);
         sessionStorage.setItem('kmmc_session_expires_at',data.expiresAt||'');
         sessionStorage.setItem('kmmc_user',JSON.stringify(user));
-        password.value='';setStatus('Login successful. Opening your workspace…');window.location.href='portal.html';
+        password.value='';setStatus('Login successful. Opening your workspace…');window.location.href=user.role==='EMPLOYEE'?'EmployeePortal.html':'portal.html';
       }catch(error){
         const message=String(error&&error.message||'Unable to sign in.');
         if(/Failed to fetch|NetworkError|Load failed/i.test(message)){

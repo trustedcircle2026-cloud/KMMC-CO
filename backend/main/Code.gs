@@ -14,8 +14,9 @@ const KMMC = {
     employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt'],r:['ADMIN']},
 
 
-    tasks:{s:'DB_TASKS',h:['id','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
-    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','startTime','endTime','minutes','description','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','description','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    workdone:{s:'DB_WORKDONE',h:['id','employeeId','workDate','jobNumber','taskId','clientId','summary','minutes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     attendance:{s:'DB_ATTENDANCE',h:['id','employeeId','workDate','checkIn','checkOut','minutes','status','note','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     leave:{s:'DB_LEAVE',h:['id','employeeId','fromDate','toDate','leaveType','reason','status','approvedBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     documents:{s:'DB_DOCUMENTS',h:['id','clientId','employeeId','taskId','invoiceId','name','mimeType','driveFileId','driveUrl','category','visibility','uploadedBy','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
@@ -67,6 +68,7 @@ function route_(a,q){
     case 'setUserStatus':return setUserStatus_(auth_(q),q);
     case 'clockIn':return clockIn_(auth_(q));
     case 'clockOut':return clockOut_(auth_(q));
+    case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
     case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
     case 'completeTask':return taskStatus_(auth_(q),q,'COMPLETED');
     case 'uploadDocument':return uploadDoc_(auth_(q),q);
@@ -165,7 +167,7 @@ function setUserStatus_(admin,q){
   u.status=st;u.updatedAt=iso_();write_('users',u.id,u);return pubUser_(u);
 }
 function dashboard_(u){
-  const role=u.role, keys=role==='ADMIN'?Object.keys(KMMC.M):role==='CLIENT'?['tasks','documents','invoices','collections','messages','notifications']:['clients','tasks','time','attendance','leave','documents','invoices','collections','expenses','messages','notifications'];
+  const role=u.role, keys=role==='ADMIN'?Object.keys(KMMC.M):role==='CLIENT'?['tasks','documents','invoices','collections','messages','notifications']:['clients','tasks','time','workdone','attendance','leave','documents','invoices','collections','expenses','messages','notifications'];
   const counts={};keys.forEach(k=>counts[k]=rows_(k).filter(r=>visible_(u,k,r)).length);
   return {user:pubUser_(u),counts,outstanding:outstandingSummary_(u)};
 }
@@ -179,7 +181,7 @@ function get_(u,q){const k=module_(q.module);authorize_(u,k,'read');const r=rows
 function create_(u,q){
   const k=module_(q.module);authorize_(u,k,'create');if(k==='users')throw Error('Use createUser.');
   const r=sanitize_(k,q.record||{});ownership_(u,k,r,false);const now=iso_();r.id=uid_();r.createdAt=now;if(KMMC.M[k].h.includes('updatedAt'))r.updatedAt=now;
-  if(k==='invoices')invoiceMath_(r);if(k==='collections')collectionMath_(r);
+  if(k==='tasks'&&!r.jobNumber)r.jobNumber='KMMC-JOB-'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMdd')+'-'+r.id.slice(0,6).toUpperCase();if(k==='invoices')invoiceMath_(r);if(k==='collections')collectionMath_(r);
   append_(k,r);activity_(u,'CREATE',k,r.id,'');return publicRec_(k,r);
 }
 function update_(u,q){
@@ -212,7 +214,7 @@ function visible_(u,k,r){
   if(k==='users')return String(r.id)===String(u.id);
   if(k==='employees')return false;
   if(k==='clients')return !r.assignedEmployeeId||String(r.assignedEmployeeId)===String(u.employeeId);
-  if(k==='tasks'||k==='time'||k==='attendance'||k==='leave')return String(r.employeeId)===String(u.employeeId);
+  if(k==='tasks'||k==='time'||k==='workdone'||k==='attendance'||k==='leave')return String(r.employeeId)===String(u.employeeId);
   if(['invoices','collections','documents'].includes(k)){
     const c=rows_('clients').find(x=>x.id===r.clientId);return !!c&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId));
   }
@@ -225,7 +227,7 @@ function ownership_(u,k,r,isUpdate){
     if(['messages','documents'].includes(k))r.clientId=u.clientId;
   }
   if(u.role==='EMPLOYEE'){
-    if(['time','attendance','leave'].includes(k)){if(r.employeeId&&String(r.employeeId)!==String(u.employeeId))throw Error('Cannot edit another employee.');r.employeeId=u.employeeId;}
+    if(['time','attendance','leave','workdone'].includes(k)){if(r.employeeId&&String(r.employeeId)!==String(u.employeeId))throw Error('Cannot edit another employee.');r.employeeId=u.employeeId;}
     if(k==='tasks'){if(r.employeeId&&String(r.employeeId)!==String(u.employeeId))throw Error('Cannot assign another employee.');if(!isUpdate)r.employeeId=u.employeeId;}
   }
 }
@@ -242,6 +244,7 @@ function clockOut_(u){
   if(!r)throw Error('No open clock-in record.');
   r.checkOut=iso_();r.minutes=Math.max(0,Math.round((new Date(r.checkOut)-new Date(r.checkIn))/60000));r.updatedAt=iso_();write_('attendance',r.id,r);return r;
 }
+function setTaskStatus_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
 function taskStatus_(u,q,status){
   const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
   if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
