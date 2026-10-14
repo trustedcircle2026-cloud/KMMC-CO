@@ -20,7 +20,7 @@ const KMMC = {
     leave:{s:'DB_LEAVE',h:['id','employeeId','fromDate','toDate','leaveType','reason','status','approvedBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     documents:{s:'DB_DOCUMENTS',h:['id','clientId','employeeId','taskId','invoiceId','name','mimeType','driveFileId','driveUrl','category','visibility','uploadedBy','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     invoices:{s:'DB_INVOICES',h:['id','invoiceNo','clientId','invoiceDate','dueDate','description','subtotal','taxAmount','discount','totalAmount','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
-    collections:{s:'DB_COLLECTIONS',h:['id','receiptNo','clientId','invoiceId','collectionDate','amount','mode','referenceNo','notes','receivedBy','status','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    collections:{s:'DB_COLLECTIONS',h:['id','receiptNo','clientId','invoiceId','collectionDate','amount','mode','referenceNo','screenshotUrl','screenshotDriveFileId','notes','receivedBy','status','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     expenses:{s:'DB_EXPENSES',h:['id','expenseDate','category','description','amount','paidTo','paymentMode','referenceNo','employeeId','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     messages:{s:'DB_MESSAGES',h:['id','fromUserId','toUserId','clientId','subject','message','status','createdAt','readAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     notifications:{s:'DB_NOTIFICATIONS',h:['id','userId','title','message','type','readAt','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
