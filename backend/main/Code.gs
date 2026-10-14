@@ -10,7 +10,7 @@ const KMMC = {
   SESSION_HOURS:12, MAX_PAGE:200,
   M:{
     users:{s:'DB_USERS',h:['id','username','passwordHash','salt','role','name','email','phone','clientId','employeeId','status','mustChangePassword','createdAt','updatedAt','lastLoginAt'],r:['ADMIN']},
-    clients:{s:'DB_CLIENTS',h:['id','clientCode','name','pan','email','phone','gstin','address','city','state','pincode','majorHeads','otherWork','referenceName','assignedEmployeeId','openingBalance','status','portalUsername','notes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    clients:{s:'DB_CLIENTS',h:['id','clientCode','name','pan','email','phone','gstin','address','city','state','pincode','majorHeads','otherWork','referenceName','assignedEmployeeId','openingBalance','status','portalUsername','notes','driveFolderId','driveFolderUrl','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt'],r:['ADMIN']},
 
 
@@ -19,12 +19,12 @@ const KMMC = {
     workdone:{s:'DB_WORKDONE',h:['id','employeeId','workDate','jobNumber','taskId','clientId','summary','minutes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     attendance:{s:'DB_ATTENDANCE',h:['id','employeeId','workDate','checkIn','checkOut','minutes','status','note','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     leave:{s:'DB_LEAVE',h:['id','employeeId','fromDate','toDate','leaveType','reason','status','approvedBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
-    documents:{s:'DB_DOCUMENTS',h:['id','clientId','employeeId','taskId','invoiceId','name','mimeType','driveFileId','driveUrl','category','visibility','uploadedBy','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    documents:{s:'DB_DOCUMENTS',h:['id','clientId','employeeId','taskId','invoiceId','name','mimeType','driveFileId','driveUrl','downloadUrl','folderUrl','pan','majorHead','year','month','category','visibility','uploadedBy','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     invoices:{s:'DB_INVOICES',h:['id','invoiceNo','clientId','invoiceDate','dueDate','description','subtotal','taxAmount','discount','totalAmount','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     collections:{s:'DB_COLLECTIONS',h:['id','receiptNo','clientId','invoiceId','collectionDate','amount','mode','referenceNo','screenshotUrl','screenshotDriveFileId','notes','receivedBy','status','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     expenses:{s:'DB_EXPENSES',h:['id','expenseDate','category','description','amount','paidTo','paymentMode','referenceNo','employeeId','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
-    messages:{s:'DB_MESSAGES',h:['id','fromUserId','toUserId','clientId','subject','message','status','createdAt','readAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
-    notifications:{s:'DB_NOTIFICATIONS',h:['id','userId','title','message','type','readAt','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    messages:{s:'DB_MESSAGES',h:['id','fromUserId','toUserId','clientId','subject','message','status','createdAt','readAt'],r:['ADMIN','EMPLOYEE']},
+    notifications:{s:'DB_NOTIFICATIONS',h:['id','userId','title','message','type','relatedId','readAt','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     activity:{s:'DB_ACTIVITY_LOG',h:['id','userId','username','role','action','module','recordId','details','createdAt'],r:['ADMIN'],ro:true},
     loginlog:{s:'DB_LOGIN_LOG',h:['id','userId','username','result','createdAt'],r:['ADMIN'],ro:true}
   }
@@ -72,6 +72,11 @@ function route_(a,q){
     case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
     case 'completeTask':return taskStatus_(auth_(q),q,'COMPLETED');
     case 'uploadDocument':return uploadDoc_(auth_(q),q);
+    case 'chatContacts':return chatContacts_(auth_(q));
+    case 'getMessages':return getMessages_(auth_(q),q);
+    case 'sendMessage':return sendMessage_(auth_(q),q);
+    case 'markMessagesRead':return markMessagesRead_(auth_(q),q);
+    case 'setLeaveStatus':return setLeaveStatus_(auth_(q),q);
     case 'createInvoice':return createInvoice_(auth_(q),q);
     case 'recordCollection':return recordCollection_(auth_(q),q);
     case 'clientOutstanding':return outstanding_(auth_(q),q);
@@ -93,6 +98,7 @@ function setupKmmcBackend(){
     let sh=ss.getSheetByName(x[0])||ss.insertSheet(x[0]);if(!sh.getLastRow())sh.appendRow(x[1]);sh.setFrozenRows(1);
   });
   const p=PropertiesService.getScriptProperties();
+  if(p.getProperty('KMMC_DOCUMENTS_FOLDER_ID'))ensureClientDocumentationRoot_();
   if(!p.getProperty(KMMC.SECRET_PROP))p.setProperty(KMMC.SECRET_PROP,Utilities.getUuid()+Utilities.getUuid());
   return 'Database tabs initialized. Next run setupKmmcAdminFromProperties().';
 }
@@ -179,9 +185,9 @@ function list_(u,q){
 }
 function get_(u,q){const k=module_(q.module);authorize_(u,k,'read');const r=rows_(k).find(x=>x.id===String(q.id));if(!r||!visible_(u,k,r))throw Error('Record not found/access denied.');return publicRec_(k,r);}
 function create_(u,q){
-  const k=module_(q.module);authorize_(u,k,'create');if(k==='users')throw Error('Use createUser.');
+  const k=module_(q.module);authorize_(u,k,'create');if(k==='users')throw Error('Use createUser.');if(k==='documents')throw Error('Use uploadDocument to securely store files in Drive.');if(k==='messages')throw Error('Use sendMessage to create a chat message.');
   const r=sanitize_(k,q.record||{});ownership_(u,k,r,false);const now=iso_();r.id=uid_();r.createdAt=now;if(KMMC.M[k].h.includes('updatedAt'))r.updatedAt=now;
-  if(k==='tasks'&&!r.jobNumber)r.jobNumber='KMMC-JOB-'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMdd')+'-'+r.id.slice(0,6).toUpperCase();if(k==='invoices')invoiceMath_(r);if(k==='collections')collectionMath_(r);
+  if(k==='tasks'&&!r.jobNumber)r.jobNumber='KMMC-JOB-'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMdd')+'-'+r.id.slice(0,6).toUpperCase();if(k==='leave'&&u.role==='EMPLOYEE'){r.status='PENDING';r.approvedBy='';}if(k==='invoices')invoiceMath_(r);if(k==='collections')collectionMath_(r);
   append_(k,r);activity_(u,'CREATE',k,r.id,'');return publicRec_(k,r);
 }
 function update_(u,q){
@@ -213,10 +219,12 @@ function visible_(u,k,r){
   }
   if(k==='users')return String(r.id)===String(u.id);
   if(k==='employees')return false;
+  if(k==='messages')return String(r.fromUserId)===String(u.id)||String(r.toUserId)===String(u.id);
+  if(k==='notifications')return String(r.userId)===String(u.id);
   if(k==='clients')return !r.assignedEmployeeId||String(r.assignedEmployeeId)===String(u.employeeId);
   if(k==='tasks'||k==='time'||k==='workdone'||k==='attendance'||k==='leave')return String(r.employeeId)===String(u.employeeId);
   if(['invoices','collections','documents'].includes(k)){
-    const c=rows_('clients').find(x=>x.id===r.clientId);return !!c&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId));
+    const c=rows_('clients').find(x=>x.id===r.clientId);if(!c)return false;if(k==='documents')return !!c.assignedEmployeeId&&String(c.assignedEmployeeId)===String(u.employeeId);return !c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId);
   }
   return true;
 }
@@ -244,22 +252,39 @@ function clockOut_(u){
   if(!r)throw Error('No open clock-in record.');
   r.checkOut=iso_();r.minutes=Math.max(0,Math.round((new Date(r.checkOut)-new Date(r.checkIn))/60000));r.updatedAt=iso_();write_('attendance',r.id,r);return r;
 }
-function setTaskStatus_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
+function setTaskStatus_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'&&r.clientId)ensureClientFolder_(r.clientId);write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
 function taskStatus_(u,q,status){
   const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
   if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
-  r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();write_('tasks',r.id,r);return r;
+  r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'&&r.clientId)ensureClientFolder_(r.clientId);write_('tasks',r.id,r);return r;
 }
 function uploadDoc_(u,q){
-  authorize_(u,'documents','create');const folderId=PropertiesService.getScriptProperties().getProperty('KMMC_DOCUMENTS_FOLDER_ID');
-  if(!folderId)throw Error('Set KMMC_DOCUMENTS_FOLDER_ID in Script Properties.');
-  const name=String(q.name||'document').slice(0,180),mime=String(q.mimeType||'application/octet-stream'),b64=String(q.base64Data||'');
-  if(!b64||b64.length>8*1024*1024)throw Error('File required; max encoded size is about 8 MB.');
-  const clientId=String(q.clientId||u.clientId||'');if(u.role==='CLIENT'&&clientId!==String(u.clientId))throw Error('Client access denied.');
-  const blob=Utilities.newBlob(Utilities.base64Decode(b64.replace(/^data:[^,]*,/,'')),mime,name);
-  const f=DriveApp.getFolderById(folderId).createFile(blob),r={id:uid_(),clientId,employeeId:String(q.employeeId||u.employeeId||''),taskId:String(q.taskId||''),invoiceId:String(q.invoiceId||''),name,mimeType:mime,driveFileId:f.getId(),driveUrl:f.getUrl(),category:String(q.category||'GENERAL'),visibility:String(q.visibility||'PRIVATE'),uploadedBy:u.id,createdAt:iso_()};
-  append_('documents',r);activity_(u,'UPLOAD','documents',r.id,name);return r;
+  authorize_(u,'documents','create');const parentId=PropertiesService.getScriptProperties().getProperty('KMMC_DOCUMENTS_FOLDER_ID');if(!parentId)throw Error('Set KMMC_DOCUMENTS_FOLDER_ID to the provided Google Drive parent folder ID in Script Properties.');
+  const name=String(q.name||'document').slice(0,180),mime=String(q.mimeType||'application/octet-stream'),b64=String(q.base64Data||'');if(!b64||b64.length>8*1024*1024)throw Error('File required; max encoded size is about 8 MB.');
+  const category=String(q.category||'GENERAL'),clientId=String(q.clientId||u.clientId||'');if(u.role==='CLIENT'&&clientId!==String(u.clientId))throw Error('Client access denied.');
+  let folder,client=null,majorHead='',year='',month='',folderUrl='';
+  if(category==='COLLECTION_SCREENSHOT'){folder=DriveApp.getFolderById(parentId);}else{
+    if(!clientId)throw Error('Select a client before uploading.');client=rows_('clients').find(x=>String(x.id)===clientId);if(!client)throw Error('Client not found.');
+    if(u.role==='EMPLOYEE'&&String(client.assignedEmployeeId)!==String(u.employeeId))throw Error('You can upload documents only for a client assigned to you.');
+    const taskId=String(q.taskId||'');if(!taskId)throw Error('Select an assigned task that has been started before uploading client documents.');
+    const task=rows_('tasks').find(x=>String(x.id)===taskId);if(!task||String(task.clientId)!==clientId)throw Error('Selected task does not belong to this client.');
+    if(u.role==='EMPLOYEE'&&String(task.employeeId)!==String(u.employeeId))throw Error('This task is not assigned to you.');
+    if(!['IN_PROGRESS','PAUSED','COMPLETED'].includes(String(task.status||'').toUpperCase()))throw Error('Start the assigned task before uploading documents.');
+    majorHead=String(q.majorHead||'').trim();if(!majorHead)throw Error('Select a Major Head.');year=String(q.year||'').trim();month=String(q.month||'').trim();
+    if(year&&!/^20\d{2}$/.test(year))throw Error('Year must be a valid four-digit year.');if(month&&!/^(0[1-9]|1[0-2])$/.test(month))throw Error('Select a valid month.');
+    folder=getOrCreateChildFolder_(ensureClientFolder_(clientId),majorHead);if(year)folder=getOrCreateChildFolder_(folder,year);if(month)folder=getOrCreateChildFolder_(folder,month);folderUrl=folder.getUrl();
+  }
+  const blob=Utilities.newBlob(Utilities.base64Decode(b64.replace(/^data:[^,]*,/,'')),mime,name),f=folder.createFile(blob);
+  const r={id:uid_(),clientId,employeeId:String(q.employeeId||u.employeeId||''),taskId:String(q.taskId||''),invoiceId:String(q.invoiceId||''),name,mimeType:mime,driveFileId:f.getId(),driveUrl:f.getUrl(),downloadUrl:'https://drive.google.com/uc?export=download&id='+f.getId(),folderUrl,pan:client?String(client.pan||''):'',majorHead,year,month,category,visibility:String(q.visibility||'PRIVATE'),uploadedBy:u.id,createdAt:iso_()};append_('documents',r);activity_(u,'UPLOAD','documents',r.id,name);return r;
 }
+function ensureClientDocumentationRoot_(){const parentId=PropertiesService.getScriptProperties().getProperty('KMMC_DOCUMENTS_FOLDER_ID');if(!parentId)throw Error('Set KMMC_DOCUMENTS_FOLDER_ID in Script Properties.');return getOrCreateChildFolder_(DriveApp.getFolderById(parentId),'Client Documentation');}
+function getOrCreateChildFolder_(parent,name){const clean=String(name||'').replace(/[\\/:*?"<>|]/g,'-').trim().slice(0,120)||'General';const it=parent.getFoldersByName(clean);return it.hasNext()?it.next():parent.createFolder(clean);}
+function ensureClientFolder_(clientId){const client=rows_('clients').find(x=>String(x.id)===String(clientId));if(!client)throw Error('Client not found.');if(client.driveFolderId){try{return DriveApp.getFolderById(client.driveFolderId);}catch(e){}}const folder=getOrCreateChildFolder_(ensureClientDocumentationRoot_(),String(client.clientCode||client.id)+' - '+String(client.name||'Client'));client.driveFolderId=folder.getId();client.driveFolderUrl=folder.getUrl();client.updatedAt=iso_();write_('clients',client.id,client);activity_({id:'SYSTEM',username:'SYSTEM',role:'SYSTEM'},'CREATE_CLIENT_FOLDER','clients',client.id,folder.getName());return folder;}
+function chatContacts_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');return rows_('users').filter(x=>['ADMIN','EMPLOYEE'].includes(String(x.role))&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE'&&String(x.id)!==String(u.id)).map(x=>({id:x.id,name:x.name||x.username,role:x.role,username:x.username}));}
+function getMessages_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');let a=rows_('messages').filter(x=>u.role==='ADMIN'||String(x.fromUserId)===String(u.id)||String(x.toUserId)===String(u.id));const peer=String(q.withUserId||'');if(peer)a=a.filter(x=>(String(x.fromUserId)===String(u.id)&&String(x.toUserId)===peer)||(String(x.toUserId)===String(u.id)&&String(x.fromUserId)===peer));a.sort((x,y)=>String(x.createdAt).localeCompare(String(y.createdAt)));return a.slice(-300).map(x=>publicRec_('messages',x));}
+function sendMessage_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');const to=String(q.toUserId||'');if(!to||to===String(u.id))throw Error('Select another employee or admin.');const recipient=rows_('users').find(x=>String(x.id)===to&&['ADMIN','EMPLOYEE'].includes(String(x.role))&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE');if(!recipient)throw Error('Recipient not found or inactive.');const message=String(q.message||'').trim();if(!message)throw Error('Message cannot be empty.');if(message.length>4000)throw Error('Message must be 4,000 characters or fewer.');const r={id:uid_(),fromUserId:u.id,toUserId:to,clientId:'',subject:'Chat',message,status:'SENT',createdAt:iso_(),readAt:''};append_('messages',r);rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:to,title:'New message from '+String(u.name||u.username),message:message.slice(0,500),type:'CHAT_MESSAGE',relatedId:r.id,readAt:'',createdAt:iso_()});activity_(u,'SEND_MESSAGE','messages',r.id,'to:'+to);return publicRec_('messages',r);}
+function markMessagesRead_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');const peer=String(q.withUserId||'');const ids=[];rows_('messages').forEach(r=>{if(String(r.toUserId)===String(u.id)&&(!peer||String(r.fromUserId)===peer)&&r.status!=='READ'){r.status='READ';r.readAt=iso_();write_('messages',r.id,r);ids.push(r.id);}});if(ids.length){const wanted={};ids.forEach(id=>wanted[id]=true);rows_('notifications').filter(n=>String(n.userId)===String(u.id)&&wanted[String(n.relatedId)]).forEach(n=>{n.readAt=iso_();write_('notifications',n.id,n);});}return {marked:ids.length};}
+function setLeaveStatus_(u,q){needAdmin_(u);const r=rows_('leave').find(x=>String(x.id)===String(q.id));if(!r)throw Error('Leave request not found.');const status=String(q.status||'').toUpperCase();if(!['APPROVED','REJECTED'].includes(status))throw Error('Status must be APPROVED or REJECTED.');r.status=status;r.approvedBy=u.id;r.updatedAt=iso_();write_('leave',r.id,r);const emp=rows_('employees').find(x=>String(x.id)===String(r.employeeId));const recipient=emp?rows_('users').find(x=>String(x.employeeId)===String(emp.id)):null;if(recipient)rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:recipient.id,title:'Leave request '+status.toLowerCase(),message:'Your leave request from '+r.fromDate+' to '+r.toDate+' was '+status.toLowerCase()+'.',type:'LEAVE_STATUS',relatedId:r.id,readAt:'',createdAt:iso_()});activity_(u,'LEAVE_STATUS','leave',r.id,status);return r;}
 function createInvoice_(u,q){
   authorize_(u,'invoices','create');const r=sanitize_('invoices',q.record||{});if(!r.clientId)throw Error('clientId required.');
   if(u.role==='CLIENT'&&String(r.clientId)!==String(u.clientId))throw Error('Access denied.');
