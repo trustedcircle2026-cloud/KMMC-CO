@@ -295,3 +295,19 @@ a:hover{color:#082747}
 .site-header .reference-enquiries a{color:#fff!important}
 .site-header .reference-enquiries a:hover{color:#d8e8f8!important}
 .site-header .login-button{background:#174d75!important;border-color:#315f8b!important;color:#fff!important}
+
+
+/* Use the updated fitted CA mark consistently in headers, login, portal and footer */
+.brand-logo,
+.brand-footer .brand-logo,
+.brand img,
+img[src*="CA%20Logo.png"],
+img[src*="CA Logo.png"]{
+  border-radius:50%!important;
+  object-fit:contain!important;
+  aspect-ratio:1/1;
+  background:#fff;
+  overflow:hidden;
+}
+.brand-logo{flex-shrink:0}
+.site-header .brand-logo{object-fit:contain!important}
