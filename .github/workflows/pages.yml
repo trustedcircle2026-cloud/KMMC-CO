@@ -12,7 +12,9 @@ permissions:
 
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  # Do not cancel an active Pages deployment: cancelling mid-deployment can leave
+  # GitHub Pages with a stale deployment marked as in progress.
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -34,4 +36,4 @@ jobs:
 
       - name: Deploy website
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
