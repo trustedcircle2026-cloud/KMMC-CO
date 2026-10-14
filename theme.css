@@ -275,3 +275,23 @@ a:hover{color:#082747}
 .portal-help a{color:#fff;font:700 12px Arial,sans-serif;text-decoration:underline}
 @media(max-width:850px){.portal-layout{grid-template-columns:1fr}.portal-side{min-height:0}.portal-login-intro{padding:34px 0 26px}}
 @media(max-width:540px){.portal-layout{width:calc(100% - 28px);padding-top:20px;gap:20px}.portal-role-tabs{gap:6px}.portal-role{padding:12px 9px;min-height:125px}.portal-role.active{padding:11px 8px}.portal-role strong{font-size:14px}.portal-role small{font-size:10px}.portal-login-form{padding:20px}.portal-side{padding:24px}.portal-form-options{align-items:flex-start;flex-direction:column}}
+
+
+/* Brand treatment: circular CA mark and white firm name on navy */
+.site-header,
+.reference-home .site-header{background:#061d34!important;color:#fff!important}
+.site-header .brand-logo{
+  border-radius:50%!important;
+  object-fit:cover!important;
+  background:#fff!important;
+  overflow:hidden;
+  border:2px solid rgba(255,255,255,.9);
+}
+.site-header .brand-copy strong,
+.site-header .brand-copy small,
+.reference-home .brand-copy strong,
+.reference-home .brand-copy small{color:#fff!important}
+.site-header .reference-enquiries,
+.site-header .reference-enquiries a{color:#fff!important}
+.site-header .reference-enquiries a:hover{color:#d8e8f8!important}
+.site-header .login-button{background:#174d75!important;border-color:#315f8b!important;color:#fff!important}
