@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CA India circular logo">
-<defs><filter id="shadow" x="-15%" y="-15%" width="130%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#172b3a" flood-opacity=".22"/></filter><clipPath id="badge"><circle cx="256" cy="256" r="230"/></clipPath></defs>
-<circle cx="256" cy="256" r="230" fill="#fff" stroke="#d6dbe1" stroke-width="8" filter="url(#shadow)"/>
-<g clip-path="url(#badge)">
-<g transform="translate(55 35) scale(.79)">
-<g fill="none" stroke="#1b5d8b" stroke-linecap="round" stroke-linejoin="round"><path d="M244 116H195C114 116 62 170 62 245s55 126 126 126c29 0 43-10 57-36l94-181c8-15 20-15 28 1l95 194" stroke-width="25"/><path d="M286 151l78 158" stroke-width="7"/></g>
-<path d="M246 247L422 194 271 270 287 294 257 309Z" fill="#f47721"/><path d="M278 280L460 217 309 299 322 323 293 339Z" fill="#48b649"/>
-<text x="256" y="434" fill="#1b5d8b" font-family="Arial,Helvetica,sans-serif" font-size="64" letter-spacing="16" text-anchor="middle">INDIA</text>
-</g></g></svg>
