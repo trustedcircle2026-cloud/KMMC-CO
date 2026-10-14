@@ -277,24 +277,36 @@ a:hover{color:#082747}
 @media(max-width:540px){.portal-layout{width:calc(100% - 28px);padding-top:20px;gap:20px}.portal-role-tabs{gap:6px}.portal-role{padding:12px 9px;min-height:125px}.portal-role.active{padding:11px 8px}.portal-role strong{font-size:14px}.portal-role small{font-size:10px}.portal-login-form{padding:20px}.portal-side{padding:24px}.portal-form-options{align-items:flex-start;flex-direction:column}}
 
 
-/* Brand treatment: circular CA mark and white firm name on navy */
+/* Main website masthead: white background, navy firm identity, black utility text */
 .site-header,
-.reference-home .site-header{background:#061d34!important;color:#fff!important}
+.reference-home .site-header{
+  background:#fff!important;
+  color:#000!important;
+  border-bottom:1px solid #e5e7eb;
+}
 .site-header .brand-logo{
   border-radius:50%!important;
-  object-fit:cover!important;
+  object-fit:contain!important;
   background:#fff!important;
   overflow:hidden;
-  border:2px solid rgba(255,255,255,.9);
+  border:2px solid #e5e7eb;
 }
 .site-header .brand-copy strong,
 .site-header .brand-copy small,
 .reference-home .brand-copy strong,
-.reference-home .brand-copy small{color:#fff!important}
+.reference-home .brand-copy small{
+  color:#123f6b!important;
+}
 .site-header .reference-enquiries,
-.site-header .reference-enquiries a{color:#fff!important}
-.site-header .reference-enquiries a:hover{color:#d8e8f8!important}
-.site-header .login-button{background:#174d75!important;border-color:#315f8b!important;color:#fff!important}
+.site-header .reference-enquiries a{
+  color:#000!important;
+}
+.site-header .reference-enquiries a:hover{color:#123f6b!important}
+.site-header .login-button{
+  background:#fff!important;
+  border:2px solid #123f6b!important;
+  color:#000!important;
+}
 
 
 /* Use the updated fitted CA mark consistently in headers, login, portal and footer */
