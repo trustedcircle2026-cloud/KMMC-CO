@@ -4,7 +4,7 @@
     <header class="site-header">
       <div class="container brand-row">
         <a class="brand" href="index.html" aria-label="K Mahesh Manickham and Co. Chartered Accountants home">
-          <img class="brand-logo" src="assets/images/ca-india-centered.svg" alt="K Mahesh Manickham and Co. Chartered Accountants">
+          <img class="brand-logo" src="assets/images/CA%20Logo.png" alt="K Mahesh Manickham and Co. Chartered Accountants">
           <span class="brand-copy"><strong>K Mahesh Manickham and Co.</strong><small>CHARTERED ACCOUNTANTS</small></span>
         </a>
         <div class="reference-enquiries"><span>Business Enquiries</span><div><a href="contact.html">Contact our office</a><i></i><a href="contact.html">Send an enquiry</a><i></i><a href="careers.html">Careers</a></div></div>
