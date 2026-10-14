@@ -259,7 +259,7 @@ function taskStatus_(u,q,status){
   r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'&&r.clientId)ensureClientFolder_(r.clientId);write_('tasks',r.id,r);return r;
 }
 function uploadDoc_(u,q){
-  authorize_(u,'documents','create');const parentId=PropertiesService.getScriptProperties().getProperty('KMMC_DOCUMENTS_FOLDER_ID');if(!parentId)throw Error('Set KMMC_DOCUMENTS_FOLDER_ID to the provided Google Drive parent folder ID in Script Properties.');
+  authorize_(u,'documents','create');const parentId=PropertiesService.getScriptProperties().getProperty('KMMC_DOCUMENTS_FOLDER_ID');if(!parentId)throw Error('Set KMMC_DOCUMENTS_FOLDER_ID to the provided Google Drive parent folder ID in Script Properties.');if(u.role==='CLIENT'&&String(q.category||'GENERAL')!=='COLLECTION_SCREENSHOT')throw Error('Client document uploads are not enabled. Please contact your assigned employee.');
   const name=String(q.name||'document').slice(0,180),mime=String(q.mimeType||'application/octet-stream'),b64=String(q.base64Data||'');if(!b64||b64.length>8*1024*1024)throw Error('File required; max encoded size is about 8 MB.');
   const category=String(q.category||'GENERAL'),clientId=String(q.clientId||u.clientId||'');if(u.role==='CLIENT'&&clientId!==String(u.clientId))throw Error('Client access denied.');
   let folder,client=null,majorHead='',year='',month='',folderUrl='';
