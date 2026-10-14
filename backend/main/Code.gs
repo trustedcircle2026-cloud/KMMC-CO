@@ -343,7 +343,7 @@ function sheet_(name){const s=db_().getSheetByName(name);if(!s)throw Error('Miss
 function rows_(k){return rawRows_(KMMC.M[k].s);}
 function rawRows_(name){
   const v=sheet_(name).getDataRange().getValues();if(v.length<2)return [];
-  const h=v[0].map(String);return v.slice(1).filter(r=>r.some(x=>x!==''&&x!=null)).map(r=>{const o={};h.forEach((x,i)=>o[x]=cell_(r[i]));return o;});
+  const h=v[0].map(String),dateOnly=['workDate','startDate','dueDate','fromDate','toDate','joiningDate','dob','invoiceDate','collectionDate','expenseDate'];return v.slice(1).filter(r=>r.some(x=>x!==''&&x!=null)).map(r=>{const o={};h.forEach((x,i)=>{const value=r[i];o[x]=value instanceof Date&&dateOnly.includes(x)?Utilities.formatDate(value,'Asia/Kolkata','yyyy-MM-dd'):cell_(value);});return o;});
 }
 function append_(k,r){rawAppend_(KMMC.M[k].s,r);}
 function rawAppend_(name,r){const sh=sheet_(name),h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];sh.appendRow(h.map(k=>r[k]==null?'':r[k]));}
