@@ -276,7 +276,7 @@ function uploadDoc_(u,q){
   let folder,client=null,majorHead='',year='',month='',folderUrl='';
   if(category==='COLLECTION_SCREENSHOT'){folder=DriveApp.getFolderById(parentId);}else{
     if(!clientId)throw Error('Select a client before uploading.');client=rows_('clients').find(x=>String(x.id)===clientId);if(!client)throw Error('Client not found.');
-    if(u.role==='EMPLOYEE'&&String(client.assignedEmployeeId)!==String(u.employeeId))throw Error('You can upload documents only for a client assigned to you.');
+    const assignedEmployeeId=String(client.assignedEmployeeId||'').trim();if(u.role==='EMPLOYEE'&&assignedEmployeeId&&assignedEmployeeId!==String(u.employeeId))throw Error('You can upload documents only for a client assigned to you.');
     const taskId=String(q.taskId||'');if(!taskId)throw Error('Select an assigned task that has been started before uploading client documents.');
     const task=rows_('tasks').find(x=>String(x.id)===taskId);if(!task||String(task.clientId)!==clientId)throw Error('Selected task does not belong to this client.');
     if(u.role==='EMPLOYEE'&&String(task.employeeId)!==String(u.employeeId))throw Error('This task is not assigned to you.');
