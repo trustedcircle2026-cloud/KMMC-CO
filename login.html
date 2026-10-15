@@ -152,7 +152,7 @@
       submit.disabled=true;submit.textContent='Signing in…';setStatus('Checking your credentials. Please wait.');
       try{
         const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',role:expected,username:userName,password:userPassword})});
-        if(!response.ok)throw new Error('Authentication service returned HTTP '+response.status+'.');
+        if(response.status===404)throw new Error('The configured Google Apps Script Web App returned HTTP 404. This is a deployment endpoint problem, not an invoice-formatting error. Open Apps Script → Deploy → Manage deployments, edit the active Web App deployment, choose a new version, deploy, and copy its /exec URL into API_URL in both login.html and portal.html.');if(response.status===401||response.status===403)throw new Error('Authentication service returned HTTP '+response.status+'. Check Web App access permissions.');if(!response.ok)throw new Error('Authentication service returned HTTP '+response.status+'.');
         const result=await response.json();
         if(!result||result.ok!==true)throw new Error((result&&result.error)||'Login failed. Check your credentials.');
         let data=result;
