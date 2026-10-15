@@ -156,15 +156,22 @@
         const result=await response.json();
         if(!result||result.ok!==true)throw new Error((result&&result.error)||'Login failed. Check your credentials.');
         let data=result;
-        for(let i=0;i<4&&data&&typeof data==='object'&&!data.token;i++){
+        // Accept the API's documented {ok:true,data:{token,user}} shape and
+        // tolerate one or more proxy/wrapper layers without mistaking a health
+        // response for a successful login.
+        for(let i=0;i<8&&data&&typeof data==='object'&&!data.token;i++){
           if(data.data&&typeof data.data==='object')data=data.data;
           else if(data.result&&typeof data.result==='object')data=data.result;
+          else if(data.payload&&typeof data.payload==='object')data=data.payload;
           else break;
         }
         const user=data&&data.user;
         if(!data||!data.token||!user){
           const keys=data&&typeof data==='object'?Object.keys(data).join(', '):typeof data;
-          throw new Error('Apps Script responded but did not return a session token. Response fields: '+(keys||'none')+'. Update and redeploy the latest backend Code.gs, then try again.');
+          const healthLike=data&&typeof data==='object'&&('setup' in data||'app' in data||'version' in data)&&!data.token;
+          throw new Error(healthLike
+            ? 'The configured Apps Script URL returned its health/status response instead of the login result. Deploy the latest backend Code.gs as a Web App, then update API_URL in login.html and portal.html to that deployment URL.'
+            : 'Apps Script did not return the required session token. Response fields: '+(keys||'none')+'. Check the backend login action and redeploy the latest Code.gs.');
         }
         if(String(user.role||'').toUpperCase()!==expected){
           try{await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'logout',token:data.token})});}catch(ignore){}
