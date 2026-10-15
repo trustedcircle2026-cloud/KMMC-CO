@@ -24,6 +24,20 @@ The previously shared spreadsheet ID is `1TCwQsyuJNWFwhgJVN98Qwn_xTEuS8Yq_y3_Dth
 6. Create a private Drive folder and set its ID in KMMC_DOCUMENTS_FOLDER_ID for document upload.
 7. Deploy as a Web App, then test `YOUR_WEB_APP_URL?action=health`.
 
+## Deployment troubleshooting (HTTP 404 / login not working)
+
+A frontend commit does **not** publish a new Google Apps Script Web App version. If the website reports HTTP 404 from the configured `/exec` endpoint:
+
+1. Open the Apps Script project that contains this repository's `Code.gs`.
+2. Save the latest `Code.gs` and run the one-time setup functions only if the project/database has not already been initialized.
+3. Choose **Deploy → Manage deployments**.
+4. Edit the existing Web App deployment, choose **New version**, and deploy. Confirm the intended execution identity and access setting for your portal.
+5. Copy the deployment's current Web App URL ending in `/exec`; update the `API_URL` constant in both `login.html` and `portal.html` if the URL changed.
+6. Open `<WEB_APP_URL>?action=health`. A healthy deployment should return JSON containing `ok`, `app`, `version`, and `setup`. If Google returns HTTP 404 or an HTML error page, verify that the URL was copied from the correct active deployment and that the deployment exists.
+7. Test login and dashboard with an authorized test account after the health check succeeds.
+
+Do not rotate the database spreadsheet, delete script properties, or rerun bootstrap admin setup merely to fix a missing deployment URL. A GitHub commit alone cannot repair a Web App deployment that is missing or inaccessible.
+
 ## Modules
 Users, clients, employees, tasks/work allocation, time logs, attendance, leave, documents, invoices, collections/receipts, expenses, messages, notifications, activity/login/error logs, and client outstanding summaries.
 
