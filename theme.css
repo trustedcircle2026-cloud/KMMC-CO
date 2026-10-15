@@ -333,3 +333,70 @@ html, body, body * {
 em, i, cite, dfn, address, var {
   font-style: normal !important;
 }
+
+/* Fixed horizontal website navigation with hover dropdowns */
+.site-header{position:relative;z-index:1000}
+.main-nav{
+  position:sticky!important;
+  top:0!important;
+  z-index:9999!important;
+  width:100%;
+  background:#123f6b!important;
+  box-shadow:0 2px 8px rgba(8,39,71,.12);
+}
+.main-nav .nav-inner{
+  min-height:47px!important;
+  align-items:stretch!important;
+}
+.main-nav .nav-item{position:relative!important}
+.main-nav .nav-link{
+  min-height:47px;
+  justify-content:center;
+  text-align:center;
+}
+.main-nav .nav-item>.dropdown{
+  display:none;
+  position:absolute!important;
+  top:100%!important;
+  left:0!important;
+  min-width:225px;
+  max-width:min(320px,90vw);
+  padding:7px!important;
+  background:#fff!important;
+  border-top:3px solid #123f6b!important;
+  box-shadow:0 12px 28px rgba(8,39,71,.2)!important;
+  z-index:10000!important;
+}
+.main-nav .nav-item:hover>.dropdown,
+.main-nav .nav-item:focus-within>.dropdown{
+  display:block!important;
+}
+.main-nav .nav-item>.dropdown a{
+  display:block!important;
+  padding:11px 13px!important;
+  white-space:normal;
+  line-height:1.35;
+  text-align:left;
+  color:#111!important;
+  border-radius:3px;
+}
+.main-nav .nav-item>.dropdown a:hover,
+.main-nav .nav-item>.dropdown a:focus{
+  background:#edf3f9!important;
+  color:#123f6b!important;
+}
+/* Keep the horizontal menu pinned under the masthead while scrolling. */
+@media(min-width:861px){
+  .main-nav{position:sticky!important;top:0!important}
+  .main-nav .nav-inner{display:flex!important}
+}
+@media(max-width:860px){
+  .main-nav{position:sticky!important;top:0!important}
+  .main-nav .nav-inner{display:none!important}
+  .main-nav.open .nav-inner{display:flex!important;flex-direction:column!important;align-items:stretch!important}
+  .main-nav .nav-item>.dropdown{position:static!important;min-width:100%!important;max-width:none!important;box-shadow:none!important;border-top:0!important;padding:0 8px 8px 18px!important}
+  .main-nav .nav-item:hover>.dropdown{display:none!important}
+  .main-nav .nav-item.expanded>.dropdown,
+  .main-nav .nav-item:focus-within>.dropdown{display:block!important}
+}
+
