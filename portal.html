@@ -208,7 +208,7 @@ body.messages-mode .chat-scroll{min-height:0}
   const overlay=document.createElement('div');
   overlay.id='invoicePreviewOverlay';
   overlay.style.cssText='position:fixed;inset:0;z-index:2000;background:#14253699;display:flex;align-items:center;justify-content:center;padding:12px';
-  overlay.innerHTML='<section style="background:#fff;width:min(1120px,98vw);height:min(94vh,1000px);display:flex;flex-direction:column;border:1px solid #cbd7e1;box-shadow:0 20px 70px #10203055;overflow:hidden"><div style="flex:none;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px;background:#f4f6f8;border-bottom:1px solid #cbd7e1"><button type="button" class="btn" id="invoicePreviewBack">Back to Edit</button><button type="button" class="btn primary" id="invoicePreviewSave">Save Invoice</button><button type="button" class="btn primary" id="invoicePreviewPdf">Download 1-page PDF</button><button type="button" class="btn" id="invoicePreviewWord">Download Word</button><button type="button" class="btn" id="invoicePreviewPrint">Print Invoice</button></div><div id="invoicePreviewWarning" role="alert" style="display:none;flex:none;margin:10px 14px;padding:12px;border:1px solid #d6a24b;background:#fff7e5;color:#68440b;border-radius:4px"></div><iframe title="Tax invoice preview" id="invoicePreviewFrame" style="width:100%;height:100%;min-height:0;flex:1;border:0;background:#fff"></iframe></section>';
+  overlay.innerHTML='<section style="background:#fff;width:min(1120px,98vw);height:min(94vh,1000px);display:flex;flex-direction:column;border:1px solid #cbd7e1;box-shadow:0 20px 70px #10203055;overflow:hidden"><div style="flex:none;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px;background:#f4f6f8;border-bottom:1px solid #cbd7e1"><button type="button" class="btn" id="invoicePreviewBack">Back to Edit</button><button type="button" class="btn primary" id="invoicePreviewSave">Save Invoice</button><button type="button" class="btn primary" id="invoicePreviewPdf">Download PDF</button><button type="button" class="btn" id="invoicePreviewWord">Download Word</button><button type="button" class="btn" id="invoicePreviewPrint">Print Invoice</button></div><div id="invoicePreviewWarning" role="alert" style="display:none;flex:none;margin:10px 14px;padding:12px;border:1px solid #d6a24b;background:#fff7e5;color:#68440b;border-radius:4px"></div><iframe title="Tax invoice preview" id="invoicePreviewFrame" style="width:100%;height:100%;min-height:0;flex:1;border:0;background:#fff"></iframe></section>';
   document.body.appendChild(overlay);
   const frame=overlay.querySelector('#invoicePreviewFrame'),warning=overlay.querySelector('#invoicePreviewWarning');
   const close=()=>overlay.remove();
@@ -261,6 +261,7 @@ body.messages-mode .chat-scroll{min-height:0}
   });
   overlay.querySelector('#invoicePreviewPdf').addEventListener('click',async()=>{
    const b=overlay.querySelector('#invoicePreviewPdf');b.disabled=true;b.textContent='Preparing PDF…';warning.style.display='none';
+   let stage=null;
    try{
     const m=compactAndMeasure();
     if(m.scale<0.68){showTooLong();return;}
@@ -269,27 +270,36 @@ body.messages-mode .chat-scroll{min-height:0}
      let lib=document.getElementById('kmmcHtml2PdfParent');
      if(!lib){
       lib=document.createElement('script');lib.id='kmmcHtml2PdfParent';lib.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';document.head.appendChild(lib);
-      await new Promise((resolve,reject)=>{lib.onload=resolve;lib.onerror=()=>reject(new Error('PDF download library did not load. Check internet access, then try again.'));});
+      await new Promise((resolve,reject)=>{lib.onload=resolve;lib.onerror=()=>reject(new Error('PDF generator could not load. Check your internet connection and try again.'));});
      }else if(typeof window.html2pdf!=='function'){
-      await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('PDF download library did not become available.')),10000);lib.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});});
+      await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('PDF generator did not load in time.')),10000);lib.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});});
      }
      pdfMaker=window.html2pdf;
     }
-    if(typeof pdfMaker!=='function')throw new Error('PDF generator is unavailable. Try again or use Print Invoice.');
-    const original=m.sheet;
-    const clone=original.cloneNode(true);
-    clone.style.cssText='position:fixed;left:-10000px;top:0;width:186mm;min-height:0;margin:0;padding:0;background:#fff;transform:none;overflow:visible;z-index:-1';
-    clone.querySelectorAll('img').forEach(img=>{img.crossOrigin='anonymous';});
-    document.body.appendChild(clone);
-    const opt={margin:[7,7,7,7],filename:'KMMC-Invoice-'+String(r.invoiceNo||'Draft').replace(/[^a-z0-9_-]/gi,'_')+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:[]}};
-    try{
-     const worker=pdfMaker().set(opt).from(clone).toPdf();
-     const pdf=await worker.get('pdf');
-     if(pdf.internal.getNumberOfPages()>1){clone.remove();showTooLong();return;}
-     pdf.save(opt.filename);
-    }finally{clone.remove();}
-   }catch(e){showNotice('PDF download failed: '+e.message+' You can still use Print Invoice to save as PDF.','error');}
-   finally{b.disabled=false;b.textContent='Download 1-page PDF';}
+    if(typeof pdfMaker!=='function')throw new Error('PDF generator is unavailable. Please try again.');
+    // The preview lives in an iframe. Copy its CSS into the export stage so the PDF renderer
+    // receives the same styled invoice rather than an unstyled/blank clone.
+    stage=document.createElement('div');
+    stage.id='kmmcInvoicePdfStage';
+    stage.style.cssText='position:fixed;left:0;top:0;width:210mm;min-height:297mm;overflow:visible;background:#fff;z-index:-1;pointer-events:none;';
+    const style=m.doc.createElement('style');
+    style.textContent=Array.from(m.doc.querySelectorAll('style')).map(x=>x.textContent).join('\n')+'\nhtml,body{margin:0!important;padding:0!important;background:#fff!important}.sheet{width:186mm!important;max-width:186mm!important;min-height:0!important;height:auto!important;margin:0!important;padding:0!important;transform:none!important;overflow:visible!important}';
+    stage.appendChild(style);
+    const clone=m.sheet.cloneNode(true);
+    clone.style.cssText='width:186mm;max-width:186mm;min-height:0;height:auto;margin:0;padding:0;background:#fff;transform:none;overflow:visible;box-sizing:border-box';
+    clone.querySelectorAll('img').forEach(img=>{img.removeAttribute('crossorigin');});
+    stage.appendChild(clone);
+    document.body.appendChild(stage);
+    await Promise.all(Array.from(clone.querySelectorAll('img')).map(img=>{
+     if(img.complete&&img.naturalWidth>0)return Promise.resolve();
+     return new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;setTimeout(resolve,2500);});
+    }));
+    const opt={margin:[7,7,7,7],filename:'KMMC-Invoice-'+String(r.invoiceNo||'Draft').replace(/[^a-z0-9_-]/gi,'_')+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',scrollY:0,windowWidth:Math.ceil(210*96/25.4),windowHeight:Math.ceil(297*96/25.4)},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:[]}};
+    const pdf=await pdfMaker().set(opt).from(clone).toPdf().get('pdf');
+    if(pdf.internal.getNumberOfPages()>1){showTooLong();return;}
+    pdf.save(opt.filename);
+   }catch(e){showNotice('PDF download failed: '+e.message+' Please try again or use Print Invoice.','error');}
+   finally{if(stage)stage.remove();b.disabled=false;b.textContent='Download PDF';}
   });
   const saveButton=overlay.querySelector('#invoicePreviewSave');
   saveButton.addEventListener('click',async()=>{
