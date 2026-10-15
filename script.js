@@ -7,7 +7,7 @@
           <img class="brand-logo" src="assets/images/CA%20Logo.png" alt="K Mahesh Manickham and Co. Chartered Accountants">
           <span class="brand-copy"><strong>K Mahesh Manickham and Co.</strong><small>CHARTERED ACCOUNTANTS</small></span>
         </a>
-        <div class="reference-enquiries"><span>Business Enquiries</span><div><a href="contact.html">Contact our office</a><i></i><a href="contact.html">Send an enquiry</a><i></i><a href="careers.html">Careers</a></div></div>
+        <div class="reference-enquiries"><span>Business Enquiries</span><div><a href="mailto:info@kmmc.co.in">info@kmmc.co.in</a><i></i><a href="tel:+919003060652">90030 60652</a><i></i><a href="careers.html">Careers</a></div></div>
         <a class="login-button" href="login.html">Login</a>
         <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button>
       </div>
@@ -82,6 +82,22 @@
         }
       });
     });
+  }
+
+  // Add consistent, working quick-contact actions to every page that loads this script.
+  if (!document.querySelector(".floating-contact")) {
+    const quickContact = document.createElement("div");
+    quickContact.className = "floating-contact";
+    quickContact.setAttribute("aria-label", "Quick contact");
+    const whatsappMessage = "Hello KMMC, I would like to enquire about your Chartered Accountant services. Please assist me.";
+    const whatsappUrl = "https://wa.me/919003060652?text=" + encodeURIComponent(whatsappMessage);
+    quickContact.innerHTML = `
+      <a class="float-whatsapp" href="${whatsappUrl}" target="_blank" rel="noopener noreferrer" aria-label="Chat with KMMC on WhatsApp" title="WhatsApp">
+        <svg viewBox="0 0 32 32" aria-hidden="true" width="25" height="25" fill="currentColor"><path d="M16 .8A15 15 0 0 0 3.1 23.5L1 31l7.7-2A15 15 0 1 0 16 .8Zm0 27.4a12.3 12.3 0 0 1-6.3-1.7l-.5-.3-4.6 1.2 1.2-4.5-.3-.5A12.4 12.4 0 1 1 16 28.2Zm6.8-9.3c-.4-.2-2.1-1-2.4-1.1-.3-.1-.6-.2-.8.2-.2.4-.9 1.1-1.1 1.3-.2.2-.4.3-.8.1-.4-.2-1.5-.6-2.9-1.8-1.1-1-1.8-2.1-2-2.5-.2-.4 0-.6.2-.8l.6-.7c.2-.2.2-.4.4-.6.1-.2.1-.5 0-.7-.1-.2-.8-1.9-1.1-2.6-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.6.9.4 1.6.6 2.1.7.9.3 1.7.2 2.3.1.7-.1 2.1-.9 2.4-1.8.3-.9.3-1.6.2-1.8-.1-.2-.3-.3-.7-.5Z"/></svg>
+      </a>
+      <a class="float-phone" href="tel:+919003060652" aria-label="Call KMMC" title="Call us">☎</a>
+      <a class="float-mail" href="mailto:info@kmmc.co.in" aria-label="Email KMMC" title="Email us">✉</a>`;
+    document.body.appendChild(quickContact);
   }
 
   const year = document.getElementById("year");
