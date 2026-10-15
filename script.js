@@ -4,7 +4,7 @@
     <header class="site-header">
       <div class="container brand-row">
         <a class="brand" href="index.html" aria-label="K Mahesh Manickham and Co. Chartered Accountants home">
-          <img class="brand-logo" src="assets/images/CA%20Logo.png" alt="K Mahesh Manickham and Co. Chartered Accountants">
+          <img class="brand-logo" src="assets/images/CA%20Logo(BG).jpg" alt="K Mahesh Manickham and Co. Chartered Accountants">
           <span class="brand-copy"><strong>K Mahesh Manickham and Co.</strong><small>CHARTERED ACCOUNTANTS</small></span>
         </a>
         <div class="reference-enquiries"><span>Business Enquiries</span><div><a href="mailto:info@kmmc.co.in">info@kmmc.co.in</a><i></i><a href="tel:+919003060652">90030 60652</a><i></i><a href="careers.html">Careers</a></div></div>
