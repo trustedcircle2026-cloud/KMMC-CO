@@ -285,11 +285,11 @@ a:hover{color:#082747}
   border-bottom:1px solid #e5e7eb;
 }
 .site-header .brand-logo{
-  border-radius:50%!important;
+  border-radius:0!important;
   object-fit:contain!important;
-  background:#fff!important;
-  overflow:hidden;
-  border:2px solid #e5e7eb;
+  background:transparent!important;
+  overflow:visible!important;
+  border:0!important;
 }
 .site-header .brand-copy strong,
 .site-header .brand-copy small,
@@ -309,17 +309,17 @@ a:hover{color:#082747}
 }
 
 
-/* Use the updated fitted CA mark consistently in headers, login, portal and footer */
+/* Display the full logo artwork without adding a circular frame or crop. */
 .brand-logo,
 .brand-footer .brand-logo,
 .brand img,
 img[src*="CA%20Logo.png"],
 img[src*="CA Logo.png"]{
-  border-radius:50%!important;
+  border-radius:0!important;
   object-fit:contain!important;
-  aspect-ratio:1/1;
-  background:#fff;
-  overflow:hidden;
+  background:transparent!important;
+  overflow:visible!important;
+  border:0!important;
 }
 .brand-logo{flex-shrink:0}
 .site-header .brand-logo{object-fit:contain!important}
