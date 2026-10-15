@@ -326,8 +326,7 @@ img[src*="CA Logo.png"]{
 
 
 /* KMMC site-wide typography standard: Garamond everywhere, never italic. */
-html, body, body *,
-body *::before, body *::after {
+html, body, body * {
   font-family: Garamond, Georgia, "Times New Roman", serif !important;
   font-style: normal !important;
 }
