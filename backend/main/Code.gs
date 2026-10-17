@@ -78,6 +78,7 @@ function route_(a,q){
     case 'driveUpload':return driveUpload_(auth_(q),q);
     case 'driveSave':return driveSave_(auth_(q),q);
     case 'driveRename':return driveRename_(auth_(q),q);
+    case 'driveDelete':return driveDelete_(auth_(q),q);
     case 'startBreak':return startBreak_(auth_(q));
     case 'stopBreak':return stopBreak_(auth_(q));
     case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
@@ -320,19 +321,21 @@ function driveUpload_(u,q){
   const bytes=Utilities.base64Decode(b64),blob=Utilities.newBlob(bytes,mime,name),file=parent.createFile(blob);activity_(u,'DRIVE_UPLOAD','drive-file',file.getId(),name);
   return {id:file.getId(),name:file.getName(),url:file.getUrl(),downloadUrl:'https://drive.google.com/uc?export=download&id='+file.getId(),mimeType:file.getMimeType()};
 }
+function driveFileForUser_(u,id){const file=DriveApp.getFileById(String(id||''));if(u.role==='ADMIN')return file;const root=employeeDriveRoot_(u),parents=file.getParents();let allowed=false;while(parents.hasNext()){const p=parents.next();let current=p,depth=0;while(current&&depth++<30){if(current.getId()===root.getId()){allowed=true;break;}const pp=current.getParents();current=pp.hasNext()?pp.next():null;}if(allowed)break;}if(!allowed)throw Error('You can only access files inside your My Files folder.');return file;}
 function driveRead_(u,q){
-  driveCanAccess_(u);const file=DriveApp.getFileById(String(q.id||'')),mime=file.getMimeType();
+  driveCanAccess_(u);const file=driveFileForUser_(u,q.id),mime=file.getMimeType();
   if(!/^(text\/|application\/(json|xml|javascript|x-javascript))/.test(mime))return {id:file.getId(),name:file.getName(),mimeType:mime,url:file.getUrl(),editable:false,content:''};
   const content=file.getBlob().getDataAsString('UTF-8');if(content.length>500000)throw Error('This text file is too large to edit in the portal. Open it in Google Drive.');
   return {id:file.getId(),name:file.getName(),mimeType:mime,url:file.getUrl(),editable:true,content:content};
 }
 function driveSave_(u,q){
-  driveCanAccess_(u);const id=String(q.id||''),file=DriveApp.getFileById(id);if(file.getMimeType()==='application/vnd.google-apps.folder')throw Error('Folders cannot be edited as file content. Rename the folder or create items inside it.');
+  driveCanAccess_(u);const id=String(q.id||''),file=driveFileForUser_(u,id);if(file.getMimeType()==='application/vnd.google-apps.folder')throw Error('Folders cannot be edited as file content. Rename the folder or create items inside it.');
   const mime=file.getMimeType();if(!/^(text\/|application\/(json|xml|javascript|x-javascript))/.test(mime))throw Error('This file type cannot be edited in the portal. Open it in Google Drive to edit it.');
   file.setContent(String(q.content||''));activity_(u,'DRIVE_EDIT','drive-file',id,file.getName());return {id:id,name:file.getName(),url:file.getUrl(),updatedAt:file.getLastUpdated().toISOString()};
 }
+function driveDelete_(u,q){driveCanAccess_(u);const id=String(q.id||''),type=String(q.type||'FILE').toUpperCase();if(type==='FOLDER')driveFolderForUser_(u,id).setTrashed(true);else driveFileForUser_(u,id).setTrashed(true);activity_(u,'DRIVE_TRASH',type==='FOLDER'?'drive-folder':'drive-file',id,'Moved to Drive trash');return {deleted:true,id:id};}
 function driveRename_(u,q){
-  driveCanAccess_(u);const id=String(q.id||''),name=String(q.name||'').trim().slice(0,180);if(!name)throw Error('Enter a name.');let type=String(q.type||'FILE').toUpperCase(),item;if(type==='FOLDER')item=DriveApp.getFolderById(id);else item=DriveApp.getFileById(id);item.setName(name);activity_(u,'DRIVE_RENAME',type==='FOLDER'?'drive-folder':'drive-file',id,name);return {id:id,name:item.getName(),url:item.getUrl(),type:type};
+  driveCanAccess_(u);const id=String(q.id||''),name=String(q.name||'').trim().slice(0,180);if(!name)throw Error('Enter a name.');let type=String(q.type||'FILE').toUpperCase(),item;if(type==='FOLDER')item=driveFolderForUser_(u,id);else item=driveFileForUser_(u,id);item.setName(name);activity_(u,'DRIVE_RENAME',type==='FOLDER'?'drive-folder':'drive-file',id,name);return {id:id,name:item.getName(),url:item.getUrl(),type:type};
 }
 function setTaskStatus_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'){const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);if(!rows_('attendance').some(a=>String(a.employeeId)===String(u.employeeId)&&dateKey_(a.workDate)===day&&!a.checkOut))throw Error('Clock in before starting work on an assignment.');if(r.clientId){const client=rows_('clients').find(c=>String(c.id)===String(r.clientId)&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));if(!client)throw Error('Client is not assigned or accessible to you.');ensureClientFolder_(r.clientId);}switchWorkToTask_(u,r);}write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
 function taskStatus_(u,q,status){
