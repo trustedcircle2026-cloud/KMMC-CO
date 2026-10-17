@@ -110,7 +110,7 @@ The latest `Code.gs` closes every open WORK/BREAK segment when clocking out, cle
 The employee portal now calls these additional actions from `Code.gs`:
 
 - `taskTransition`: closes the current task timer segment and updates a task to `PAUSED`, `ACCEPTED` (waiting list), or `COMPLETED`.
-- `driveList`, `driveCreate`, `driveRead`, `driveSave`, and `driveRename`: browse the configured Drive root, create folders and text files, edit supported text files, rename items, and return Drive/download URLs.
+- `driveList`, `driveCreate`, `driveUpload`, `driveRead`, `driveSave`, and `driveRename`: browse the configured Drive root, create folders and text files, edit supported text files, rename items, and return Drive/download URLs.
 
 Google Drive uses the existing `KMMC_DOCUMENTS_FOLDER_ID` Script Property as its main folder. The signed-in Admin or Employee account must have access to that folder. The portal can edit text-based files directly; Google Docs, spreadsheets, PDFs, and other non-text formats open in Google Drive for editing. The Share button opens the Drive item so the user can use Drive's own Share dialog; it does not automatically grant public link access.
 
