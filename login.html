@@ -150,8 +150,6 @@
       const role=roleInput.value,expected=roleData[role].apiRole,userName=username.value.trim(),userPassword=password.value;
       if((role!=='admin'&&!userName)||!userPassword){setStatus(role==='admin'?'Enter the Admin password.':'Enter your username and password.',true);return;}
       submit.disabled=true;submit.textContent='Signing in…';setStatus('Checking your credentials. Please wait.');
-      // Open the workspace in a separate tab while this submit still has user activation.
-      let workspaceTab=null;try{workspaceTab=window.open('about:blank','_blank');if(workspaceTab){workspaceTab.document.title='Opening KMMC Portal';workspaceTab.document.body.innerHTML='<p style="font:16px Arial,sans-serif;padding:24px;color:#17466f">Signing in to KMMC Portal…</p>';}}catch(ignore){}
       try{
         const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',role:expected,username:userName,password:userPassword})});
         if(response.status===404)throw new Error('The configured Google Apps Script Web App returned HTTP 404. This is a deployment endpoint problem, not an invoice-formatting error. Open Apps Script → Deploy → Manage deployments, edit the active Web App deployment, choose a new version, deploy, and copy its /exec URL into API_URL in both login.html and portal.html.');if(response.status===401||response.status===403)throw new Error('Authentication service returned HTTP '+response.status+'. Check Web App access permissions.');if(!response.ok)throw new Error('Authentication service returned HTTP '+response.status+'.');
@@ -185,7 +183,7 @@
         sessionStorage.setItem('kmmc_session_token',data.token);
         sessionStorage.setItem('kmmc_session_expires_at',data.expiresAt||'');
         sessionStorage.setItem('kmmc_user',JSON.stringify(user));
-        password.value='';setStatus('Login successful. Opening your workspace in a new tab…');const workspaceUrl=user.role==='EMPLOYEE'?'EmployeePortal.html':'portal.html';if(workspaceTab&&!workspaceTab.closed){workspaceTab.location.replace(new URL(workspaceUrl,window.location.href).href);try{workspaceTab.focus();}catch(ignore){}}else{setStatus('Your browser blocked the new tab. Allow pop-ups for this site, or continue in this tab.');window.location.href=workspaceUrl;}
+        password.value='';setStatus('Login successful. Opening your workspace…');const workspaceUrl=new URL(user.role==='EMPLOYEE'?'EmployeePortal.html':'portal.html',window.location.href).href;let workspaceTab=null;try{workspaceTab=window.open(workspaceUrl,'_blank');}catch(ignore){}if(workspaceTab){try{workspaceTab.focus();}catch(ignore){}setStatus('Login successful. Your workspace is opening in a new tab.');}else{setStatus('Your browser blocked the new tab. Allow pop-ups for this site; opening your workspace here instead.');window.location.href=workspaceUrl;}
       }catch(error){
         const message=String(error&&error.message||'Unable to sign in.');
         if(/Failed to fetch|NetworkError|Load failed/i.test(message)){
