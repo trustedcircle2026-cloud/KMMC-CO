@@ -91,3 +91,10 @@ This remains an implementation foundation: test with dummy records and review Dr
 - Passwords are never saved in localStorage. The portal saves only the server-issued session token and public profile; the backend remains the source of truth.
 - Portal forms use a 3-step wizard, API calls show a small centered spinner, search is in the records-panel header, and Employee Management groups Manage, Time, Attendance, and Leave.
 - Employee Management supports its own Excel template, import, and export. Bulk employee import is limited to 500 rows and returns a credentials workbook for accounts created successfully.
+
+
+## Employee task timer update (17-Oct-2026)
+
+The latest `Code.gs` adds the `startTaskTimer` API action and records each completed work-timer segment in `DB_WORKDONE`. A clocked-in employee starts with an **Unallotted Work** segment until an accepted assignment is started. Starting an accepted assignment closes and records the previous segment, then assigns the single active work timer to that task. Duplicate open timer segments are reconciled when timer status is read or work is switched.
+
+After committing backend changes, open Apps Script → **Deploy** → **Manage deployments** → edit the active Web App deployment → select **New version** → **Deploy**. The repository commit alone does not update the live Apps Script deployment. Do not rerun database/admin bootstrap setup just for this code update.
