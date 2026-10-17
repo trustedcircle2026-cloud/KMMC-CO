@@ -74,6 +74,7 @@ function route_(a,q){
     case 'driveList':return driveList_(auth_(q),q);
     case 'driveRead':return driveRead_(auth_(q),q);
     case 'driveCreate':return driveCreate_(auth_(q),q);
+    case 'driveUpload':return driveUpload_(auth_(q),q);
     case 'driveSave':return driveSave_(auth_(q),q);
     case 'driveRename':return driveRename_(auth_(q),q);
     case 'startBreak':return startBreak_(auth_(q));
@@ -298,6 +299,12 @@ function driveCreate_(u,q){
   driveCanAccess_(u);const parent=q.folderId?DriveApp.getFolderById(String(q.folderId)):driveRoot_(),type=String(q.type||'FILE').toUpperCase(),name=String(q.name||'').trim().slice(0,180);if(!name)throw Error('Enter a folder or file name.');
   let item;if(type==='FOLDER')item=parent.createFolder(name);else{const mime=String(q.mimeType||'text/plain'),content=String(q.content||'');item=parent.createFile(Utilities.newBlob(content,mime,name));}
   activity_(u,'DRIVE_CREATE',type==='FOLDER'?'drive-folder':'drive-file',item.getId(),name);return {id:item.getId(),name:item.getName(),type:type,url:item.getUrl(),mimeType:type==='FILE'?item.getMimeType():'application/vnd.google-apps.folder'};
+}
+function driveUpload_(u,q){
+  driveCanAccess_(u);const parent=q.folderId?DriveApp.getFolderById(String(q.folderId)):driveRoot_(),name=String(q.name||'').trim().slice(0,180),mime=String(q.mimeType||'application/octet-stream'),b64=String(q.base64Data||'');
+  if(!name||!b64)throw Error('Choose a file to upload.');if(b64.length>8*1024*1024)throw Error('File is too large for portal upload (maximum about 6 MB).');
+  const bytes=Utilities.base64Decode(b64),blob=Utilities.newBlob(bytes,mime,name),file=parent.createFile(blob);activity_(u,'DRIVE_UPLOAD','drive-file',file.getId(),name);
+  return {id:file.getId(),name:file.getName(),url:file.getUrl(),downloadUrl:'https://drive.google.com/uc?export=download&id='+file.getId(),mimeType:file.getMimeType()};
 }
 function driveRead_(u,q){
   driveCanAccess_(u);const file=DriveApp.getFileById(String(q.id||'')),mime=file.getMimeType();
