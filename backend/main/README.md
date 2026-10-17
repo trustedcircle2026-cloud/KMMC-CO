@@ -103,3 +103,15 @@ After committing backend changes, open Apps Script → **Deploy** → **Manage d
 ## Timer duplicate fix (17-Oct-2026)
 
 The latest `Code.gs` closes every open WORK/BREAK segment when clocking out, cleans up stale open segments before a new clock-in, and uses a script lock around clock-in/clock-out to reduce concurrent duplicate sessions. When duplicate open segments are reconciled, only the newest segment is recorded to Workdone; duplicate stale segments are closed without generating duplicate Workdone rows. **Redeploy this backend as a new Web App version** for the live portal to receive this cleanup. The frontend also falls back to the existing `setTaskStatus` action if an older deployment returns `Unknown action: startTaskTimer`.
+
+
+## Latest Task and Google Drive portal actions
+
+The employee portal now calls these additional actions from `Code.gs`:
+
+- `taskTransition`: closes the current task timer segment and updates a task to `PAUSED`, `ACCEPTED` (waiting list), or `COMPLETED`.
+- `driveList`, `driveCreate`, `driveRead`, `driveSave`, and `driveRename`: browse the configured Drive root, create folders and text files, edit supported text files, rename items, and return Drive/download URLs.
+
+Google Drive uses the existing `KMMC_DOCUMENTS_FOLDER_ID` Script Property as its main folder. The signed-in Admin or Employee account must have access to that folder. The portal can edit text-based files directly; Google Docs, spreadsheets, PDFs, and other non-text formats open in Google Drive for editing. The Share button opens the Drive item so the user can use Drive's own Share dialog; it does not automatically grant public link access.
+
+**Deploy after updating:** Save the latest `Code.gs` in Apps Script, then go to **Deploy → Manage deployments → Edit → New version → Deploy**. Confirm the deployment uses the intended execution identity and that the web app is accessible to your portal users. The static portal is on GitHub Pages, but backend changes do not become live until the Apps Script web app is redeployed.
