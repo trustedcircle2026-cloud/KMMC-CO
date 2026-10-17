@@ -72,6 +72,7 @@ function route_(a,q){
     case 'startTaskTimer':return startTaskTimer_(auth_(q),q);
     case 'taskTransition':return taskTransition_(auth_(q),q);
     case 'driveList':return driveList_(auth_(q),q);
+    case 'driveRead':return driveRead_(auth_(q),q);
     case 'driveCreate':return driveCreate_(auth_(q),q);
     case 'driveSave':return driveSave_(auth_(q),q);
     case 'driveRename':return driveRename_(auth_(q),q);
@@ -297,6 +298,12 @@ function driveCreate_(u,q){
   driveCanAccess_(u);const parent=q.folderId?DriveApp.getFolderById(String(q.folderId)):driveRoot_(),type=String(q.type||'FILE').toUpperCase(),name=String(q.name||'').trim().slice(0,180);if(!name)throw Error('Enter a folder or file name.');
   let item;if(type==='FOLDER')item=parent.createFolder(name);else{const mime=String(q.mimeType||'text/plain'),content=String(q.content||'');item=parent.createFile(Utilities.newBlob(content,mime,name));}
   activity_(u,'DRIVE_CREATE',type==='FOLDER'?'drive-folder':'drive-file',item.getId(),name);return {id:item.getId(),name:item.getName(),type:type,url:item.getUrl(),mimeType:type==='FILE'?item.getMimeType():'application/vnd.google-apps.folder'};
+}
+function driveRead_(u,q){
+  driveCanAccess_(u);const file=DriveApp.getFileById(String(q.id||'')),mime=file.getMimeType();
+  if(!/^(text\/|application\/(json|xml|javascript|x-javascript))/.test(mime))return {id:file.getId(),name:file.getName(),mimeType:mime,url:file.getUrl(),editable:false,content:''};
+  const content=file.getBlob().getDataAsString('UTF-8');if(content.length>500000)throw Error('This text file is too large to edit in the portal. Open it in Google Drive.');
+  return {id:file.getId(),name:file.getName(),mimeType:mime,url:file.getUrl(),editable:true,content:content};
 }
 function driveSave_(u,q){
   driveCanAccess_(u);const id=String(q.id||''),file=DriveApp.getFileById(id);if(file.getMimeType()==='application/vnd.google-apps.folder')throw Error('Folders cannot be edited as file content. Rename the folder or create items inside it.');
