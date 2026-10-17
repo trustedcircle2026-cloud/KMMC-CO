@@ -98,3 +98,8 @@ This remains an implementation foundation: test with dummy records and review Dr
 The latest `Code.gs` adds the `startTaskTimer` API action and records each completed work-timer segment in `DB_WORKDONE`. A clocked-in employee starts with an **Unallotted Work** segment until an accepted assignment is started. Starting an accepted assignment closes and records the previous segment, then assigns the single active work timer to that task. Duplicate open timer segments are reconciled when timer status is read or work is switched.
 
 After committing backend changes, open Apps Script → **Deploy** → **Manage deployments** → edit the active Web App deployment → select **New version** → **Deploy**. The repository commit alone does not update the live Apps Script deployment. Do not rerun database/admin bootstrap setup just for this code update.
+
+
+## Timer duplicate fix (17-Oct-2026)
+
+The latest `Code.gs` closes every open WORK/BREAK segment when clocking out, cleans up stale open segments before a new clock-in, and uses a script lock around clock-in/clock-out to reduce concurrent duplicate sessions. When duplicate open segments are reconciled, only the newest segment is recorded to Workdone; duplicate stale segments are closed without generating duplicate Workdone rows. **Redeploy this backend as a new Web App version** for the live portal to receive this cleanup. The frontend also falls back to the existing `setTaskStatus` action if an older deployment returns `Unknown action: startTaskTimer`.
