@@ -203,7 +203,7 @@ function create_(u,q){
   append_(k,r);activity_(u,'CREATE',k,r.id,'');return publicRec_(k,r);
 }
 function update_(u,q){
-  const k=module_(q.module);authorize_(u,k,'update');if(['users','activity','loginlog'].includes(k))throw Error('Use a dedicated action; editing disabled.');
+  const k=module_(q.module);authorize_(u,k,'update');if(k==='time')ensureHeaders_(sheet_(KMMC.M.time.s),KMMC.M.time.h);if(['users','activity','loginlog'].includes(k))throw Error('Use a dedicated action; editing disabled.');
   const old=rows_(k).find(x=>x.id===String(q.id));if(!old||!visible_(u,k,old))throw Error('Record not found/access denied.');
   const patch=sanitize_(k,q.record||{});ownership_(u,k,patch,true);const r=Object.assign({},old,patch,{id:old.id,createdAt:old.createdAt,updatedAt:iso_()});
   if(k==='invoices')invoiceMath_(r);write_(k,r.id,r);activity_(u,'UPDATE',k,r.id,'');return publicRec_(k,r);
