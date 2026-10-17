@@ -70,6 +70,11 @@ function route_(a,q){
     case 'clockOut':return clockOut_(auth_(q));
     case 'timerStatus':return timerStatus_(auth_(q));
     case 'startTaskTimer':return startTaskTimer_(auth_(q),q);
+    case 'taskTransition':return taskTransition_(auth_(q),q);
+    case 'driveList':return driveList_(auth_(q),q);
+    case 'driveCreate':return driveCreate_(auth_(q),q);
+    case 'driveSave':return driveSave_(auth_(q),q);
+    case 'driveRename':return driveRename_(auth_(q),q);
     case 'startBreak':return startBreak_(auth_(q));
     case 'stopBreak':return stopBreak_(auth_(q));
     case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
@@ -267,6 +272,40 @@ function installAutoClockOutTrigger_(){const name='autoCloseSessionsAtNinePm';Sc
 function autoCloseSessionsAtNinePm(){const now=new Date();if(localClock_(now)<'21:00:00')return 'Before 9 PM IST.';const day=localDay_(now),open=rows_('attendance').filter(x=>!x.checkOut&&dateKey_(x.workDate)<=day);open.forEach(att=>closeAttendance_(att,ninePm_(dateKey_(att.workDate)),true));return 'Auto clock-out processed for '+open.length+' session(s).';}
 function switchWorkToTask_(u,task){if(u.role!=='EMPLOYEE'||!u.employeeId)return;const now=new Date(),day=localDay_(now);if(!rows_('attendance').some(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut))throw Error('Clock in before starting work on an assignment.');const open=enforceSingleOpenTimer_(u,day,now);if(open&&String(open.entryType).toUpperCase()==='BREAK')throw Error('Stop your break before starting an assignment.');if(open&&String(open.taskId||'')===String(task.id||''))return;if(open)closeTimerSegment_(open,now);addTimerSegment_(u,'WORK',now,task);}
  function startTaskTimer_(u,q){if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');const lock=LockService.getScriptLock();lock.waitLock(10000);try{const task=rows_('tasks').find(x=>String(x.id)===String(q.id));if(!task||!visible_(u,'tasks',task)||String(task.employeeId)!==String(u.employeeId))throw Error('Assignment not found or not assigned to you.');if(String(task.status||'').toUpperCase()!=='ACCEPTED')throw Error('Only accepted assignments can be started from Task.');if(task.clientId){const c=rows_('clients').find(x=>String(x.id)===String(task.clientId)&&(!x.assignedEmployeeId||String(x.assignedEmployeeId)===String(u.employeeId)));if(!c)throw Error('Client is not assigned or accessible to you.');ensureClientFolder_(task.clientId);}switchWorkToTask_(u,task);task.status='IN_PROGRESS';task.updatedAt=iso_();write_('tasks',task.id,task);activity_(u,'TASK_TIMER_START','tasks',task.id,task.jobNumber||task.title);return {task:task,timer:timerStatus_(u)};}finally{lock.releaseLock();}}
+function taskTransition_(u,q){
+  if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const task=rows_('tasks').find(x=>String(x.id)===String(q.id));
+  if(!task||!visible_(u,'tasks',task)||String(task.employeeId)!==String(u.employeeId))throw Error('Task not found or not assigned to you.');
+  const status=String(q.status||'').toUpperCase();
+  if(!['PAUSED','ACCEPTED','COMPLETED'].includes(status))throw Error('Unsupported task transition.');
+  const now=new Date(),day=localDay_(now),open=openTimerSegment_(u.employeeId,day);
+  if(open&&String(open.taskId||'')===String(task.id))closeTimerSegment_(open,now);
+  task.status=status;task.updatedAt=iso_();if(status==='COMPLETED')task.completedAt=iso_();else task.completedAt='';
+  write_('tasks',task.id,task);activity_(u,'TASK_STATUS','tasks',task.id,status);
+  return {task:task,timer:timerStatus_(u)};
+}
+function driveRoot_(){const id=PropertiesService.getScriptProperties().getProperty('KMMC_DOCUMENTS_FOLDER_ID');if(!id)throw Error('Set KMMC_DOCUMENTS_FOLDER_ID in Apps Script properties to the main Google Drive folder ID.');return DriveApp.getFolderById(id);}
+function driveCanAccess_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Google Drive is available to Admin and Employee accounts only.');}
+function driveList_(u,q){
+  driveCanAccess_(u);const id=String(q.folderId||'').trim(),folder=id?DriveApp.getFolderById(id):driveRoot_(),items=[],query=String(q.search||'').trim().toLowerCase();
+  const folders=folder.getFolders();while(folders.hasNext()){const f=folders.next();if(!query||f.getName().toLowerCase().includes(query))items.push({id:f.getId(),name:f.getName(),type:'FOLDER',mimeType:'application/vnd.google-apps.folder',url:f.getUrl(),updatedAt:f.getLastUpdated()?f.getLastUpdated().toISOString():''});}
+  const files=folder.getFiles();while(files.hasNext()){const f=files.next();if(!query||f.getName().toLowerCase().includes(query))items.push({id:f.getId(),name:f.getName(),type:'FILE',mimeType:f.getMimeType(),url:f.getUrl(),downloadUrl:'https://drive.google.com/uc?export=download&id='+f.getId(),updatedAt:f.getLastUpdated()?f.getLastUpdated().toISOString():'',size:f.getSize()});}
+  items.sort((a,b)=>a.type===b.type?a.name.localeCompare(b.name):a.type==='FOLDER'?-1:1);
+  return {folderId:folder.getId(),folderName:folder.getName(),parentId:folder.getParents().hasNext()?folder.getParents().next().getId():'',items:items.slice(0,500)};
+}
+function driveCreate_(u,q){
+  driveCanAccess_(u);const parent=q.folderId?DriveApp.getFolderById(String(q.folderId)):driveRoot_(),type=String(q.type||'FILE').toUpperCase(),name=String(q.name||'').trim().slice(0,180);if(!name)throw Error('Enter a folder or file name.');
+  let item;if(type==='FOLDER')item=parent.createFolder(name);else{const mime=String(q.mimeType||'text/plain'),content=String(q.content||'');item=parent.createFile(Utilities.newBlob(content,mime,name));}
+  activity_(u,'DRIVE_CREATE',type==='FOLDER'?'drive-folder':'drive-file',item.getId(),name);return {id:item.getId(),name:item.getName(),type:type,url:item.getUrl(),mimeType:type==='FILE'?item.getMimeType():'application/vnd.google-apps.folder'};
+}
+function driveSave_(u,q){
+  driveCanAccess_(u);const id=String(q.id||''),file=DriveApp.getFileById(id);if(file.getMimeType()==='application/vnd.google-apps.folder')throw Error('Folders cannot be edited as file content. Rename the folder or create items inside it.');
+  const mime=file.getMimeType();if(!/^(text\/|application\/(json|xml|javascript|x-javascript))/.test(mime))throw Error('This file type cannot be edited in the portal. Open it in Google Drive to edit it.');
+  file.setContent(String(q.content||''));activity_(u,'DRIVE_EDIT','drive-file',id,file.getName());return {id:id,name:file.getName(),url:file.getUrl(),updatedAt:file.getLastUpdated().toISOString()};
+}
+function driveRename_(u,q){
+  driveCanAccess_(u);const id=String(q.id||''),name=String(q.name||'').trim().slice(0,180);if(!name)throw Error('Enter a name.');let type=String(q.type||'FILE').toUpperCase(),item;if(type==='FOLDER')item=DriveApp.getFolderById(id);else item=DriveApp.getFileById(id);item.setName(name);activity_(u,'DRIVE_RENAME',type==='FOLDER'?'drive-folder':'drive-file',id,name);return {id:id,name:item.getName(),url:item.getUrl(),type:type};
+}
 function setTaskStatus_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'){const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);if(!rows_('attendance').some(a=>String(a.employeeId)===String(u.employeeId)&&dateKey_(a.workDate)===day&&!a.checkOut))throw Error('Clock in before starting work on an assignment.');if(r.clientId){const client=rows_('clients').find(c=>String(c.id)===String(r.clientId)&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));if(!client)throw Error('Client is not assigned or accessible to you.');ensureClientFolder_(r.clientId);}switchWorkToTask_(u,r);}write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
 function taskStatus_(u,q,status){
   const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
