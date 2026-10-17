@@ -57,8 +57,8 @@ Outstanding is calculated as opening balance + non-cancelled invoices − non-ca
 The portal now has a left-side module menu, profile dropdown with logout, individual module views, and admin workflows for clients and employees.
 
 ### Additional Script Properties
-- `KMMC_EMPLOYEE_FOLDER_ID`: Google Drive folder ID for employee records. The script creates/uses a `Resume` subfolder and a per-employee folder named `EMPLOYEE_ID - Employee Name`. Uploads go into that folder.
-- `KMMC_DOCUMENTS_FOLDER_ID`: existing document upload folder.
+- `KMMC_EMPLOYEE_FOLDER_ID`: optional dedicated Google Drive folder ID for employee records. The script creates/uses a `Resume` subfolder and a per-employee folder named `EMPLOYEE_ID - Employee Name`.
+- `KMMC_DOCUMENTS_FOLDER_ID`: existing document upload folder. If `KMMC_EMPLOYEE_FOLDER_ID` is not set, employee resume uploads use this folder as the parent folder instead.
 
 ### Required one-time schema migration
 After pasting the latest `Code.gs` into Apps Script:
