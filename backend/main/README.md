@@ -115,3 +115,18 @@ The employee portal now calls these additional actions from `Code.gs`:
 Google Drive uses the existing `KMMC_DOCUMENTS_FOLDER_ID` Script Property as its main folder. The signed-in Admin or Employee account must have access to that folder. The portal can edit text-based files directly; Google Docs, spreadsheets, PDFs, and other non-text formats open in Google Drive for editing. The Share button opens the Drive item so the user can use Drive's own Share dialog; it does not automatically grant public link access.
 
 **Deploy after updating:** Save the latest `Code.gs` in Apps Script, then go to **Deploy → Manage deployments → Edit → New version → Deploy**. Confirm the deployment uses the intended execution identity and that the web app is accessible to your portal users. The static portal is on GitHub Pages, but backend changes do not become live until the Apps Script web app is redeployed.
+
+
+## Accountant module (27-Oct-2026)
+
+Added an Admin-only Accountant navigation group with Accounts, Receipts, Payments and Reports. The backend adds chart-of-accounts, accounting receipts, accounting payments, ledger and reimbursement-claim schemas. Posted receipts and payments create two-line double-entry ledger transactions under a script lock. Voucher cancellation adds reversing ledger entries rather than deleting accounting records. A basic date-filtered account ledger summary and CSV export are included.
+
+### Apply and deploy
+1. Review the feature branch and merge it after testing.
+2. Copy updated `backend/main/Code.gs` into the bound Apps Script project and save.
+3. Run `setupKmmcBackend()` to create new tabs and add missing headers; it does not clear existing records.
+4. Deploy the existing Apps Script Web App as a **new version**.
+5. Open the portal as Admin; create account codes first, then post dummy receipts and payments. Confirm each posted voucher creates two ledger lines with equal debit and credit totals.
+6. Test cancellation reversal and date-filtered reports before entering live transactions.
+
+A GitHub commit does not update the Apps Script Web App automatically. Do not use the new summaries for management or statutory reporting until tested and reconciled. The reimbursement table is schema-ready, but its approval/payment lifecycle is not yet implemented.
