@@ -131,6 +131,32 @@ th{color:#243b4e;background:#eaf0f6}
 
 </style>
   <link rel="stylesheet" href="theme.css">
+
+<style id="kmmc-voucher-landscape-overrides">
+/* Tally-inspired light landscape voucher entry */
+.acct-voucher-backdrop{padding:12px!important;align-items:center!important;justify-content:center!important;background:rgba(225,233,241,.66)!important;backdrop-filter:blur(3px)}
+.acct-voucher-landscape{width:min(1180px,calc(100vw - 28px))!important;max-width:1180px!important;max-height:calc(100vh - 28px)!important;overflow:auto!important;background:#fff!important;border:1px solid #d9e5ef!important;border-radius:12px!important;box-shadow:0 16px 45px rgba(39,75,110,.16)!important;color:#23364b!important}
+.acct-voucher-head{position:sticky;top:0;z-index:3;background:linear-gradient(110deg,#f1f8ff,#e7f3ff)!important;color:#243b53!important;border-bottom:1px solid #d4e5f5!important;padding:14px 20px!important}
+.acct-voucher-head h2{color:#203b58!important;margin:3px 0 4px!important;font-size:22px!important}
+.acct-voucher-head p{color:#536b82!important;margin:0!important}
+.acct-voucher-head .acct-modal-kicker{color:#49769c!important}
+.acct-voucher-head .acct-modal-close{color:#365a7a!important;border-color:#c5dced!important;background:#fff!important}
+.acct-voucher-form{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;padding:16px 20px 18px!important;background:#fff!important}
+.acct-voucher-form .acct-field{min-width:0!important;padding:10px 11px!important;border:1px solid #e0eaf3!important;border-radius:8px!important;background:#fbfdff!important;box-shadow:0 2px 5px rgba(41,79,114,.035)!important}
+.acct-voucher-form .acct-field label{color:#334e68!important;font-weight:600!important}
+.acct-voucher-form input,.acct-voucher-form select,.acct-voucher-form textarea{background:#fff!important;color:#243b53!important;border:1px solid #cbd9e6!important;border-radius:6px!important;min-height:36px!important}
+.acct-voucher-form input:focus,.acct-voucher-form select:focus,.acct-voucher-form textarea:focus{outline:2px solid #d4e9fb!important;border-color:#83b7e2!important}
+.acct-voucher-form .acct-live-balance{background:#f0f8ff!important;border-color:#d4e8f8!important;color:#25496a!important}
+.acct-voucher-form .acct-voucher-narration{grid-column:span 2!important}
+.acct-voucher-form .acct-voucher-attachment{grid-column:span 2!important}
+.acct-voucher-form .acct-voucher-actions{grid-column:1/-1!important;background:#f7fbff!important}
+.acct-voucher-form .acct-modal-actions{display:flex!important;justify-content:flex-end!important;gap:10px!important}
+.acct-voucher-form .btn.primary{background:#d9edff!important;color:#16456d!important;border:1px solid #b9d9f3!important;font-weight:700!important}
+.acct-voucher-form .btn:not(.primary){background:#fff!important;color:#40566b!important;border:1px solid #d4e0eb!important}
+.acct-voucher-form [hidden]{display:none!important}
+@media(max-width:850px){.acct-voucher-landscape{width:calc(100vw - 16px)!important;max-height:calc(100vh - 16px)!important}.acct-voucher-form{grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:12px!important}.acct-voucher-form .acct-voucher-narration,.acct-voucher-form .acct-voucher-attachment{grid-column:1/-1!important}}
+@media(max-width:520px){.acct-voucher-form{grid-template-columns:1fr!important}.acct-voucher-form .acct-voucher-narration,.acct-voucher-form .acct-voucher-attachment{grid-column:1!important}}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -431,13 +457,70 @@ function arenderVoucherWorkspace(){
  el('aSearch').oninput=draw;draw();const exportRows=()=>all.map(x=>[x.date,x.voucherNo,x.voucherType,x.party||x.receivedFrom||x.paidTo||'',x.debitAccountId||x.counterAccountId||'',x.creditAccountId||x.accountId||x.depositAccountId||x.paymentAccountId||'',x.amount,x.mode,x.status,x.referenceNo,x.narration,x.attachmentUrl]);el('aRefresh').onclick=()=>renderAccountantPage('vouchers');el('aXlsx').onclick=()=>aexport('Voucher Register',headers,exportRows());el('aPdf').onclick=()=>aexport('Voucher Register',headers,exportRows(),true);el('aAdd').onclick=()=>aVoucherEntryForm(types);
 }
 function aVoucherEntryForm(types){
- const accounts=acctData.accounts.filter(a=>String(a.active||'ACTIVE')!=='INACTIVE'),opts=accounts.map(a=>'<option value="'+aesc(a.id)+'">'+aesc(a.accountCode+' · '+a.name)+'</option>').join(''),h=el('aEditor');
- h.innerHTML='<div class="acct-modal-backdrop" id="acctFormModal"><section class="acct-form-modal"><div class="acct-form-modal-head"><div><span class="acct-modal-kicker">KMMC ACCOUNTING</span><h2>New Voucher</h2><p>Enter all voucher details on one screen. Data is saved locally first and synced in the background.</p></div><button class="acct-modal-close" id="aCancel" type="button" aria-label="Close">×</button></div><form id="aVoucherForm" class="acct-form-grid acct-modal-form"><div class="acct-field"><label>Voucher type *</label><select name="voucherType" id="aVoucherType" required>'+types.map(x=>'<option value="'+x+'">'+x.replace('_',' ')+'</option>').join('')+'</select></div><div class="acct-field"><label>Date *</label><input type="date" name="date" value="'+adate()+'" required></div><div class="acct-field"><label>Voucher number</label><input name="voucherNo" placeholder="Auto-generated if blank"></div><div class="acct-field span2"><label>Party / Particulars</label><input name="party" placeholder="Client, supplier, employee or journal narration"></div><div class="acct-field"><label>Amount (₹) *</label><input name="amount" type="number" min=".01" step=".01" required placeholder="0.00"></div><div class="acct-field span2"><label>Debit account *</label><select name="debitAccountId" id="aDebitAccount" required><option value="">Select debit account</option>'+opts+'</select><div class="acct-live-balance"><small>Selected debit account balance</small><strong id="aDebitBalance">—</strong></div></div><div class="acct-field span2"><label>Credit account *</label><select name="creditAccountId" id="aCreditAccount" required><option value="">Select credit account</option>'+opts+'</select><div class="acct-live-balance"><small>Selected credit account balance</small><strong id="aCreditBalance">—</strong></div></div><div class="acct-field"><label>Payment mode</label><select name="mode">'+['CASH','UPI','BANK_TRANSFER','CHEQUE','CARD','OTHER'].map(x=>'<option>'+x+'</option>').join('')+'</select></div><div class="acct-field"><label>Reference / transaction no.</label><input name="referenceNo" placeholder="Optional"></div><div class="acct-field span3"><label>Narration / particulars</label><textarea name="narration" placeholder="Transaction details"></textarea></div><div class="acct-field span3"><label>Attachment <span class="acct-optional">OPTIONAL</span></label><input type="file" id="aAttach" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"><small class="acct-muted">PDF, JPG or PNG · maximum 5 MB · saved to Google Drive when online.</small></div><div class="acct-field span3"><div id="aVoucherError" class="notice error hidden"></div><div class="acct-modal-actions"><button type="button" class="btn" id="aCancelBottom">Cancel</button><button type="submit" class="btn primary">Save Voucher</button></div></div></form></section></div>';
- const close=()=>h.innerHTML='';el('aCancel').onclick=close;el('aCancelBottom').onclick=close;el('acctFormModal').addEventListener('click',e=>{if(e.target.id==='acctFormModal')close()});const f=el('aVoucherForm');
- const balUpdate=(field,out)=>{const a=accounts.find(x=>String(x.id)===String(el(field).value));el(out).textContent=a?amoney(abal(a)):'—'};el('aDebitAccount').onchange=()=>balUpdate('aDebitAccount','aDebitBalance');el('aCreditAccount').onchange=()=>balUpdate('aCreditAccount','aCreditBalance');
- f.onsubmit=async e=>{e.preventDefault();if(!f.reportValidity())return;const d=Object.fromEntries(new FormData(f).entries());d.amount=Number(d.amount||0);d.status='POSTED';d.id='local-voucher-'+Date.now();d._syncStatus='PENDING';const file=el('aAttach').files[0];if(file&&(file.size>5*1024*1024||!['application/pdf','image/jpeg','image/png'].includes(file.type))){el('aVoucherError').textContent=file.size>5*1024*1024?'Attachment must be 5 MB or smaller.':'Only PDF, JPG or PNG files are allowed.';el('aVoucherError').classList.remove('hidden');return;}acctData.vouchers.unshift(d);accountantCacheWrite(acctData);close();renderAccountantBody('vouchers');showNotice('Voucher saved on this device. Backend sync is running in the background.','success');(async()=>{try{if(file){const up=await apiFetchFresh('uploadDocument',{name:file.name,mimeType:file.type,base64Data:await readFile(file),category:'ACCOUNTING_VOUCHER',visibility:'PRIVATE'},false);d.attachmentUrl=up.driveUrl;d.attachmentDriveFileId=up.driveFileId;}const payload={...d};delete payload._syncStatus;delete payload.id;await apiFetchFresh('postVoucher',{record:payload},false);const r=await apiFetchFresh('list',{module:'vouchers',limit:500,offset:0},false);acctData.vouchers=r.records||[];accountantCacheWrite(acctData);if(activeModule==='vouchers')renderAccountantBody('vouchers');}catch(err){d._syncStatus='FAILED';accountantCacheWrite(acctData);showNotice('Voucher remains saved locally, but backend sync failed: '+err.message,'error');}})();};
+ const allAccounts=acctData.accounts.filter(a=>String(a.active||'ACTIVE').toUpperCase()!=='INACTIVE');
+ const cashBank=allAccounts.filter(a=>['CASH','BANK'].includes(String(a.type||'').toUpperCase()));
+ const opts=(list,placeholder)=>'<option value="">'+placeholder+'</option>'+list.map(a=>'<option value="'+aesc(a.id)+'">'+aesc((a.accountCode?a.accountCode+' · ':'')+a.name)+'</option>').join('');
+ const h=el('aEditor');
+ h.innerHTML='<div class="acct-modal-backdrop acct-voucher-backdrop" id="acctFormModal"><section class="acct-form-modal acct-voucher-landscape"><div class="acct-form-modal-head acct-voucher-head"><div><span class="acct-modal-kicker">KMMC ACCOUNTING</span><h2>New Voucher</h2><p>Fast single-screen entry · saved locally first and synchronised in the background.</p></div><button class="acct-modal-close" id="aCancel" type="button" aria-label="Close">×</button></div><form id="aVoucherForm" class="acct-form-grid acct-modal-form acct-voucher-form"><div class="acct-field"><label>Voucher type *</label><select name="voucherType" id="aVoucherType" required>'+types.map(x=>'<option value="'+x+'">'+x.replace(/_/g,' ')+'</option>').join('')+'</select></div><div class="acct-field"><label>Date *</label><input type="date" name="date" value="'+adate()+'" required></div><div class="acct-field"><label>Voucher number</label><input name="voucherNo" placeholder="Auto-generated if blank"></div><div class="acct-field"><label>Party / Particulars *</label><input name="party" required placeholder="Client, supplier, employee or particulars"></div><div class="acct-field"><label>Amount (₹) *</label><input name="amount" type="number" min=".01" step=".01" required placeholder="0.00"></div><div class="acct-field" id="aSingleAccountWrap"><label id="aSingleAccountLabel">Cash / bank account *</label><select id="aSingleAccount" name="singleAccountId" required>'+opts(cashBank,'Select account')+'</select><div class="acct-live-balance"><small>Current account balance</small><strong id="aSingleAccountBalance">—</strong></div></div><div class="acct-field acct-journal-account" id="aDebitWrap" hidden><label>Debit account *</label><select name="debitAccountId" id="aDebitAccount">'+opts(allAccounts,'Select debit account')+'</select><div class="acct-live-balance"><small>Current balance</small><strong id="aDebitBalance">—</strong></div></div><div class="acct-field acct-journal-account" id="aCreditWrap" hidden><label>Credit account *</label><select name="creditAccountId" id="aCreditAccount">'+opts(allAccounts,'Select credit account')+'</select><div class="acct-live-balance"><small>Current balance</small><strong id="aCreditBalance">—</strong></div></div><div class="acct-field"><label>Payment mode</label><select name="mode">'+['CASH','UPI','BANK_TRANSFER','CHEQUE','CARD','OTHER'].map(x=>'<option>'+x+'</option>').join('')+'</select></div><div class="acct-field"><label>Reference / transaction no.</label><input name="referenceNo" placeholder="Optional"></div><div class="acct-field acct-voucher-narration"><label>Narration / particulars</label><textarea name="narration" placeholder="Transaction details"></textarea></div><div class="acct-field acct-voucher-attachment"><label>Attachment <span class="acct-optional">OPTIONAL</span></label><input type="file" id="aAttach" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"><small class="acct-muted">PDF, JPG or PNG · maximum 5 MB · uploaded to Google Drive when online.</small></div><div class="acct-field acct-voucher-actions"><div id="aVoucherError" class="notice error hidden"></div><div class="acct-modal-actions"><button type="button" class="btn" id="aCancelBottom">Cancel</button><button type="submit" class="btn primary">Save Voucher</button></div></div></form></section></div>';
+ const close=()=>{h.innerHTML='';};
+ el('aCancel').onclick=close;el('aCancelBottom').onclick=close;
+ el('acctFormModal').addEventListener('click',e=>{if(e.target.id==='acctFormModal')close()});
+ const f=el('aVoucherForm'),typeEl=el('aVoucherType'),single=el('aSingleAccount');
+ const bal=(field,out)=>{const a=allAccounts.find(x=>String(x.id)===String(el(field).value));el(out).textContent=a?amoney(abal(a)):'—';};
+ const updateType=()=>{
+  const t=String(typeEl.value||'RECEIPT').toUpperCase(),journal=t==='JOURNAL';
+  el('aSingleAccountWrap').hidden=journal;el('aDebitWrap').hidden=!journal;el('aCreditWrap').hidden=!journal;
+  single.required=!journal;el('aDebitAccount').required=journal;el('aCreditAccount').required=journal;
+  if(t==='RECEIPT'){el('aSingleAccountLabel').textContent='Deposit into cash / bank account *';single.innerHTML=opts(cashBank,'Select cash / bank account');}
+  else if(t==='PAYMENT'){el('aSingleAccountLabel').textContent='Pay from cash / bank account *';single.innerHTML=opts(cashBank,'Select cash / bank account');}
+  else if(t==='CONTRA'){el('aSingleAccountLabel').textContent='Cash / bank account *';single.innerHTML=opts(cashBank,'Select cash / bank account');}
+  else {el('aSingleAccountLabel').textContent='Account *';single.innerHTML=opts(allAccounts,'Select account');}
+  el('aSingleAccountBalance').textContent='—';el('aDebitBalance').textContent='—';el('aCreditBalance').textContent='—';
+ };
+ typeEl.onchange=updateType;updateType();
+ single.onchange=()=>bal('aSingleAccount','aSingleAccountBalance');
+ el('aDebitAccount').onchange=()=>bal('aDebitAccount','aDebitBalance');el('aCreditAccount').onchange=()=>bal('aCreditAccount','aCreditBalance');
+ const autoCounter=(t,selectedId)=>{
+  const selected=allAccounts.find(a=>String(a.id)===String(selectedId));
+  const pool=allAccounts.filter(a=>String(a.id)!==String(selectedId));
+  const type=String(t).toUpperCase();
+  let wanted=[];
+  if(type==='RECEIPT')wanted=['INCOME','RECEIVABLE','ASSET'];
+  else if(type==='PAYMENT')wanted=['EXPENSE','LIABILITY'];
+  else if(type==='CONTRA')return pool.find(a=>['CASH','BANK'].includes(String(a.type||'').toUpperCase()))||pool[0];
+  else if(type==='SALES')wanted=['INCOME','RECEIVABLE'];
+  else if(type==='PURCHASE')wanted=['EXPENSE','PAYABLE','LIABILITY'];
+  else if(type==='CREDIT_NOTE')wanted=['INCOME','RECEIVABLE'];
+  else if(type==='DEBIT_NOTE')wanted=['EXPENSE','PAYABLE','LIABILITY'];
+  if(selected&&String(selected.group||'').toUpperCase()==='INCOME'&&type==='RECEIPT')wanted=['RECEIVABLE','ASSET'];
+  if(selected&&String(selected.group||'').toUpperCase()==='EXPENSE'&&type==='PAYMENT')wanted=['LIABILITY','ASSET'];
+  return pool.find(a=>wanted.includes(String(a.group||'').toUpperCase())||wanted.includes(String(a.type||'').toUpperCase()))||pool[0];
+ };
+ f.onsubmit=async e=>{
+  e.preventDefault();if(!f.reportValidity())return;
+  const d=Object.fromEntries(new FormData(f).entries()),t=String(d.voucherType||'RECEIPT').toUpperCase();
+  d.amount=Number(d.amount||0);d.status='POSTED';
+  if(t==='JOURNAL'){
+   if(!d.debitAccountId||!d.creditAccountId){showNotice('Select both debit and credit accounts for a journal voucher.','error');return;}
+   if(String(d.debitAccountId)===String(d.creditAccountId)){showNotice('Debit and credit accounts must be different.','error');return;}
+  }else{
+   const selected=allAccounts.find(a=>String(a.id)===String(d.singleAccountId));
+   if(!selected){showNotice('Select an account to continue.','error');return;}
+   const counter=autoCounter(t,selected.id);
+   if(!counter){showNotice('Create at least two active accounts before posting this voucher.','error');return;}
+   if(t==='PAYMENT'){d.debitAccountId=counter.id;d.creditAccountId=selected.id;}
+   else if(t==='SALES'||t==='CREDIT_NOTE'){d.debitAccountId=selected.id;d.creditAccountId=counter.id;}
+   else if(t==='PURCHASE'||t==='DEBIT_NOTE'){d.debitAccountId=counter.id;d.creditAccountId=selected.id;}
+   else {d.debitAccountId=selected.id;d.creditAccountId=counter.id;}
+  }
+  delete d.singleAccountId;
+  d.id='local-voucher-'+Date.now();d._syncStatus='PENDING';
+  const file=el('aAttach').files[0];
+  if(file&&(file.size>5*1024*1024||!['application/pdf','image/jpeg','image/png'].includes(file.type))){el('aVoucherError').textContent=file.size>5*1024*1024?'Attachment must be 5 MB or smaller.':'Only PDF, JPG or PNG files are allowed.';el('aVoucherError').classList.remove('hidden');return;}
+  acctData.vouchers.unshift(d);accountantCacheWrite(acctData);close();renderAccountantBody('vouchers');showNotice('Voucher saved on this device. Backend sync is running in the background.','success');
+  (async()=>{try{if(file){const up=await apiFetchFresh('uploadDocument',{name:file.name,mimeType:file.type,base64Data:await readFile(file),category:'ACCOUNTING_VOUCHER',visibility:'PRIVATE'},false);d.attachmentUrl=up.driveUrl;d.attachmentDriveFileId=up.driveFileId;}const payload={...d};delete payload._syncStatus;delete payload.id;await apiFetchFresh('postVoucher',{record:payload},false);const r=await apiFetchFresh('list',{module:'vouchers',limit:500,offset:0},false);acctData.vouchers=r.records||[];accountantCacheWrite(acctData);if(activeModule==='vouchers')renderAccountantBody('vouchers');}catch(err){d._syncStatus='FAILED';accountantCacheWrite(acctData);showNotice('Voucher remains saved locally, but backend sync failed: '+err.message,'error');}})();
+ };
 }
-
 async function arenderReports(){const from=astart(),to=adate(),types=['Ledger','Invoices','Collections','Expenses','Payables','Receipts','Payments','Vouchers','Chart of Accounts'];awrap('<div class="acct-toolbar"><div class="left"><strong>Reports centre</strong><span class="acct-muted">Select a report and period; exports include KMMC branding.</span></div><div class="right"><button class="btn" id="aRefresh">Refresh</button><button class="btn" id="aXlsx">Download Excel</button><button class="btn" id="aPdf">Download PDF</button></div></div><section class="acct-card"><div class="acct-card-body"><div class="acct-report-filter"><div class="acct-field acct-type-field"><label>Report type</label><select id="aReportType">'+types.map(x=>'<option>'+x+'</option>').join('')+'</select></div><div class="acct-field"><label>From date</label><input type="date" id="aFrom" value="'+from+'"></div><div class="acct-field"><label>To date</label><input type="date" id="aTo" value="'+to+'"></div><div class="acct-field"><button class="btn primary" id="aRun">Run report</button></div></div></div><div class="acct-card-body acct-report-output" id="aReportBody"><div class="acct-empty">Choose a report and run it.</div></div></section>');let rows=[],headers=[];const run=()=>{const f=el('aFrom').value,t=el('aTo').value,type=el('aReportType').value;if(f>t){showNotice('From date must be on or before To date.','error');return}const data=acctReportRecords(type,f,t);headers=acctReportColumns(data);rows=data.map(r=>headers.map(k=>{const v=r[k];return v===null||v===undefined?'':typeof v==='number'?v:String(v)}));const title=type+' · '+f+' to '+t;el('aReportBody').innerHTML='<div class="acct-card-head"><h2 class="acct-title">'+aesc(title)+'</h2><span class="acct-muted">'+data.length+' records</span></div>'+(data.length?atable(data.map(r=>'<tr>'+headers.map(k=>'<td>'+aesc(typeof r[k]==='number'&&/amount|balance|debit|credit|total|subtotal|tax/i.test(k)?amoney(r[k]):r[k])+'</td>').join('')+'</tr>'),headers):'<div class="acct-empty">No records found for this report and period.</div>');};el('aRun').onclick=run;el('aReportType').onchange=run;el('aRefresh').onclick=()=>{renderAccountantPage('reports')};el('aXlsx').onclick=()=>aexport(el('aReportType').value+' Report '+el('aFrom').value+' to '+el('aTo').value,headers,rows);el('aPdf').onclick=()=>aexport(el('aReportType').value+' Report '+el('aFrom').value+' to '+el('aTo').value,headers,rows,true);run();}
 
 async function renderAccountingReports(){
