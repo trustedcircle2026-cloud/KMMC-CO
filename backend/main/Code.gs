@@ -24,6 +24,7 @@ const KMMC = {
     collections:{s:'DB_COLLECTIONS',h:['id','receiptNo','clientId','invoiceId','collectionDate','amount','mode','referenceNo','screenshotUrl','screenshotDriveFileId','notes','receivedBy','status','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     expenses:{s:'DB_EXPENSES',h:['id','expenseDate','category','description','amount','paidTo','paymentMode','referenceNo','employeeId','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     accounts:{s:'DB_ACCOUNTS',h:['id','accountCode','name','group','type','openingBalance','openingSide','bankName','accountNumberLast4','ifsc','active','notes','createdAt','updatedAt'],r:['ADMIN']},
+    vouchers:{s:'DB_ACCOUNTING_VOUCHERS',h:['id','voucherNo','voucherType','date','party','debitAccountId','creditAccountId','amount','mode','referenceNo','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     receipts:{s:'DB_ACCOUNTING_RECEIPTS',h:['id','voucherNo','date','receivedFrom','category','depositAccountId','counterAccountId','amount','mode','referenceNo','clientId','invoiceId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     payments:{s:'DB_ACCOUNTING_PAYMENTS',h:['id','voucherNo','date','paidTo','category','paymentAccountId','counterAccountId','amount','mode','referenceNo','employeeId','claimId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     ledger:{s:'DB_ACCOUNTING_LEDGER',h:['id','entryDate','voucherType','voucherId','voucherNo','accountId','accountCode','accountName','group','debit','credit','narration','status','createdBy','createdAt'],r:['ADMIN'],ro:true},
@@ -102,6 +103,7 @@ function route_(a,q){
     case 'accountingReports':return accountingReports_(auth_(q),q);
     case 'accountingLedger':return accountingLedger_(auth_(q),q);
     case 'postReceipt':return postAccountingReceipt_(auth_(q),q);
+    case 'postVoucher':return postAccountingVoucher_(auth_(q),q);
     case 'postPayment':return postAccountingPayment_(auth_(q),q);
     case 'cancelAccountingVoucher':return cancelAccountingVoucher_(auth_(q),q);
     default:throw Error('Unknown action: '+a);
@@ -455,6 +457,19 @@ function postAccountingPayment_(u,q){
  withAccountingLock_(()=>{append_('payments',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'PAYMENT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
  activity_(u,'ACCOUNTING_PAYMENT','payments',id,r.voucherNo);return publicRec_('payments',r);
 }
+
+function postAccountingVoucher_(u,q){
+ needAdmin_(u);const x=q.record||{},pair=assertAccountingPair_(x.debitAccountId,x.creditAccountId,x.amount),now=iso_(),date=String(x.date||localDay_(new Date())),type=String(x.voucherType||'JOURNAL').toUpperCase(),allowed=['RECEIPT','PAYMENT','CONTRA','JOURNAL','SALES','PURCHASE','CREDIT_NOTE','DEBIT_NOTE'];
+ if(!allowed.includes(type))throw Error('Unsupported voucher type.');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Voucher date must be YYYY-MM-DD.');
+ const party=String(x.party||'').trim();if(!['JOURNAL','CONTRA'].includes(type)&&!party)throw Error('Party / particulars is required for this voucher type.');
+ const status=String(x.status||'POSTED').toUpperCase();if(!['POSTED','DRAFT'].includes(status))throw Error('Voucher status must be POSTED or DRAFT.');
+ const prefix={RECEIPT:'RCPT',PAYMENT:'PAY',CONTRA:'CNTR',JOURNAL:'JRN',SALES:'SAL',PURCHASE:'PUR',CREDIT_NOTE:'CRN',DEBIT_NOTE:'DBN'}[type];
+ const r={id:uid_(),voucherNo:String(x.voucherNo||voucherNo_(prefix)),voucherType:type,date,party,debitAccountId:pair.debit.id,creditAccountId:pair.credit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
+ withAccountingLock_(()=>{append_('vouchers',r);if(status==='POSTED')appendLedgerPair_(u,{date,type,id:r.id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration||r.party});});
+ activity_(u,'ACCOUNTING_VOUCHER','vouchers',r.id,r.voucherNo+' '+type);return publicRec_('vouchers',r);
+}
+
 function withAccountingLock_(fn){const lock=LockService.getScriptLock();lock.waitLock(10000);try{return fn();}finally{lock.releaseLock();}}
 function appendLedgerPair_(u,v){
  const common={entryDate:v.date,voucherType:v.type,voucherId:v.id,voucherNo:v.voucherNo,narration:v.narration,status:'POSTED',createdBy:u.id,createdAt:iso_()};
