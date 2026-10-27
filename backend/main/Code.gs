@@ -102,6 +102,7 @@ function route_(a,q){
     case 'outstandingSummary':return outstandingSummary_(auth_(q));
     case 'accountingReports':return accountingReports_(auth_(q),q);
     case 'accountingLedger':return accountingLedger_(auth_(q),q);
+    case 'pendingVoucherReferences':return pendingVoucherReferences_(auth_(q),q);
     case 'postReceipt':return postAccountingReceipt_(auth_(q),q);
     case 'postVoucher':return postAccountingVoucher_(auth_(q),q);
     case 'postPayment':return postAccountingPayment_(auth_(q),q);
@@ -450,23 +451,66 @@ function accountPaymentMode_(account,requested){
   if(!['UPI','QR','BANK_TRANSFER','CHEQUE','OTHER','CASH'].includes(mode))throw Error('Invalid payment mode.');
   return mode;
 }
-function parseReferenceAdjustments_(x,clientId){
+function pendingVoucherReferences_(u,q){
+  needAdmin_(u);
+  const kind=String(q.kind||q.voucherType||'RECEIVABLE').toUpperCase();
+  if(!['RECEIVABLE','PAYABLE','SALES','PURCHASE'].includes(kind))throw Error('Reference kind must be RECEIVABLE or PAYABLE.');
+  const clientId=String(q.clientId||'').trim(),isPayable=['PAYABLE','PURCHASE'].includes(kind);
+  if(clientId&&!rows_('clients').some(c=>String(c.id)===clientId))throw Error('Selected client does not exist.');
+  return {kind:isPayable?'PAYABLE':'RECEIVABLE',clientId,records:accountingOpenReferences_(isPayable,clientId)};
+}
+function accountingOpenReferences_(isPayable,clientId){
+  const refs=[];
+  if(!isPayable){
+    rows_('invoices').filter(i=>String(i.status||'').toUpperCase()!=='CANCELLED'&&(!clientId||String(i.clientId)===clientId)).forEach(i=>{
+      const total=round_(num_(i.totalAmount||i.amount)),allocated=round_(receiptAllocatedTo_(String(i.id))),open=round_(Math.max(0,total-allocated));
+      if(open>0.009)refs.push({id:String(i.id),referenceId:String(i.id),referenceType:'SALES_INVOICE',referenceNo:String(i.invoiceNo||''),date:String(i.invoiceDate||''),clientId:String(i.clientId||''),party:clientName_(i.clientId),totalAmount:total,adjustedAmount:allocated,pendingAmount:open,label:String(i.invoiceNo||'Sales invoice')+' · '+clientName_(i.clientId)+' · Pending ₹'+open.toFixed(2)});
+    });
+  }else{
+    rows_('vouchers').filter(v=>String(v.voucherType||'').toUpperCase()==='PURCHASE'&&String(v.status||'POSTED').toUpperCase()!=='CANCELLED'&&(!clientId||String(v.clientId)===clientId)).forEach(v=>{
+      const total=round_(num_(v.amount)),allocated=round_(paymentAllocatedTo_(String(v.id))),open=round_(Math.max(0,total-allocated));
+      if(open>0.009)refs.push({id:String(v.id),referenceId:String(v.id),referenceType:'PURCHASE_VOUCHER',referenceNo:String(v.voucherNo||''),date:String(v.date||''),clientId:String(v.clientId||''),party:String(v.party||clientName_(v.clientId)),totalAmount:total,adjustedAmount:allocated,pendingAmount:open,label:String(v.voucherNo||'Purchase voucher')+' · '+String(v.party||clientName_(v.clientId))+' · Pending ₹'+open.toFixed(2)});
+    });
+  }
+  return refs.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+}
+function clientName_(clientId){const c=rows_('clients').find(x=>String(x.id)===String(clientId));return c?String(c.name||''):'Unlinked party';}
+function receiptAllocatedTo_(referenceId){
+  let total=0;
+  rows_('collections').filter(x=>String(x.invoiceId)===referenceId&&String(x.status||'').toUpperCase()!=='CANCELLED').forEach(x=>total=round_(total+num_(x.amount)));
+  rows_('receipts').filter(x=>String(x.status||'POSTED').toUpperCase()==='POSTED').forEach(x=>{
+    const refs=parseStoredAdjustments_(x.referenceAdjustments);
+    refs.forEach(r=>{if(String(r.invoiceId||r.referenceId)===referenceId)total=round_(total+num_(r.amount||r.adjustedAmount));});
+    if(!refs.length&&String(x.invoiceId)===referenceId)total=round_(total+num_(x.adjustedAmount||x.amount));
+  });
+  return total;
+}
+function paymentAllocatedTo_(referenceId){
+  let total=0;
+  rows_('payments').filter(x=>String(x.status||'POSTED').toUpperCase()==='POSTED').forEach(x=>{
+    const refs=parseStoredAdjustments_(x.referenceAdjustments);
+    refs.forEach(r=>{if(String(r.purchaseVoucherId||r.referenceId||r.invoiceId)===referenceId)total=round_(total+num_(r.amount||r.adjustedAmount));});
+  });
+  return total;
+}
+function parseStoredAdjustments_(value){if(!value)return [];if(Array.isArray(value))return value;try{const x=JSON.parse(String(value));return Array.isArray(x)?x:[];}catch(e){return [];}}
+function parseReferenceAdjustments_(x,clientId,isPayable){
   let refs=x.referenceAdjustments||[];
   if(typeof refs==='string'&&refs.trim()){try{refs=JSON.parse(refs);}catch(e){throw Error('Reference adjustments must be valid JSON.');}}
   if(!Array.isArray(refs))throw Error('Reference adjustments must be a list.');
-  let total=0;
+  let total=0;const normalized=[];
   refs.forEach(ref=>{
-    const invoiceId=String(ref.invoiceId||ref.referenceId||'').trim(),amount=round_(num_(ref.amount||ref.adjustedAmount));
-    if(!invoiceId)throw Error('Every reference adjustment must identify an invoice.');
+    const referenceId=String(ref.referenceId||ref.invoiceId||ref.purchaseVoucherId||'').trim(),amount=round_(num_(ref.amount||ref.adjustedAmount));
+    if(!referenceId)throw Error('Every reference adjustment must identify a pending invoice or purchase voucher.');
     if(!(amount>0))throw Error('Each reference adjustment amount must be greater than zero.');
-    const inv=rows_('invoices').find(i=>String(i.id)===invoiceId);
-    if(!inv)throw Error('Referenced invoice was not found.');
-    if(clientId&&String(inv.clientId)!==String(clientId))throw Error('Referenced invoice belongs to a different client.');
-    if(String(inv.status||'').toUpperCase()==='CANCELLED')throw Error('Cancelled invoices cannot be adjusted.');
+    const available=accountingOpenReferences_(!!isPayable,clientId).find(v=>String(v.id)===referenceId);
+    if(!available)throw Error('Reference is not a pending '+(isPayable?'payable purchase voucher':'receivable sales invoice')+' for the selected client.');
+    if(amount>available.pendingAmount+0.01)throw Error('Adjustment exceeds the pending balance for '+available.referenceNo+'.');
     total=round_(total+amount);
+    normalized.push({referenceId,invoiceId:isPayable?'':referenceId,purchaseVoucherId:isPayable?referenceId:'',referenceType:available.referenceType,referenceNo:available.referenceNo,amount});
   });
   if(total>round_(num_(x.amount))+0.01)throw Error('Total reference adjustment cannot exceed the voucher amount.');
-  return {refs,total};
+  return {refs:normalized,total};
 }
 function validateOtherNarration_(mode,narration){
   if(String(mode||'').toUpperCase()==='OTHER'&&!String(narration||'').trim())throw Error('Narration is mandatory when payment mode is Other.');
@@ -483,7 +527,7 @@ function postAccountingReceipt_(u,q){
   if(pair.credit.clientId&&!clientId)throw Error('Client ID must be populated from the selected client ledger.');
   if(invoiceId){const inv=rows_('invoices').find(i=>String(i.id)===invoiceId);if(!inv)throw Error('Referenced invoice was not found.');if(clientId&&String(inv.clientId)!==clientId)throw Error('Referenced invoice belongs to a different client.');}
   const mode=accountPaymentMode_(pair.debit,x.mode);validateOtherNarration_(mode,x.narration);
-  const adjustment=parseReferenceAdjustments_(x,clientId);
+  const adjustment=parseReferenceAdjustments_(x,clientId,false);
   const refs=adjustment.refs.length?adjustment.refs:(invoiceId?[{invoiceId,amount:round_(num_(x.adjustedAmount||x.amount))}]:[]);
   const r={id,voucherNo:voucherNo_('RCPT'),date,receivedFrom:String(x.receivedFrom).trim(),category:String(x.category||'OTHER'),depositAccountId:pair.debit.id,counterAccountId:pair.credit.id,amount:pair.amount,mode,referenceNo:String(x.referenceNo||''),remarksNo:String(x.remarksNo||''),clientId,invoiceId,referenceType:String(x.referenceType||(refs.length?'SALES_INVOICE':'')),referenceId:String(x.referenceId||invoiceId),adjustedAmount:round_(adjustment.total||num_(x.adjustedAmount)),referenceAdjustments:JSON.stringify(refs),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
   withAccountingLock_(()=>{append_('receipts',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'RECEIPT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
@@ -500,7 +544,7 @@ function postAccountingPayment_(u,q){
   if(pair.debit.clientId&&clientId&&String(pair.debit.clientId)!==clientId)throw Error('Selected payable ledger belongs to a different client.');
   if(pair.debit.clientId&&!clientId)throw Error('Client ID must be populated from the selected client ledger.');
   const mode=accountPaymentMode_(pair.credit,x.mode);validateOtherNarration_(mode,x.narration);
-  const adjustment=parseReferenceAdjustments_(x,clientId);
+  const adjustment=parseReferenceAdjustments_(x,clientId,true);
   const r={id,voucherNo:voucherNo_('PAY'),date,paidTo:String(x.paidTo).trim(),category:String(x.category||'OFFICE_EXPENSE'),paymentAccountId:pair.credit.id,counterAccountId:pair.debit.id,amount:pair.amount,mode,referenceNo:String(x.referenceNo||''),remarksNo:String(x.remarksNo||''),employeeId:String(x.employeeId||''),claimId:String(x.claimId||''),clientId,referenceType:String(x.referenceType||''),referenceId:String(x.referenceId||''),adjustedAmount:round_(adjustment.total||num_(x.adjustedAmount)),referenceAdjustments:JSON.stringify(adjustment.refs),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
   withAccountingLock_(()=>{append_('payments',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'PAYMENT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
   activity_(u,'ACCOUNTING_PAYMENT','payments',id,r.voucherNo);return publicRec_('payments',r);
