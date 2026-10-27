@@ -424,6 +424,7 @@ function outstandingSummary_(u){
 /** Admin-only accounting foundation. Posted vouchers are reversed, never silently deleted. */
 function validateAccount_(r){
  if(!String(r.accountCode||'').trim()||!String(r.name||'').trim())throw Error('Account code and account name are required.');
+ if(String(r.clientId||'').trim()&&!rows_('clients').some(c=>String(c.id)===String(r.clientId)))throw Error('Linked client was not found. A client may have multiple ledgers, but each ledger must reference a valid client ID.');
  if(rows_('accounts').some(x=>String(x.accountCode).toLowerCase()===String(r.accountCode).toLowerCase()&&String(x.id)!==String(r.id||'')))throw Error('Account code already exists.');
  if(['ASSET','LIABILITY','EQUITY','INCOME','EXPENSE'].indexOf(String(r.group||'').toUpperCase())<0)throw Error('Invalid account group.');
  r.openingBalance=round_(Math.abs(num_(r.openingBalance)));
@@ -465,6 +466,9 @@ function postAccountingVoucher_(u,q){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Voucher date must be YYYY-MM-DD.');
  const party=String(x.party||'').trim();if(!['JOURNAL','CONTRA'].includes(type)&&!party)throw Error('Party / particulars is required for this voucher type.');
  const status=String(x.status||'POSTED').toUpperCase();if(!['POSTED','DRAFT'].includes(status))throw Error('Voucher status must be POSTED or DRAFT.');
+ const clientId=String(x.clientId||'').trim(),partyAccountId=String(x.partyAccountId||'').trim();
+ if(clientId&&!rows_('clients').some(c=>String(c.id)===clientId))throw Error('Selected client ID does not exist.');
+ if(partyAccountId){const partyAccount=accountingAccount_(partyAccountId);if(partyAccount.clientId&&clientId&&String(partyAccount.clientId)!==clientId)throw Error('Selected party ledger belongs to a different client.');if(partyAccount.clientId&&!clientId)throw Error('Client ID must be supplied for the selected party ledger.');}
  const amount=round_(num_(x.amount));if(!(amount>0))throw Error('Amount must be greater than zero.');
  const id=uid_(),prefix={RECEIPT:'RCPT',PAYMENT:'PAY',CONTRA:'CNTR',JOURNAL:'JRN',SALES:'SAL',PURCHASE:'PUR',CREDIT_NOTE:'CRN',DEBIT_NOTE:'DBN'}[type],voucherNo=String(x.voucherNo||voucherNo_(prefix));
  const taxable=round_(num_(x.taxableValue)),cgst=round_(num_(x.cgst)),sgst=round_(num_(x.sgst)),igst=round_(num_(x.igst)),taxTotal=round_(cgst+sgst+igst);
@@ -488,7 +492,7 @@ function postAccountingVoucher_(u,q){
  }else{const pair=assertAccountingPair_(x.debitAccountId,x.creditAccountId,amount);lines=[{account:pair.debit,debit:amount,credit:0},{account:pair.credit,debit:0,credit:amount}];}
  const totalDr=round_(lines.reduce((n,l)=>n+l.debit,0)),totalCr=round_(lines.reduce((n,l)=>n+l.credit,0));
  if(Math.abs(totalDr-totalCr)>0.02)throw Error('Voucher is not balanced. Debit '+totalDr+' and credit '+totalCr+'.');
- const r={id,voucherNo,voucherType:type,date,party,debitAccountId:String(x.debitAccountId||''),creditAccountId:String(x.creditAccountId||''),amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now,clientId:String(x.clientId||''),partyAccountId:String(x.partyAccountId||''),taxableValue:taxable,gstRate:round_(num_(x.gstRate)),cgst,sgst,igst,salesPurchaseAccountId:String(x.salesPurchaseAccountId||''),cgstAccountId:String(x.cgstAccountId||''),sgstAccountId:String(x.sgstAccountId||''),igstAccountId:String(x.igstAccountId||''),inputCgstAccountId:String(x.inputCgstAccountId||''),inputSgstAccountId:String(x.inputSgstAccountId||''),inputIgstAccountId:String(x.inputIgstAccountId||''),referenceType:String(x.referenceType||''),referenceId:String(x.referenceId||''),adjustedAmount:round_(num_(x.adjustedAmount))};
+ const r={id,voucherNo,voucherType:type,date,party,debitAccountId:String(x.debitAccountId||''),creditAccountId:String(x.creditAccountId||''),amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now,clientId,partyAccountId, taxableValue:taxable,gstRate:round_(num_(x.gstRate)),cgst,sgst,igst,salesPurchaseAccountId:String(x.salesPurchaseAccountId||''),cgstAccountId:String(x.cgstAccountId||''),sgstAccountId:String(x.sgstAccountId||''),igstAccountId:String(x.igstAccountId||''),inputCgstAccountId:String(x.inputCgstAccountId||''),inputSgstAccountId:String(x.inputSgstAccountId||''),inputIgstAccountId:String(x.inputIgstAccountId||''),referenceType:String(x.referenceType||''),referenceId:String(x.referenceId||''),adjustedAmount:round_(num_(x.adjustedAmount))};
  withAccountingLock_(()=>{append_('vouchers',r);if(status==='POSTED')lines.forEach(l=>appendLedgerLine_(u,{date,type,id,voucherNo,account:l.account,debit:l.debit,credit:l.credit,narration:r.narration||party}));});
  activity_(u,'ACCOUNTING_VOUCHER','vouchers',r.id,r.voucherNo+' '+type);return publicRec_('vouchers',r);
 }
