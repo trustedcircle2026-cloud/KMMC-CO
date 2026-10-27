@@ -23,8 +23,8 @@ const KMMC = {
     invoices:{s:'DB_INVOICES',h:['id','invoiceNo','clientId','invoiceDate','dueDate','description','subtotal','taxAmount','discount','totalAmount','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     collections:{s:'DB_COLLECTIONS',h:['id','receiptNo','clientId','invoiceId','collectionDate','amount','mode','referenceNo','screenshotUrl','screenshotDriveFileId','notes','receivedBy','status','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     expenses:{s:'DB_EXPENSES',h:['id','expenseDate','category','description','amount','paidTo','paymentMode','referenceNo','employeeId','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
-    accounts:{s:'DB_ACCOUNTS',h:['id','accountCode','name','group','type','openingBalance','openingSide','bankName','accountNumberLast4','ifsc','active','notes','createdAt','updatedAt'],r:['ADMIN']},
-    vouchers:{s:'DB_ACCOUNTING_VOUCHERS',h:['id','voucherNo','voucherType','date','party','debitAccountId','creditAccountId','amount','mode','referenceNo','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
+    accounts:{s:'DB_ACCOUNTS',h:['id','accountCode','name','group','type','openingBalance','openingSide','bankName','accountNumberLast4','ifsc','active','notes','clientId','createdAt','updatedAt'],r:['ADMIN']},
+    vouchers:{s:'DB_ACCOUNTING_VOUCHERS',h:['id','voucherNo','voucherType','date','party','debitAccountId','creditAccountId','amount','mode','referenceNo','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt','clientId','partyAccountId','taxableValue','gstRate','cgst','sgst','igst','salesPurchaseAccountId','cgstAccountId','sgstAccountId','igstAccountId','inputCgstAccountId','inputSgstAccountId','inputIgstAccountId','referenceType','referenceId','adjustedAmount'],r:['ADMIN']},
     receipts:{s:'DB_ACCOUNTING_RECEIPTS',h:['id','voucherNo','date','receivedFrom','category','depositAccountId','counterAccountId','amount','mode','referenceNo','clientId','invoiceId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     payments:{s:'DB_ACCOUNTING_PAYMENTS',h:['id','voucherNo','date','paidTo','category','paymentAccountId','counterAccountId','amount','mode','referenceNo','employeeId','claimId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     ledger:{s:'DB_ACCOUNTING_LEDGER',h:['id','entryDate','voucherType','voucherId','voucherNo','accountId','accountCode','accountName','group','debit','credit','narration','status','createdBy','createdAt'],r:['ADMIN'],ro:true},
@@ -459,23 +459,42 @@ function postAccountingPayment_(u,q){
 }
 
 function postAccountingVoucher_(u,q){
- needAdmin_(u);const x=q.record||{},pair=assertAccountingPair_(x.debitAccountId,x.creditAccountId,x.amount),now=iso_(),date=String(x.date||localDay_(new Date())),type=String(x.voucherType||'JOURNAL').toUpperCase(),allowed=['RECEIPT','PAYMENT','CONTRA','JOURNAL','SALES','PURCHASE','CREDIT_NOTE','DEBIT_NOTE'];
+ needAdmin_(u);
+ const x=q.record||{},now=iso_(),date=String(x.date||localDay_(new Date())),type=String(x.voucherType||'JOURNAL').toUpperCase(),allowed=['RECEIPT','PAYMENT','CONTRA','JOURNAL','SALES','PURCHASE','CREDIT_NOTE','DEBIT_NOTE'];
  if(!allowed.includes(type))throw Error('Unsupported voucher type.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Voucher date must be YYYY-MM-DD.');
  const party=String(x.party||'').trim();if(!['JOURNAL','CONTRA'].includes(type)&&!party)throw Error('Party / particulars is required for this voucher type.');
  const status=String(x.status||'POSTED').toUpperCase();if(!['POSTED','DRAFT'].includes(status))throw Error('Voucher status must be POSTED or DRAFT.');
- const prefix={RECEIPT:'RCPT',PAYMENT:'PAY',CONTRA:'CNTR',JOURNAL:'JRN',SALES:'SAL',PURCHASE:'PUR',CREDIT_NOTE:'CRN',DEBIT_NOTE:'DBN'}[type];
- const r={id:uid_(),voucherNo:String(x.voucherNo||voucherNo_(prefix)),voucherType:type,date,party,debitAccountId:pair.debit.id,creditAccountId:pair.credit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
- withAccountingLock_(()=>{append_('vouchers',r);if(status==='POSTED')appendLedgerPair_(u,{date,type,id:r.id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration||r.party});});
+ const amount=round_(num_(x.amount));if(!(amount>0))throw Error('Amount must be greater than zero.');
+ const id=uid_(),prefix={RECEIPT:'RCPT',PAYMENT:'PAY',CONTRA:'CNTR',JOURNAL:'JRN',SALES:'SAL',PURCHASE:'PUR',CREDIT_NOTE:'CRN',DEBIT_NOTE:'DBN'}[type],voucherNo=String(x.voucherNo||voucherNo_(prefix));
+ const taxable=round_(num_(x.taxableValue)),cgst=round_(num_(x.cgst)),sgst=round_(num_(x.sgst)),igst=round_(num_(x.igst)),taxTotal=round_(cgst+sgst+igst);
+ let lines=[];
+ const addLine=(accountId,debit,credit)=>{const a=accountingAccount_(accountId);if(debit<0||credit<0||(debit&&credit))throw Error('Invalid debit/credit line.');if(debit||credit)lines.push({account:a,debit:round_(debit),credit:round_(credit)});};
+ const splitEnabled=(type==='SALES'||type==='PURCHASE')&&x.taxableValue!==undefined&&x.taxableValue!==''&&(taxTotal>0||x.splitGst===true||x.splitGst==='true');
+ if(splitEnabled){
+   const salesPurchaseId=String(x.salesPurchaseAccountId||((type==='SALES')?x.creditAccountId:x.debitAccountId)||'');
+   const partyId=String(x.partyAccountId||((type==='SALES')?x.debitAccountId:x.creditAccountId)||'');
+   if(!partyId||!salesPurchaseId)throw Error('Select both the party ledger and sales/purchase ledger.');
+   if(!(taxable>0)||Math.abs(round_(taxable+taxTotal-amount))>0.02)throw Error('Invoice amount must equal taxable value plus CGST, SGST and IGST.');
+   if(cgst&&sgst&&igst)throw Error('Use either local GST (CGST/SGST) or IGST, not both.');
+   if(type==='SALES'){
+     addLine(partyId,amount,0);addLine(salesPurchaseId,0,taxable);
+     if(cgst)addLine(x.cgstAccountId,0,cgst);if(sgst)addLine(x.sgstAccountId,0,sgst);if(igst)addLine(x.igstAccountId,0,igst);
+   }else{
+     addLine(salesPurchaseId,taxable,0);
+     if(cgst)addLine(x.inputCgstAccountId||x.cgstAccountId,cgst,0);if(sgst)addLine(x.inputSgstAccountId||x.sgstAccountId,sgst,0);if(igst)addLine(x.inputIgstAccountId||x.igstAccountId,igst,0);
+     addLine(partyId,0,amount);
+   }
+ }else{const pair=assertAccountingPair_(x.debitAccountId,x.creditAccountId,amount);lines=[{account:pair.debit,debit:amount,credit:0},{account:pair.credit,debit:0,credit:amount}];}
+ const totalDr=round_(lines.reduce((n,l)=>n+l.debit,0)),totalCr=round_(lines.reduce((n,l)=>n+l.credit,0));
+ if(Math.abs(totalDr-totalCr)>0.02)throw Error('Voucher is not balanced. Debit '+totalDr+' and credit '+totalCr+'.');
+ const r={id,voucherNo,voucherType:type,date,party,debitAccountId:String(x.debitAccountId||''),creditAccountId:String(x.creditAccountId||''),amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now,clientId:String(x.clientId||''),partyAccountId:String(x.partyAccountId||''),taxableValue:taxable,gstRate:round_(num_(x.gstRate)),cgst,sgst,igst,salesPurchaseAccountId:String(x.salesPurchaseAccountId||''),cgstAccountId:String(x.cgstAccountId||''),sgstAccountId:String(x.sgstAccountId||''),igstAccountId:String(x.igstAccountId||''),inputCgstAccountId:String(x.inputCgstAccountId||''),inputSgstAccountId:String(x.inputSgstAccountId||''),inputIgstAccountId:String(x.inputIgstAccountId||''),referenceType:String(x.referenceType||''),referenceId:String(x.referenceId||''),adjustedAmount:round_(num_(x.adjustedAmount))};
+ withAccountingLock_(()=>{append_('vouchers',r);if(status==='POSTED')lines.forEach(l=>appendLedgerLine_(u,{date,type,id,voucherNo,account:l.account,debit:l.debit,credit:l.credit,narration:r.narration||party}));});
  activity_(u,'ACCOUNTING_VOUCHER','vouchers',r.id,r.voucherNo+' '+type);return publicRec_('vouchers',r);
 }
-
 function withAccountingLock_(fn){const lock=LockService.getScriptLock();lock.waitLock(10000);try{return fn();}finally{lock.releaseLock();}}
-function appendLedgerPair_(u,v){
- const common={entryDate:v.date,voucherType:v.type,voucherId:v.id,voucherNo:v.voucherNo,narration:v.narration,status:'POSTED',createdBy:u.id,createdAt:iso_()};
- append_('ledger',Object.assign({id:uid_(),accountId:v.debit.id,accountCode:v.debit.accountCode,accountName:v.debit.name,group:v.debit.group,debit:v.amount,credit:0},common));
- append_('ledger',Object.assign({id:uid_(),accountId:v.credit.id,accountCode:v.credit.accountCode,accountName:v.credit.name,group:v.credit.group,debit:0,credit:v.amount},common));
-}
+function appendLedgerLine_(u,v){const common={entryDate:v.date,voucherType:v.type,voucherId:v.id,voucherNo:v.voucherNo,narration:v.narration,status:'POSTED',createdBy:u.id,createdAt:iso_()};append_('ledger',Object.assign({id:uid_(),accountId:v.account.id,accountCode:v.account.accountCode,accountName:v.account.name,group:v.account.group,debit:round_(num_(v.debit)),credit:round_(num_(v.credit))},common));}
+function appendLedgerPair_(u,v){appendLedgerLine_(u,{date:v.date,type:v.type,id:v.id,voucherNo:v.voucherNo,account:v.debit,debit:v.amount,credit:0,narration:v.narration});appendLedgerLine_(u,{date:v.date,type:v.type,id:v.id,voucherNo:v.voucherNo,account:v.credit,debit:0,credit:v.amount,narration:v.narration});}
 function cancelAccountingVoucher_(u,q){
  needAdmin_(u);const type=String(q.voucherType||'').toUpperCase(),id=String(q.id||'');
  if(!['RECEIPT','PAYMENT'].includes(type)||!id)throw Error('Voucher type and ID are required.');
@@ -488,13 +507,18 @@ function accountingLedger_(u,q){needAdmin_(u);const id=String(q.accountId||'');i
 function accountingReports_(u,q){
  needAdmin_(u);const from=String(q.fromDate||'0000-01-01'),to=String(q.toDate||localDay_(new Date()));if(from>to)throw Error('From date must be on or before To date.');
  const accounts=rows_('accounts'),ledger=rows_('ledger').filter(e=>String(e.status)==='POSTED'&&String(e.entryDate)>=from&&String(e.entryDate)<=to),by={};
- accounts.forEach(a=>{by[a.id]={accountId:a.id,accountCode:a.accountCode,accountName:a.name,group:a.group,debit:0,credit:0,net:0,openingBalance:round_(num_(a.openingBalance)),openingSide:a.openingSide||'DEBIT'};});
- ledger.forEach(e=>{const a=by[e.accountId]||(by[e.accountId]={accountId:e.accountId,accountCode:e.accountCode,accountName:e.accountName,group:e.group,debit:0,credit:0,net:0,openingBalance:0,openingSide:'DEBIT'});a.debit=round_(a.debit+num_(e.debit));a.credit=round_(a.credit+num_(e.credit));});
- const list=Object.values(by).map(a=>{a.net=round_((a.openingSide==='CREDIT'?-a.openingBalance:a.openingBalance)+a.debit-a.credit);return a;});
+ accounts.forEach(a=>{by[a.id]={accountId:a.id,accountCode:a.accountCode,accountName:a.name,group:String(a.group||'').toUpperCase(),debit:0,credit:0,net:0,openingBalance:round_(num_(a.openingBalance)),openingSide:a.openingSide||'DEBIT'};});
+ ledger.forEach(e=>{const a=by[e.accountId]||(by[e.accountId]={accountId:e.accountId,accountCode:e.accountCode,accountName:e.accountName,group:String(e.group||'').toUpperCase(),debit:0,credit:0,net:0,openingBalance:0,openingSide:'DEBIT'});a.debit=round_(a.debit+num_(e.debit));a.credit=round_(a.credit+num_(e.credit));});
+ const list=Object.values(by).map(a=>{a.net=round_((String(a.openingSide).toUpperCase()==='CREDIT'?-a.openingBalance:a.openingBalance)+a.debit-a.credit);a.accountCode=String(a.accountCode||'');return a;}).sort((a,b)=>a.accountCode.localeCompare(b.accountCode));
  const totalDebit=round_(ledger.reduce((s,e)=>s+num_(e.debit),0)),totalCredit=round_(ledger.reduce((s,e)=>s+num_(e.credit),0));
- return {fromDate:from,toDate:to,ledger:list.sort((a,b)=>String(a.accountCode).localeCompare(String(b.accountCode))),summary:[{label:'Total Debit',net:totalDebit,debit:totalDebit,credit:0},{label:'Total Credit',net:totalCredit,debit:0,credit:totalCredit},{label:'Debit less Credit',net:round_(totalDebit-totalCredit),debit:totalDebit,credit:totalCredit}],ledgerEntries:ledger.length};
+ const balanceSide=a=>({accountId:a.accountId,accountCode:a.accountCode,accountName:a.accountName,group:a.group,debitBalance:round_(Math.max(0,a.net)),creditBalance:round_(Math.max(0,-a.net)),net:a.net});
+ const income=list.filter(a=>a.group==='INCOME').map(balanceSide),expenses=list.filter(a=>a.group==='EXPENSE').map(balanceSide),assets=list.filter(a=>a.group==='ASSET').map(balanceSide),liabilities=list.filter(a=>a.group==='LIABILITY'||a.group==='EQUITY').map(balanceSide);
+ const totalIncome=round_(income.reduce((s,a)=>s+a.creditBalance-a.debitBalance,0)),totalExpenses=round_(expenses.reduce((s,a)=>s+a.debitBalance-a.creditBalance,0));
+ const gstAccounts=list.filter(a=>/gst|input tax|output tax|cgst|sgst|igst|itc/i.test(a.accountName));
+ const gstByType={cgst:{debit:0,credit:0},sgst:{debit:0,credit:0},igst:{debit:0,credit:0}};
+ ledger.forEach(e=>{const name=String(e.accountName||'').toLowerCase(),k=name.includes('cgst')?'cgst':name.includes('sgst')?'sgst':name.includes('igst')?'igst':'';if(k){gstByType[k].debit=round_(gstByType[k].debit+num_(e.debit));gstByType[k].credit=round_(gstByType[k].credit+num_(e.credit));}});
+ return {fromDate:from,toDate:to,ledger:list,trialBalance:list.map(a=>({accountCode:a.accountCode,accountName:a.accountName,group:a.group,debit:a.debit,credit:a.credit,net:a.net})),profitLoss:{income,expenses,totalIncome,totalExpenses,netProfit:round_(totalIncome-totalExpenses)},balanceSheet:{assets,liabilities,totalAssets:round_(assets.reduce((s,a)=>s+a.debitBalance-a.creditBalance,0)),totalLiabilitiesAndEquity:round_(liabilities.reduce((s,a)=>s+a.creditBalance-a.debitBalance,0))},gst:{accounts:gstAccounts,byType:gstByType,netOutputTax:round_(Object.values(gstByType).reduce((s,a)=>s+a.credit-a.debit,0))},summary:[{label:'Total Debit',net:totalDebit,debit:totalDebit,credit:0},{label:'Total Credit',net:totalCredit,debit:0,credit:totalCredit},{label:'Debit less Credit',net:round_(totalDebit-totalCredit),debit:totalDebit,credit:totalCredit}],ledgerEntries:ledger.length};
 }
-
 function module_(k){k=String(k||'').toLowerCase();if(!KMMC.M[k])throw Error('Unknown module: '+k);return k;}
 function sanitize_(k,input){
   const out={},h=KMMC.M[k].h;
