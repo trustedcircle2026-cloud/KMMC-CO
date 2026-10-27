@@ -25,8 +25,8 @@ const KMMC = {
     expenses:{s:'DB_EXPENSES',h:['id','expenseDate','category','description','amount','paidTo','paymentMode','referenceNo','employeeId','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     accounts:{s:'DB_ACCOUNTS',h:['id','accountCode','name','group','type','openingBalance','openingSide','bankName','accountNumberLast4','ifsc','active','notes','clientId','createdAt','updatedAt'],r:['ADMIN']},
     vouchers:{s:'DB_ACCOUNTING_VOUCHERS',h:['id','voucherNo','voucherType','date','party','debitAccountId','creditAccountId','amount','mode','referenceNo','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt','clientId','partyAccountId','taxableValue','gstRate','cgst','sgst','igst','salesPurchaseAccountId','cgstAccountId','sgstAccountId','igstAccountId','inputCgstAccountId','inputSgstAccountId','inputIgstAccountId','referenceType','referenceId','adjustedAmount'],r:['ADMIN']},
-    receipts:{s:'DB_ACCOUNTING_RECEIPTS',h:['id','voucherNo','date','receivedFrom','category','depositAccountId','counterAccountId','amount','mode','referenceNo','clientId','invoiceId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
-    payments:{s:'DB_ACCOUNTING_PAYMENTS',h:['id','voucherNo','date','paidTo','category','paymentAccountId','counterAccountId','amount','mode','referenceNo','employeeId','claimId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
+    receipts:{s:'DB_ACCOUNTING_RECEIPTS',h:['id','voucherNo','date','receivedFrom','category','depositAccountId','counterAccountId','amount','mode','referenceNo','remarksNo','clientId','invoiceId','referenceType','referenceId','adjustedAmount','referenceAdjustments','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
+    payments:{s:'DB_ACCOUNTING_PAYMENTS',h:['id','voucherNo','date','paidTo','category','paymentAccountId','counterAccountId','amount','mode','referenceNo','remarksNo','employeeId','claimId','clientId','referenceType','referenceId','adjustedAmount','referenceAdjustments','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     ledger:{s:'DB_ACCOUNTING_LEDGER',h:['id','entryDate','voucherType','voucherId','voucherNo','accountId','accountCode','accountName','group','debit','credit','narration','status','createdBy','createdAt'],r:['ADMIN'],ro:true},
     reimbursement:{s:'DB_REIMBURSEMENT_CLAIMS',h:['id','claimNo','employeeId','employeeName','claimDate','category','description','amountClaimed','amountApproved','amountPaid','status','approvedBy','approvedAt','paidAt','receiptUrl','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     messages:{s:'DB_MESSAGES',h:['id','fromUserId','toUserId','clientId','subject','message','status','createdAt','readAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
@@ -438,25 +438,72 @@ function assertAccountingPair_(debitId,creditId,amount){
  return {debit:d,credit:c,amount:round_(num_(amount))};
 }
 function voucherNo_(prefix){return prefix+'-'+Utilities.formatDate(new Date(),'Asia/Kolkata','yyyyMMdd')+'-'+Utilities.getUuid().slice(0,6).toUpperCase();}
+function accountPaymentMode_(account,requested){
+  const name=String(account.name||'').toLowerCase(),type=String(account.type||'').toLowerCase();
+  if(/cash/.test(name)||/cash/.test(type))return 'CASH';
+  if(/bank|current account|savings account/.test(name)||/bank/.test(type)){
+    const mode=String(requested||'').toUpperCase();
+    if(!['UPI','QR','BANK_TRANSFER','CHEQUE','OTHER'].includes(mode))throw Error('Select a payment mode for the bank account: UPI, QR, Bank Transfer, Cheque or Other.');
+    return mode;
+  }
+  const mode=String(requested||'OTHER').toUpperCase();
+  if(!['UPI','QR','BANK_TRANSFER','CHEQUE','OTHER','CASH'].includes(mode))throw Error('Invalid payment mode.');
+  return mode;
+}
+function parseReferenceAdjustments_(x,clientId){
+  let refs=x.referenceAdjustments||[];
+  if(typeof refs==='string'&&refs.trim()){try{refs=JSON.parse(refs);}catch(e){throw Error('Reference adjustments must be valid JSON.');}}
+  if(!Array.isArray(refs))throw Error('Reference adjustments must be a list.');
+  let total=0;
+  refs.forEach(ref=>{
+    const invoiceId=String(ref.invoiceId||ref.referenceId||'').trim(),amount=round_(num_(ref.amount||ref.adjustedAmount));
+    if(!invoiceId)throw Error('Every reference adjustment must identify an invoice.');
+    if(!(amount>0))throw Error('Each reference adjustment amount must be greater than zero.');
+    const inv=rows_('invoices').find(i=>String(i.id)===invoiceId);
+    if(!inv)throw Error('Referenced invoice was not found.');
+    if(clientId&&String(inv.clientId)!==String(clientId))throw Error('Referenced invoice belongs to a different client.');
+    if(String(inv.status||'').toUpperCase()==='CANCELLED')throw Error('Cancelled invoices cannot be adjusted.');
+    total=round_(total+amount);
+  });
+  if(total>round_(num_(x.amount))+0.01)throw Error('Total reference adjustment cannot exceed the voucher amount.');
+  return {refs,total};
+}
+function validateOtherNarration_(mode,narration){
+  if(String(mode||'').toUpperCase()==='OTHER'&&!String(narration||'').trim())throw Error('Narration is mandatory when payment mode is Other.');
+}
 function postAccountingReceipt_(u,q){
- needAdmin_(u);const x=q.record||{},pair=assertAccountingPair_(x.depositAccountId,x.counterAccountId,x.amount);
- const id=uid_(),now=iso_(),date=String(x.date||localDay_(new Date())),status=String(x.status||'POSTED').toUpperCase();
- if(!String(x.receivedFrom||'').trim())throw Error('Received from is required.');
- if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Receipt date must be YYYY-MM-DD.');
- if(!['POSTED','DRAFT'].includes(status))throw Error('Receipt status must be POSTED or DRAFT.');
- const r={id,voucherNo:voucherNo_('RCPT'),date,receivedFrom:String(x.receivedFrom).trim(),category:String(x.category||'OTHER'),depositAccountId:pair.debit.id,counterAccountId:pair.credit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),clientId:String(x.clientId||''),invoiceId:String(x.invoiceId||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
- withAccountingLock_(()=>{append_('receipts',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'RECEIPT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
- activity_(u,'ACCOUNTING_RECEIPT','receipts',id,r.voucherNo);return publicRec_('receipts',r);
+  needAdmin_(u);const x=q.record||{},pair=assertAccountingPair_(x.depositAccountId,x.counterAccountId,x.amount);
+  const id=uid_(),now=iso_(),date=String(x.date||localDay_(new Date())),status=String(x.status||'POSTED').toUpperCase();
+  if(!String(x.receivedFrom||'').trim())throw Error('Received from is required.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Receipt date must be YYYY-MM-DD.');
+  if(!['POSTED','DRAFT'].includes(status))throw Error('Receipt status must be POSTED or DRAFT.');
+  const clientId=String(x.clientId||'').trim(),invoiceId=String(x.invoiceId||'').trim();
+  if(clientId&&!rows_('clients').some(c=>String(c.id)===clientId))throw Error('Selected client does not exist.');
+  if(pair.credit.clientId&&clientId&&String(pair.credit.clientId)!==clientId)throw Error('Selected receivable ledger belongs to a different client.');
+  if(pair.credit.clientId&&!clientId)throw Error('Client ID must be populated from the selected client ledger.');
+  if(invoiceId){const inv=rows_('invoices').find(i=>String(i.id)===invoiceId);if(!inv)throw Error('Referenced invoice was not found.');if(clientId&&String(inv.clientId)!==clientId)throw Error('Referenced invoice belongs to a different client.');}
+  const mode=accountPaymentMode_(pair.debit,x.mode);validateOtherNarration_(mode,x.narration);
+  const adjustment=parseReferenceAdjustments_(x,clientId);
+  const refs=adjustment.refs.length?adjustment.refs:(invoiceId?[{invoiceId,amount:round_(num_(x.adjustedAmount||x.amount))}]:[]);
+  const r={id,voucherNo:voucherNo_('RCPT'),date,receivedFrom:String(x.receivedFrom).trim(),category:String(x.category||'OTHER'),depositAccountId:pair.debit.id,counterAccountId:pair.credit.id,amount:pair.amount,mode,referenceNo:String(x.referenceNo||''),remarksNo:String(x.remarksNo||''),clientId,invoiceId,referenceType:String(x.referenceType||(refs.length?'SALES_INVOICE':'')),referenceId:String(x.referenceId||invoiceId),adjustedAmount:round_(adjustment.total||num_(x.adjustedAmount)),referenceAdjustments:JSON.stringify(refs),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
+  withAccountingLock_(()=>{append_('receipts',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'RECEIPT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
+  activity_(u,'ACCOUNTING_RECEIPT','receipts',id,r.voucherNo);return publicRec_('receipts',r);
 }
 function postAccountingPayment_(u,q){
- needAdmin_(u);const x=q.record||{},pair=assertAccountingPair_(x.counterAccountId,x.paymentAccountId,x.amount);
- const id=uid_(),now=iso_(),date=String(x.date||localDay_(new Date())),status=String(x.status||'POSTED').toUpperCase();
- if(!String(x.paidTo||'').trim())throw Error('Paid to is required.');
- if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Payment date must be YYYY-MM-DD.');
- if(!['POSTED','DRAFT'].includes(status))throw Error('Payment status must be POSTED or DRAFT.');
- const r={id,voucherNo:voucherNo_('PAY'),date,paidTo:String(x.paidTo).trim(),category:String(x.category||'OFFICE_EXPENSE'),paymentAccountId:pair.credit.id,counterAccountId:pair.debit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),employeeId:String(x.employeeId||''),claimId:String(x.claimId||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
- withAccountingLock_(()=>{append_('payments',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'PAYMENT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
- activity_(u,'ACCOUNTING_PAYMENT','payments',id,r.voucherNo);return publicRec_('payments',r);
+  needAdmin_(u);const x=q.record||{},pair=assertAccountingPair_(x.counterAccountId,x.paymentAccountId,x.amount);
+  const id=uid_(),now=iso_(),date=String(x.date||localDay_(new Date())),status=String(x.status||'POSTED').toUpperCase();
+  if(!String(x.paidTo||'').trim())throw Error('Paid to is required.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Payment date must be YYYY-MM-DD.');
+  if(!['POSTED','DRAFT'].includes(status))throw Error('Payment status must be POSTED or DRAFT.');
+  const clientId=String(x.clientId||'').trim();
+  if(clientId&&!rows_('clients').some(c=>String(c.id)===clientId))throw Error('Selected client does not exist.');
+  if(pair.debit.clientId&&clientId&&String(pair.debit.clientId)!==clientId)throw Error('Selected payable ledger belongs to a different client.');
+  if(pair.debit.clientId&&!clientId)throw Error('Client ID must be populated from the selected client ledger.');
+  const mode=accountPaymentMode_(pair.credit,x.mode);validateOtherNarration_(mode,x.narration);
+  const adjustment=parseReferenceAdjustments_(x,clientId);
+  const r={id,voucherNo:voucherNo_('PAY'),date,paidTo:String(x.paidTo).trim(),category:String(x.category||'OFFICE_EXPENSE'),paymentAccountId:pair.credit.id,counterAccountId:pair.debit.id,amount:pair.amount,mode,referenceNo:String(x.referenceNo||''),remarksNo:String(x.remarksNo||''),employeeId:String(x.employeeId||''),claimId:String(x.claimId||''),clientId,referenceType:String(x.referenceType||''),referenceId:String(x.referenceId||''),adjustedAmount:round_(adjustment.total||num_(x.adjustedAmount)),referenceAdjustments:JSON.stringify(adjustment.refs),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
+  withAccountingLock_(()=>{append_('payments',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'PAYMENT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
+  activity_(u,'ACCOUNTING_PAYMENT','payments',id,r.voucherNo);return publicRec_('payments',r);
 }
 
 function postAccountingVoucher_(u,q){
@@ -468,10 +515,10 @@ function postAccountingVoucher_(u,q){
  const status=String(x.status||'POSTED').toUpperCase();if(!['POSTED','DRAFT'].includes(status))throw Error('Voucher status must be POSTED or DRAFT.');
  const clientId=String(x.clientId||'').trim(),partyAccountId=String(x.partyAccountId||'').trim();
  if(clientId&&!rows_('clients').some(c=>String(c.id)===clientId))throw Error('Selected client ID does not exist.');
- if(partyAccountId){const partyAccount=accountingAccount_(partyAccountId);if(partyAccount.clientId&&clientId&&String(partyAccount.clientId)!==clientId)throw Error('Selected party ledger belongs to a different client.');if(partyAccount.clientId&&!clientId)throw Error('Client ID must be supplied for the selected party ledger.');}
+ if(partyAccountId){const partyAccount=accountingAccount_(partyAccountId);if(partyAccount.clientId&&clientId&&String(partyAccount.clientId)!==clientId)throw Error('Selected party ledger belongs to a different client.');if(partyAccount.clientId&&!clientId)throw Error('Client ID must be supplied for the selected party ledger.');}if(['SALES','PURCHASE'].includes(type)&&partyAccountId){const pa=accountingAccount_(partyAccountId),g=String(pa.group||'').toUpperCase();if(type==='SALES'&&!['ASSET','LIABILITY'].includes(g))throw Error('Sales vouchers must post through Trade Receivables / the selected client ledger.');if(type==='PURCHASE'&&!['ASSET','LIABILITY'].includes(g))throw Error('Purchase vouchers must post through Trade Payables / the selected supplier ledger.');}
  const amount=round_(num_(x.amount));if(!(amount>0))throw Error('Amount must be greater than zero.');
  const id=uid_(),prefix={RECEIPT:'RCPT',PAYMENT:'PAY',CONTRA:'CNTR',JOURNAL:'JRN',SALES:'SAL',PURCHASE:'PUR',CREDIT_NOTE:'CRN',DEBIT_NOTE:'DBN'}[type],voucherNo=String(x.voucherNo||voucherNo_(prefix));
- const taxable=round_(num_(x.taxableValue)),cgst=round_(num_(x.cgst)),sgst=round_(num_(x.sgst)),igst=round_(num_(x.igst)),taxTotal=round_(cgst+sgst+igst);
+ validateOtherNarration_(String(x.mode||'').toUpperCase(),x.narration);const taxable=round_(num_(x.taxableValue)),cgst=round_(num_(x.cgst)),sgst=round_(num_(x.sgst)),igst=round_(num_(x.igst)),taxTotal=round_(cgst+sgst+igst);
  let lines=[];
  const addLine=(accountId,debit,credit)=>{const a=accountingAccount_(accountId);if(debit<0||credit<0||(debit&&credit))throw Error('Invalid debit/credit line.');if(debit||credit)lines.push({account:a,debit:round_(debit),credit:round_(credit)});};
  const splitEnabled=(type==='SALES'||type==='PURCHASE')&&x.taxableValue!==undefined&&x.taxableValue!==''&&(taxTotal>0||x.splitGst===true||x.splitGst==='true');
