@@ -473,4 +473,24 @@ function pretty(s){return String(s||'').replace(/([a-z])([A-Z])/g,'$1 $2').repla
  begin().catch(error=>{const message=String(error&&error.message||error||'Unknown initialization error');showNotice('Portal initialization failed: '+message,'error');const nav=el('sideNav');if(nav&&!nav.children.length)nav.innerHTML='<div class="nav-link" role="alert">Portal initialization failed. Refresh the page or sign in again.</div>';});
 })();
 </script>
+
+<!-- KMMC-INDEPENDENT-HEADER-CLOCK-FIX: keep the live header clock independent of portal initialization -->
+<script id="kmmc-independent-header-clock-fix">
+(function(){
+  function refreshKmmcHeaderClock(){
+    try {
+      var now = new Date();
+      var dateNode = document.getElementById('headerDate');
+      var timeNode = document.getElementById('headerTime');
+      if (dateNode) dateNode.textContent = new Intl.DateTimeFormat('en-GB', {day:'2-digit', month:'short', year:'numeric', timeZone:'Asia/Kolkata'}).format(now);
+      if (timeNode) timeNode.textContent = new Intl.DateTimeFormat('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true, timeZone:'Asia/Kolkata'}).format(now);
+    } catch (err) { console.error('[KMMC header clock]', err); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshKmmcHeaderClock, {once:true});
+  refreshKmmcHeaderClock();
+  window.setInterval(refreshKmmcHeaderClock, 1000);
+  window.addEventListener('pageshow', refreshKmmcHeaderClock);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) refreshKmmcHeaderClock(); });
+})();
+</script>
 </body></html>
