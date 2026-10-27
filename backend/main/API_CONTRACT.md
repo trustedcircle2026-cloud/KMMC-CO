@@ -42,3 +42,24 @@ Outstanding:
 users, clients, employees, tasks, time, attendance, leave, documents, invoices, collections, expenses, messages, notifications, activity, loginlog.
 
 Admin has full management access. Employees are scoped to their linked employee ID and assigned clients/tasks. Clients are scoped to their linked client ID; they cannot create or edit invoices/collections. Test these rules with dummy records before using real data.
+
+
+## Accountant API (v1.1 — Admin only)
+
+New schema tabs: `DB_ACCOUNTS`, `DB_ACCOUNTING_RECEIPTS`, `DB_ACCOUNTING_PAYMENTS`, `DB_ACCOUNTING_LEDGER`, and `DB_REIMBURSEMENT_CLAIMS`. Existing `setupKmmcBackend()` creates these tabs and appends missing headers without clearing existing records.
+
+Create chart-of-account records with the authenticated generic `create` action and `module: "accounts"`. Account codes must be unique. Use dedicated receipt/payment actions; generic create for those financial voucher modules is blocked.
+
+Post receipt:
+```json
+{"action":"postReceipt","token":"SESSION_TOKEN","record":{"date":"2026-10-27","receivedFrom":"Example Client","category":"CLIENT_FEES","depositAccountId":"CASH_ACCOUNT_ID","counterAccountId":"FEES_INCOME_ACCOUNT_ID","amount":5000,"mode":"UPI","referenceNo":"UTR_REFERENCE","narration":"Professional fees","status":"POSTED"}}
+```
+
+Post payment:
+```json
+{"action":"postPayment","token":"SESSION_TOKEN","record":{"date":"2026-10-27","paidTo":"Office Supplier","category":"OFFICE_EXPENSE","paymentAccountId":"BANK_ACCOUNT_ID","counterAccountId":"OFFICE_EXPENSE_ACCOUNT_ID","amount":1500,"mode":"BANK_TRANSFER","referenceNo":"UTR_REFERENCE","narration":"Office supplies","status":"POSTED"}}
+```
+
+Run the date-range summary through `accountingReports`. Cancel a voucher using `cancelAccountingVoucher`, `voucherType` = `RECEIPT` or `PAYMENT`, and the voucher ID. Posted transactions are reversed rather than deleted.
+
+**Scope note:** This is an accounting foundation with chart of accounts, receipt/payment vouchers, double-entry ledger rows, reversal cancellation, and a basic account-wise period summary. Reimbursement approval/payment workflow, petty cash controls, full Trial Balance/Profit & Loss/Balance Sheet, and bank reconciliation remain future work. Test with dummy transactions and reconcile before using for live accounting.
