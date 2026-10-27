@@ -24,8 +24,8 @@ const KMMC = {
     collections:{s:'DB_COLLECTIONS',h:['id','receiptNo','clientId','invoiceId','collectionDate','amount','mode','referenceNo','screenshotUrl','screenshotDriveFileId','notes','receivedBy','status','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     expenses:{s:'DB_EXPENSES',h:['id','expenseDate','category','description','amount','paidTo','paymentMode','referenceNo','employeeId','status','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     accounts:{s:'DB_ACCOUNTS',h:['id','accountCode','name','group','type','openingBalance','openingSide','bankName','accountNumberLast4','ifsc','active','notes','createdAt','updatedAt'],r:['ADMIN']},
-    receipts:{s:'DB_ACCOUNTING_RECEIPTS',h:['id','voucherNo','date','receivedFrom','category','depositAccountId','counterAccountId','amount','mode','referenceNo','clientId','invoiceId','narration','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
-    payments:{s:'DB_ACCOUNTING_PAYMENTS',h:['id','voucherNo','date','paidTo','category','paymentAccountId','counterAccountId','amount','mode','referenceNo','employeeId','claimId','narration','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
+    receipts:{s:'DB_ACCOUNTING_RECEIPTS',h:['id','voucherNo','date','receivedFrom','category','depositAccountId','counterAccountId','amount','mode','referenceNo','clientId','invoiceId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
+    payments:{s:'DB_ACCOUNTING_PAYMENTS',h:['id','voucherNo','date','paidTo','category','paymentAccountId','counterAccountId','amount','mode','referenceNo','employeeId','claimId','narration','attachmentUrl','attachmentDriveFileId','status','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     ledger:{s:'DB_ACCOUNTING_LEDGER',h:['id','entryDate','voucherType','voucherId','voucherNo','accountId','accountCode','accountName','group','debit','credit','narration','status','createdBy','createdAt'],r:['ADMIN'],ro:true},
     reimbursement:{s:'DB_REIMBURSEMENT_CLAIMS',h:['id','claimNo','employeeId','employeeName','claimDate','category','description','amountClaimed','amountApproved','amountPaid','status','approvedBy','approvedAt','paidAt','receiptUrl','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     messages:{s:'DB_MESSAGES',h:['id','fromUserId','toUserId','clientId','subject','message','status','createdAt','readAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
@@ -100,6 +100,7 @@ function route_(a,q){
     case 'clientOutstanding':return outstanding_(auth_(q),q);
     case 'outstandingSummary':return outstandingSummary_(auth_(q));
     case 'accountingReports':return accountingReports_(auth_(q),q);
+    case 'accountingLedger':return accountingLedger_(auth_(q),q);
     case 'postReceipt':return postAccountingReceipt_(auth_(q),q);
     case 'postPayment':return postAccountingPayment_(auth_(q),q);
     case 'cancelAccountingVoucher':return cancelAccountingVoucher_(auth_(q),q);
@@ -440,7 +441,7 @@ function postAccountingReceipt_(u,q){
  if(!String(x.receivedFrom||'').trim())throw Error('Received from is required.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Receipt date must be YYYY-MM-DD.');
  if(!['POSTED','DRAFT'].includes(status))throw Error('Receipt status must be POSTED or DRAFT.');
- const r={id,voucherNo:voucherNo_('RCPT'),date,receivedFrom:String(x.receivedFrom).trim(),category:String(x.category||'OTHER'),depositAccountId:pair.debit.id,counterAccountId:pair.credit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),clientId:String(x.clientId||''),invoiceId:String(x.invoiceId||''),narration:String(x.narration||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
+ const r={id,voucherNo:voucherNo_('RCPT'),date,receivedFrom:String(x.receivedFrom).trim(),category:String(x.category||'OTHER'),depositAccountId:pair.debit.id,counterAccountId:pair.credit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),clientId:String(x.clientId||''),invoiceId:String(x.invoiceId||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
  withAccountingLock_(()=>{append_('receipts',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'RECEIPT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
  activity_(u,'ACCOUNTING_RECEIPT','receipts',id,r.voucherNo);return publicRec_('receipts',r);
 }
@@ -450,7 +451,7 @@ function postAccountingPayment_(u,q){
  if(!String(x.paidTo||'').trim())throw Error('Paid to is required.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Payment date must be YYYY-MM-DD.');
  if(!['POSTED','DRAFT'].includes(status))throw Error('Payment status must be POSTED or DRAFT.');
- const r={id,voucherNo:voucherNo_('PAY'),date,paidTo:String(x.paidTo).trim(),category:String(x.category||'OFFICE_EXPENSE'),paymentAccountId:pair.credit.id,counterAccountId:pair.debit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),employeeId:String(x.employeeId||''),claimId:String(x.claimId||''),narration:String(x.narration||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
+ const r={id,voucherNo:voucherNo_('PAY'),date,paidTo:String(x.paidTo).trim(),category:String(x.category||'OFFICE_EXPENSE'),paymentAccountId:pair.credit.id,counterAccountId:pair.debit.id,amount:pair.amount,mode:String(x.mode||'OTHER').toUpperCase(),referenceNo:String(x.referenceNo||''),employeeId:String(x.employeeId||''),claimId:String(x.claimId||''),narration:String(x.narration||''),attachmentUrl:String(x.attachmentUrl||''),attachmentDriveFileId:String(x.attachmentDriveFileId||''),status,createdBy:u.id,createdAt:now,updatedAt:now};
  withAccountingLock_(()=>{append_('payments',r);if(status==='POSTED')appendLedgerPair_(u,{date,type:'PAYMENT',id,voucherNo:r.voucherNo,debit:pair.debit,credit:pair.credit,amount:pair.amount,narration:r.narration});});
  activity_(u,'ACCOUNTING_PAYMENT','payments',id,r.voucherNo);return publicRec_('payments',r);
 }
@@ -468,6 +469,7 @@ function cancelAccountingVoucher_(u,q){
  withAccountingLock_(()=>{if(r.status==='POSTED'){const entries=rows_('ledger').filter(x=>String(x.voucherId)===id&&String(x.status)==='POSTED');if(entries.length!==2)throw Error('Cannot reverse: expected two posted ledger lines.');const revId=uid_(),revNo=voucherNo_('REV'),date=localDay_(new Date());entries.forEach(e=>append_('ledger',{id:uid_(),entryDate:date,voucherType:'REVERSAL',voucherId:revId,voucherNo:revNo,accountId:e.accountId,accountCode:e.accountCode,accountName:e.accountName,group:e.group,debit:num_(e.credit),credit:num_(e.debit),narration:'Reversal of '+r.voucherNo,status:'POSTED',createdBy:u.id,createdAt:iso_()}));}r.status='CANCELLED';r.updatedAt=iso_();write_(module,r.id,r);});
  activity_(u,'CANCEL_ACCOUNTING_VOUCHER',module,id,r.voucherNo);return {cancelled:true,id:r.id,voucherNo:r.voucherNo};
 }
+function accountingLedger_(u,q){needAdmin_(u);const id=String(q.accountId||'');if(!id)throw Error('Account is required.');const a=rows_('accounts').find(x=>String(x.id)===id);if(!a)throw Error('Account not found.');const from=String(q.fromDate||'0000-01-01'),to=String(q.toDate||localDay_(new Date()));if(from>to)throw Error('From date must be on or before To date.');const all=rows_('ledger').filter(e=>String(e.accountId)===id&&String(e.status)==='POSTED');const opening=round_(num_(a.openingBalance)*(String(a.openingSide||'DEBIT').toUpperCase()==='CREDIT'?-1:1)+all.filter(e=>String(e.entryDate)<from).reduce((s,e)=>s+num_(e.debit)-num_(e.credit),0));const es=all.filter(e=>String(e.entryDate)>=from&&String(e.entryDate)<=to).sort((x,y)=>String(x.entryDate).localeCompare(String(y.entryDate))||String(x.createdAt).localeCompare(String(y.createdAt)));let run=opening;const entries=es.map(e=>({date:e.entryDate,voucherType:e.voucherType,voucherNo:e.voucherNo,narration:e.narration||'',debit:round_(num_(e.debit)),credit:round_(num_(e.credit)),balance:run=round_(run+num_(e.debit)-num_(e.credit))}));return {account:publicRec_('accounts',a),fromDate:from,toDate:to,openingBalance:opening,closingBalance:run,totalDebit:round_(entries.reduce((s,e)=>s+e.debit,0)),totalCredit:round_(entries.reduce((s,e)=>s+e.credit,0)),entries};}
 function accountingReports_(u,q){
  needAdmin_(u);const from=String(q.fromDate||'0000-01-01'),to=String(q.toDate||localDay_(new Date()));if(from>to)throw Error('From date must be on or before To date.');
  const accounts=rows_('accounts'),ledger=rows_('ledger').filter(e=>String(e.status)==='POSTED'&&String(e.entryDate)>=from&&String(e.entryDate)<=to),by={};
