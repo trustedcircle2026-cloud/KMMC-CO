@@ -6,7 +6,7 @@
  * Run setupKmmcBackend(), then setupKmmcAdminFromProperties().
  */
 const KMMC = {
-  VERSION:'1.1.0', DB_PROP:'KMMC_DATABASE_SPREADSHEET_ID', SECRET_PROP:'KMMC_SESSION_SECRET',
+  VERSION:'1.2.0', DB_PROP:'KMMC_DATABASE_SPREADSHEET_ID', SECRET_PROP:'KMMC_SESSION_SECRET',
   SESSION_HOURS:12, MAX_PAGE:200,
   M:{
     users:{s:'DB_USERS',h:['id','username','passwordHash','salt','role','name','email','phone','clientId','employeeId','status','mustChangePassword','createdAt','updatedAt','lastLoginAt'],r:['ADMIN']},
