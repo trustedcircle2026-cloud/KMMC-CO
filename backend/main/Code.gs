@@ -131,14 +131,15 @@ function setupKmmcBackend(){
 }
 /**
  * DESTRUCTIVE DATABASE RESET.
- * Run from the Apps Script editor with the exact argument:
- * resetCompleteDatabase("RESET KMMC DATABASE")
+ * To run safely, first set Script Property KMMC_RESET_CONFIRMATION=RESET KMMC DATABASE,
+ * then run resetCompleteDatabase() from the Apps Script editor.
  * A full Drive backup is created before any database sheet is removed.
  * The configured central database spreadsheet is rebuilt with empty schema tabs.
  */
-function resetCompleteDatabase(confirmation){
-  if(String(confirmation||'')!=='RESET KMMC DATABASE'){
-    return 'NOT RESET. To proceed, run resetCompleteDatabase("RESET KMMC DATABASE") from the Apps Script editor. This permanently clears the configured KMMC database after creating a Drive backup.';
+function resetCompleteDatabase(){
+  const confirmation=PropertiesService.getScriptProperties().getProperty('KMMC_RESET_CONFIRMATION')||'';
+  if(String(confirmation)!=='RESET KMMC DATABASE'){
+    return 'NOT RESET. To proceed, add Script Property KMMC_RESET_CONFIRMATION with exact value RESET KMMC DATABASE, then run resetCompleteDatabase() again. This permanently clears the configured KMMC database after creating a Drive backup.';
   }
   const id=PropertiesService.getScriptProperties().getProperty(KMMC.DB_PROP);
   if(!id)throw Error('Database spreadsheet ID is not configured. Nothing was changed.');
@@ -159,7 +160,7 @@ function resetCompleteDatabase(confirmation){
   const temp=ss.getSheetByName('_RESET_TEMP_');
   if(temp)ss.deleteSheet(temp);
   // Revoke cached sessions so nobody can continue with an old in-memory session.
-  CacheService.getScriptCache().removeAll([]);
+  PropertiesService.getScriptProperties().deleteProperty('KMMC_RESET_CONFIRMATION');
   return 'RESET COMPLETE. All original sheets/data in the configured database spreadsheet were removed and empty database tabs recreated. Backup: '+backupName+' (Drive file ID: '+backup.getId()+'). Set KMMC_ADMIN_PASSWORD in Script Properties, then run setupKmmcAdminFromProperties() to create a new admin login.';
 }
 
