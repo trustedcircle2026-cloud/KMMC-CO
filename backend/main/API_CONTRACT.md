@@ -70,3 +70,30 @@ Run the date-range summary through `accountingReports`. Cancel a voucher using `
 - `accountingLedger` is an Admin-only action. Send `accountId`, `fromDate`, and `toDate` in `YYYY-MM-DD` format to retrieve opening balance, posted ledger lines, debit/credit totals, and running balance.
 - `postReceipt` and `postPayment` accept optional `attachmentUrl` and `attachmentDriveFileId` fields. Attachments are uploaded to the configured Google Drive folder using `uploadDocument` before the voucher is posted.
 - Run `setupKmmcBackend()` after deploying the updated Apps Script code to extend existing receipt/payment sheet headers without deleting existing records.
+
+
+## Unified vouchers API (v1.2)
+
+The admin Accountant menu now uses a single **Vouchers** workspace for Receipt, Payment, Contra, Journal, Sales, Purchase, Credit Note, and Debit Note entries. The single-page voucher form accepts debit and credit account IDs, amount, date, party/particulars, payment mode, reference, narration, and optional Drive attachment metadata.
+
+Post a voucher:
+```json
+{
+  "action": "postVoucher",
+  "token": "SESSION_TOKEN",
+  "record": {
+    "voucherType": "JOURNAL",
+    "date": "2026-10-27",
+    "party": "Month-end adjustment",
+    "debitAccountId": "DEBIT_ACCOUNT_ID",
+    "creditAccountId": "CREDIT_ACCOUNT_ID",
+    "amount": 2500,
+    "mode": "OTHER",
+    "referenceNo": "",
+    "narration": "Adjustment entry",
+    "status": "POSTED"
+  }
+}
+```
+
+The first run of `setupKmmcBackend()` after updating the Apps Script adds the `DB_ACCOUNTING_VOUCHERS` tab without clearing existing records. The new report selector includes Ledger, Invoices, Collections, Expenses, Payables, Receipts, Payments, Vouchers, and Chart of Accounts. Validate voucher mappings and opening balances using test entries before using this for live accounting.
