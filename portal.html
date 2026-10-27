@@ -519,9 +519,10 @@ function aVoucherEntryForm(types){
  f.onsubmit=async e=>{
   e.preventDefault();if(!f.reportValidity())return;
   const d=Object.fromEntries(new FormData(f).entries()),t=String(d.voucherType||'RECEIPT').toUpperCase();
+  if(!d.voucherNo){const seq=acctData.vouchers.filter(v=>String(v.voucherType||'').toUpperCase()===t&&String(v.date||'').slice(0,4)===String(d.date||'').slice(0,4)).length+1;d.voucherNo=(t==='SALES'?'INV':'VCH')+'-'+String(d.date||adate()).slice(0,4)+'-'+String(seq).padStart(4,'0');}
   if(t==='SALES'){
    const ptype=String(d.partyType||'CLIENT');
-   if(ptype==='CLIENT'){const c=clientRecords.find(x=>String(x.id)===String(d.clientId));if(!c){showNotice('Select a client from Client Management.','error');return;}d.party=c.name||'';d.clientName=c.name||'';d.clientGstin=c.gstin||'';d.clientAddress=c.address||[c.city,c.state,c.pincode].filter(Boolean).join(', ');d.clientEmail=c.email||'';d.clientPhone=c.phone||'';}
+   if(ptype==='CLIENT'){const c=clientRecords.find(x=>String(x.id)===String(d.clientId));if(!c){showNotice('Select a client from Client Management.','error');return;}d.party=c.name||'';d.clientName=c.name||'';d.clientGstin=c.gstin||'';d.clientAddress=c.address||[c.city,c.state,c.pincode].filter(Boolean).join(', ');d.clientEmail=c.email||'';d.clientPhone=c.phone||'';d.clientState=c.state||'';d.taxMode=(String(c.state||c.address||'').toUpperCase().includes('TAMIL NADU')?'INTRA':(c.state?'INTER':''));}
    else{const ledger=allAccounts.find(a=>String(a.id)===String(d.partyLedgerId));if(!ledger){showNotice('Select a party ledger account.','error');return;}d.party=ledger.name;d.partyLedgerId=ledger.id;}
    d.taxableValue=Number(d.taxableValue||0);d.gstRate=Number(d.gstRate||0);d.taxAmount=+(d.taxableValue*d.gstRate/100).toFixed(2);d.totalAmount=+(d.taxableValue+d.taxAmount).toFixed(2);d.amount=d.totalAmount;d.invoiceNo=d.voucherNo||'';d.invoiceDate=d.date;d.status='POSTED';
   }
