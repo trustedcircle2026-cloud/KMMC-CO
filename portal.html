@@ -35,35 +35,9 @@ body.messages-mode .chat-main{min-height:0}
 body.messages-mode .chat-scroll{min-height:0}
 @media(max-width:700px){body.messages-mode main{height:calc(100vh - 120px);height:calc(100dvh - 120px);padding:0}body.messages-mode .chat-layout{height:100%;min-height:0}}
 
-.invoice-workspace{display:grid;gap:18px}.invoice-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.invoice-workspace-head h2{margin:0 0 5px;font-size:20px}.invoice-workspace-head p{margin:0;color:#617181}.invoice-count{font-size:12px;color:#526476;background:#edf3f9;padding:7px 10px;border-radius:4px}.invoice-editor{background:#fff;border:1px solid #d8e2ec;padding:18px}.tax-invoice-form{display:grid;gap:18px}.invoice-form-section{border:1px solid #dbe4ed;padding:16px;background:#fff}.invoice-form-section h3,.invoice-list h3{margin:0 0 14px;color:#123f6b;font-size:16px}.invoice-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.invoice-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:#34495d}.invoice-form-grid label.wide{grid-column:1/-1}.invoice-form-grid input,.invoice-form-grid textarea,.invoice-form-grid select{width:100%;border:1px solid #cbd8e5;border-radius:4px;padding:10px;font:14px Garamond,Georgia,serif;color:#20364a;background:#fff}.invoice-live-summary{margin-top:14px;border:1px solid #a9bfd9;background:#f5f8fc;padding:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.invoice-live-summary div{display:flex;justify-content:space-between;gap:12px}.invoice-live-summary .invoice-total{grid-column:1/-1;background:#b7cce5;padding:10px;font-size:16px}.invoice-live-summary p{grid-column:1/-1;margin:4px 0 0;font-style:normal}.invoice-form-actions{display:flex;justify-content:flex-end;gap:10px}.invoice-list{display:grid;gap:10px}@media(max-width:650px){.invoice-form-grid{grid-template-columns:1fr}.invoice-form-grid label.wide{grid-column:auto}.invoice-live-summary{grid-template-columns:1fr}}
 
-.invoice-modal-backdrop{position:fixed;inset:0;background:#14253699;z-index:1000;display:flex;align-items:center;justify-content:center;padding:18px}.invoice-modal{background:#f8fafc;width:min(1100px,96vw);max-height:94vh;overflow:auto;border-radius:8px;box-shadow:0 20px 70px #10203055;border:1px solid #cbd7e1}.invoice-modal-head{position:sticky;top:0;background:#fff;z-index:3;padding:18px 22px;border-bottom:1px solid #d8e2ec;display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.invoice-modal-head h2{margin:0 0 6px;color:#123f6b}.invoice-modal-head p{margin:0;color:#627282}.invoice-close{font-size:28px;line-height:1;background:transparent;border:0;color:#34495d}.invoice-modal .tax-invoice-form{padding:18px;display:grid;gap:14px}.invoice-modal .invoice-form-section{background:#fff;border:1px solid #dbe4ed;padding:16px}.invoice-modal .invoice-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.invoice-modal .invoice-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:#34495d}.invoice-modal .invoice-form-grid label.wide{grid-column:1/-1}.invoice-modal .invoice-form-grid input,.invoice-modal .invoice-form-grid textarea,.invoice-modal .invoice-form-grid select{width:100%;border:1px solid #cbd8e5;border-radius:4px;padding:10px;font:14px Garamond,Georgia,serif;color:#20364a;background:#fff}.invoice-modal .invoice-form-grid small{font-weight:400;color:#637384}.invoice-modal .invoice-live-summary{margin-top:14px;border:1px solid #a9bfd9;background:#f5f8fc;padding:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.invoice-modal .invoice-live-summary div{display:flex;justify-content:space-between;gap:12px}.invoice-modal .invoice-live-summary .invoice-total{grid-column:1/-1;background:#b7cce5;padding:10px;font-size:16px}.invoice-modal .invoice-live-summary p{grid-column:1/-1;margin:4px 0 0}.invoice-modal-actions{display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#f8fafc;padding:12px 0}.invoice-form-error{color:#9c3d32}.invoice-modal .workspace-note{margin:0;color:#657585;font-size:12px}@media(max-width:700px){.invoice-modal-backdrop{padding:0}.invoice-modal{width:100vw;max-height:100vh;border-radius:0}.invoice-modal .invoice-form-grid{grid-template-columns:1fr}.invoice-modal .invoice-form-grid label.wide{grid-column:auto}.invoice-modal .invoice-live-summary{grid-template-columns:1fr}}
 
-/* Compact single-screen invoice editor and aligned invoice heading */
-.invoice-modal{width:min(1120px,98vw);max-height:96vh}
-.invoice-modal .invoice-modal-head{padding:10px 18px}
-.invoice-modal .tax-invoice-form{padding:10px 14px;gap:8px}
-.invoice-modal .invoice-form-section{padding:9px 12px}
-.invoice-modal .invoice-form-section h3{margin-bottom:8px;font-size:14px}
-.invoice-modal .invoice-form-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px 10px}
-.invoice-modal .invoice-form-grid label{gap:3px;font-size:11px}
-.invoice-modal .invoice-form-grid label.wide{grid-column:span 2}
-.invoice-modal .invoice-form-grid input,.invoice-modal .invoice-form-grid textarea,.invoice-modal .invoice-form-grid select{padding:6px 8px;font-size:12px;min-height:30px}
-.invoice-modal .invoice-form-grid textarea{resize:vertical;min-height:38px}
-.invoice-modal .invoice-live-summary{margin-top:7px;padding:7px 9px;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;font-size:11px}
-.invoice-modal .invoice-live-summary .invoice-total{grid-column:auto;padding:7px;font-size:12px}
-.invoice-modal .invoice-live-summary p{grid-column:1/-1;font-size:11px;margin:0}
-.invoice-modal-actions{padding:6px 0 0}
-.invoice-modal .workspace-note{font-size:10px}
-.invoice-modal .invoice-form-grid .short-field{grid-column:span 1}
-.invoice-items-editor{width:100%;border-collapse:collapse;margin-top:5px;font-size:11px}
-.invoice-items-editor th,.invoice-items-editor td{border:1px solid #d5e0ea;padding:4px}
-.invoice-items-editor input{width:100%;min-width:0;padding:5px!important}
-.invoice-items-editor .remove-line{padding:3px 7px}
-.invoice-modal .invoice-form-grid label.line-items-label{grid-column:1/-1}
-@media(max-width:800px){.invoice-modal-backdrop{padding:0}.invoice-modal{width:100vw;max-height:100vh}.invoice-modal .invoice-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.invoice-modal .invoice-form-grid label.wide{grid-column:1/-1}.invoice-modal .invoice-live-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
- /* Frozen top navigation matching the KMMC public website */
+/* Frozen top navigation matching the KMMC public website */
  .portal-menubar{position:sticky;top:76px;z-index:19;background:#16436b;border-bottom:1px solid #0e3557;box-shadow:0 3px 8px #10283a18}
  .menubar-inner{max-width:none;margin:0 auto;display:flex;align-items:stretch;min-height:48px;padding:0 22px;gap:12px}
  .portal-menubar .side-heading{display:none}
