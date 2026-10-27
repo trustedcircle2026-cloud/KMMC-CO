@@ -63,3 +63,10 @@ Post payment:
 Run the date-range summary through `accountingReports`. Cancel a voucher using `cancelAccountingVoucher`, `voucherType` = `RECEIPT` or `PAYMENT`, and the voucher ID. Posted transactions are reversed rather than deleted.
 
 **Scope note:** This is an accounting foundation with chart of accounts, receipt/payment vouchers, double-entry ledger rows, reversal cancellation, and a basic account-wise period summary. Reimbursement approval/payment workflow, petty cash controls, full Trial Balance/Profit & Loss/Balance Sheet, and bank reconciliation remain future work. Test with dummy transactions and reconcile before using for live accounting.
+
+
+## Accountant workspace additions
+
+- `accountingLedger` is an Admin-only action. Send `accountId`, `fromDate`, and `toDate` in `YYYY-MM-DD` format to retrieve opening balance, posted ledger lines, debit/credit totals, and running balance.
+- `postReceipt` and `postPayment` accept optional `attachmentUrl` and `attachmentDriveFileId` fields. Attachments are uploaded to the configured Google Drive folder using `uploadDocument` before the voucher is posted.
+- Run `setupKmmcBackend()` after deploying the updated Apps Script code to extend existing receipt/payment sheet headers without deleting existing records.
