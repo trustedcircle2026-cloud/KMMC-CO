@@ -129,6 +129,40 @@ function setupKmmcBackend(){
   if(!p.getProperty(KMMC.SECRET_PROP))p.setProperty(KMMC.SECRET_PROP,Utilities.getUuid()+Utilities.getUuid());
   return 'Database tabs initialized. Next run setupKmmcAdminFromProperties().';
 }
+/**
+ * DESTRUCTIVE DATABASE RESET.
+ * Run from the Apps Script editor with the exact argument:
+ * resetCompleteDatabase("RESET KMMC DATABASE")
+ * A full Drive backup is created before any database sheet is removed.
+ * The configured central database spreadsheet is rebuilt with empty schema tabs.
+ */
+function resetCompleteDatabase(confirmation){
+  if(String(confirmation||'')!=='RESET KMMC DATABASE'){
+    return 'NOT RESET. To proceed, run resetCompleteDatabase("RESET KMMC DATABASE") from the Apps Script editor. This permanently clears the configured KMMC database after creating a Drive backup.';
+  }
+  const id=PropertiesService.getScriptProperties().getProperty(KMMC.DB_PROP);
+  if(!id)throw Error('Database spreadsheet ID is not configured. Nothing was changed.');
+  const ss=SpreadsheetApp.openById(id);
+  const stamp=Utilities.formatDate(new Date(),'Asia/Kolkata','yyyyMMdd-HHmmss');
+  const backupName='KMMC_DATABASE_BACKUP_BEFORE_RESET_'+stamp;
+  const backup=DriveApp.getFileById(id).makeCopy(backupName);
+  if(!backup||!backup.getId())throw Error('Backup creation failed. Database was not reset.');
+  const sheets=ss.getSheets();
+  if(!sheets.length)throw Error('Database spreadsheet has no sheets. Backup created; reset stopped.');
+  // Google Sheets must retain at least one sheet. Keep one temporarily, remove every other
+  // sheet, then clear and rename the remaining sheet before rebuilding the database schema.
+  const keeper=sheets[0];
+  for(let i=sheets.length-1;i>=1;i--)ss.deleteSheet(sheets[i]);
+  keeper.clear();
+  keeper.setName('_RESET_TEMP_');
+  setupKmmcBackend();
+  const temp=ss.getSheetByName('_RESET_TEMP_');
+  if(temp)ss.deleteSheet(temp);
+  // Revoke cached sessions so nobody can continue with an old in-memory session.
+  CacheService.getScriptCache().removeAll([]);
+  return 'RESET COMPLETE. All original sheets/data in the configured database spreadsheet were removed and empty database tabs recreated. Backup: '+backupName+' (Drive file ID: '+backup.getId()+'). Set KMMC_ADMIN_PASSWORD in Script Properties, then run setupKmmcAdminFromProperties() to create a new admin login.';
+}
+
 /** Set KMMC_ADMIN_PASSWORD (12+ chars) and optional KMMC_ADMIN_USERNAME in Script Properties, then run once. */
 function setupKmmcAdminFromProperties(){
   if(!configured_())throw Error('Run setupKmmcBackend() first.');
