@@ -56,6 +56,7 @@ function route_(a,q){
     case 'logout':return logout_(q);
     case 'validateSession':case 'myProfile':return {user:pubUser_(auth_(q))};
     case 'changePassword':return changePassword_(auth_(q),q);
+    case 'resetPasswordByRegisteredEmail':return resetPasswordByRegisteredEmail_(q);
     case 'dashboard':return dashboard_(auth_(q));
     case 'list':return list_(auth_(q),q);
     case 'get':return get_(auth_(q),q);
@@ -211,6 +212,26 @@ function logout_(q){
   const u=auth_(q),h=sha_(String(q.token||q.sessionToken));
   rawRows_('DB_SESSIONS').filter(s=>s.tokenHash===h&&!s.revokedAt).forEach(s=>rawWrite_('DB_SESSIONS',s.id,Object.assign({},s,{revokedAt:iso_()})));
   CacheService.getScriptCache().remove('s_'+h);activity_(u,'LOGOUT','auth',u.id,'');return {loggedOut:true};
+}
+function resetPasswordByRegisteredEmail_(q){
+  const role=String(q.role||'').toUpperCase();
+  if(role!=='CLIENT'&&role!=='EMPLOYEE')throw Error('Password recovery is available for Customer and Employee accounts only.');
+  const identifier=String(q.username||q.userId||'').trim().toLowerCase();
+  const email=String(q.email||'').trim().toLowerCase();
+  const newPassword=String(q.newPassword||'');
+  if(!identifier||!email)throw Error('Enter your User ID and registered email address.');
+  if(newPassword.length<8)throw Error('New password must be at least 8 characters.');
+  if(newPassword.length>128)throw Error('Password is too long.');
+  const u=rows_('users').find(x=>{
+    if(String(x.role||'').toUpperCase()!==role||String(x.status||'').toUpperCase()!=='ACTIVE')return false;
+    const userMatch=[x.username,x.employeeId,x.clientId].some(v=>String(v||'').trim().toLowerCase()===identifier);
+    return userMatch&&String(x.email||'').trim().toLowerCase()===email;
+  });
+  if(!u)throw Error('User ID and registered email do not match our active records.');
+  u.salt=uid_();u.passwordHash=hash_(newPassword,u.salt);u.mustChangePassword=false;u.updatedAt=iso_();write_('users',u.id,u);
+  rawRows_('DB_SESSIONS').filter(s=>String(s.userId)===String(u.id)&&!s.revokedAt).forEach(s=>rawWrite_('DB_SESSIONS',s.id,Object.assign({},s,{revokedAt:iso_()})));
+  activity_(u,'PASSWORD_RESET','auth',u.id,'Reset using registered email verification');
+  return {reset:true,message:'Password changed successfully. Please sign in with your new password.'};
 }
 function changePassword_(u,q){
   if(String(q.newPassword||'').length<1)throw Error('New password is required.');
