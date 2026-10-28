@@ -100,7 +100,7 @@
           <input type="hidden" id="selectedRole" name="role" value="customer">
           <div class="form-options">
             <label class="remember"><input type="checkbox" name="remember"> Remember me</label>
-            <a href="contact.html">Need help?</a>
+            <button type="button" class="help-link" id="forgotPasswordLink" style="border:0;background:none;padding:0;cursor:pointer;text-decoration:underline">Forgot password?</button>
           </div>
           <button class="submit-button" type="submit" id="submitButton">Log In</button>
           <p class="login-status" id="portalLoginStatus" role="status" aria-live="polite">Enter your account details to continue.</p>
@@ -109,6 +109,20 @@
       </div>
     </section>
   </main>
+  <div id="forgotPasswordPanel" hidden style="position:fixed;inset:0;z-index:1000;background:rgba(8,24,38,.58);display:none;align-items:center;justify-content:center;padding:20px">
+    <section role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle" style="width:min(100%,430px);background:#fff;border:1px solid #d5dfe7;border-radius:12px;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="forgotPasswordTitle" style="margin:0;color:#123f6b;font-size:24px">Reset Password</h2><button type="button" id="closeForgotPassword" aria-label="Close" style="border:0;background:none;font-size:25px;cursor:pointer;color:#58636d">×</button></div>
+      <p style="color:#58636d;font-size:13px;line-height:1.5">Enter your account ID, registered email address and a new password. This is available for Customer and Employee accounts.</p>
+      <form id="forgotPasswordForm">
+        <div class="field"><label for="recoveryUserId">Customer / Employee ID</label><input id="recoveryUserId" required autocomplete="username" placeholder="Enter your registered User ID"></div>
+        <div class="field"><label for="recoveryEmail">Registered email address</label><input id="recoveryEmail" required type="email" autocomplete="email" placeholder="Enter registered email"></div>
+        <div class="field"><label for="recoveryNewPassword">New password</label><input id="recoveryNewPassword" required type="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="At least 8 characters"></div>
+        <div class="field"><label for="recoveryConfirmPassword">Confirm new password</label><input id="recoveryConfirmPassword" required type="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Re-enter new password"></div>
+        <p id="recoveryStatus" role="status" aria-live="polite" style="font-size:13px;line-height:1.5;color:#41494f"></p>
+        <button type="submit" id="recoverySubmit" class="submit-button">Change Password</button>
+      </form>
+    </section>
+  </div>
   <footer class="bottom-bar">
     <span>© <span id="year"></span> K Mahesh Manickham &amp; Co.</span>
     <a href="contact.html">Contact office</a>
@@ -191,6 +205,11 @@
         }else setStatus(message,true);
       }finally{submit.disabled=false;submit.textContent=roleData[roleInput.value].button;}
     });
+    const forgotLink=document.getElementById('forgotPasswordLink'),forgotPanel=document.getElementById('forgotPasswordPanel'),forgotForm=document.getElementById('forgotPasswordForm'),recoveryStatus=document.getElementById('recoveryStatus'),recoverySubmit=document.getElementById('recoverySubmit');
+    function openRecovery(){if(roleInput.value==='admin'){setStatus('Password recovery is available for Customer and Employee accounts only.',true);return;}forgotPanel.hidden=false;forgotPanel.style.display='flex';document.getElementById('recoveryUserId').value=roleInput.value==='employee'?username.value.trim():username.value.trim();document.getElementById('recoveryUserId').focus();recoveryStatus.textContent='';}
+    function closeRecovery(){forgotPanel.style.display='none';forgotPanel.hidden=true;forgotForm.reset();}
+    forgotLink.addEventListener('click',openRecovery);document.getElementById('closeForgotPassword').addEventListener('click',closeRecovery);forgotPanel.addEventListener('click',e=>{if(e.target===forgotPanel)closeRecovery();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!forgotPanel.hidden)closeRecovery();});
+    forgotForm.addEventListener('submit',async e=>{e.preventDefault();if(!forgotForm.reportValidity())return;const newPassword=document.getElementById('recoveryNewPassword').value,confirmPassword=document.getElementById('recoveryConfirmPassword').value;if(newPassword!==confirmPassword){recoveryStatus.textContent='The new passwords do not match.';recoveryStatus.style.color='#803d25';return;}const role=roleInput.value;if(role==='admin'){recoveryStatus.textContent='Admin password recovery must be handled by the system administrator.';return;}recoverySubmit.disabled=true;recoverySubmit.textContent='Updating…';recoveryStatus.textContent='Verifying account details…';recoveryStatus.style.color='#41494f';try{const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'resetPasswordByRegisteredEmail',role:roleData[role].apiRole,username:document.getElementById('recoveryUserId').value.trim(),email:document.getElementById('recoveryEmail').value.trim(),newPassword})});const result=await response.json();if(!response.ok||!result||result.ok!==true)throw new Error(result&&result.error||'Unable to reset password.');recoveryStatus.textContent=result.data?.message||'Password changed successfully. Please sign in with your new password.';recoveryStatus.style.color='#17633a';forgotForm.reset();setTimeout(closeRecovery,2200);}catch(err){recoveryStatus.textContent=String(err.message||'Unable to reset password.');recoveryStatus.style.color='#803d25';}finally{recoverySubmit.disabled=false;recoverySubmit.textContent='Change Password';}});
     document.getElementById('year').textContent=new Date().getFullYear();setRole('customer');
   })();
   </script>
