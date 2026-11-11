@@ -130,3 +130,11 @@ Added an Admin-only Accountant navigation group with Accounts, Receipts, Payment
 6. Test cancellation reversal and date-filtered reports before entering live transactions.
 
 A GitHub commit does not update the Apps Script Web App automatically. Do not use the new summaries for management or statutory reporting until tested and reconciled. The reimbursement table is schema-ready, but its approval/payment lifecycle is not yet implemented.
+
+
+
+## Public website enquiry API deployment (11-Nov-2026)
+
+The public website now submits contact, service, careers and portal-information enquiries to the `publicEnquiry` API action. The backend creates the `DB_WEBSITE_ENQUIRIES` sheet on the first submission and records each enquiry with a unique reference and NEW status. This action is intentionally separate from ERP authentication and accepts only basic public contact information.
+
+After updating `Code.gs`, save the Apps Script project and deploy the existing Web App as a **new version**. The GitHub Pages website can load the new frontend before that deployment; enquiries will not be stored until the updated Apps Script version is active.
