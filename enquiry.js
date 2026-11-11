@@ -47,6 +47,8 @@
         status.className = "form-status success";
         const reference = result.data && result.data.reference;
         status.textContent = "Thank you. Your enquiry has been received." + (reference ? " Reference: " + reference : "") + " Our office will contact you.";
+        const summary = document.getElementById("enquiry-summary");
+        if (summary) { summary.textContent = status.textContent; summary.className = "notice form-status success"; summary.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
         form.reset();
       } catch (error) {
         status.className = "form-status error";
