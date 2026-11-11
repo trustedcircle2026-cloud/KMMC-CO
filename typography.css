@@ -21,3 +21,24 @@ h1,h2,h3,h4,h5,h6,
   font-style:normal!important;
 }
 em,i,cite,dfn,var,address{font-style:normal!important}
+
+
+/* Emphasise all page titles/headings and navigation labels. */
+h1,h2,h3,h4,h5,h6,
+.page-title,.section-title,.page-hero h1,.page-hero h2,
+.reference-home .team-hero-caption,
+.reference-home .reference-intro h1,
+.reference-home .reference-services h2,
+.reference-home .reference-cta h2,
+.brand-copy strong,.form-card h2{
+  font-weight:700!important;
+}
+.main-nav .nav-link,
+.main-nav .dropdown a,
+.services-menu a,
+.services-menu .service-category-link,
+.services-menu .service-submenu a,
+.site-header .login-button,
+.menu-toggle{
+  font-weight:700!important;
+}
