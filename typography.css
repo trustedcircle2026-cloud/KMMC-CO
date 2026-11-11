@@ -158,3 +158,42 @@ em,i,cite,dfn,var,address{font-style:normal!important}
   letter-spacing:.105em!important;
   line-height:1.3!important;
 }
+
+/* Re-applied final header scale and high-contrast footer treatment. */
+.site-header .brand-copy small,
+.site-header .brand-copy .subtitle{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:16px!important;
+  font-weight:700!important;
+  letter-spacing:.105em!important;
+  line-height:1.3!important;
+  color:#123f6b!important;
+}
+
+/* Every footer element, including column headings and brand text, must be white. */
+footer.site-footer,
+footer.site-footer *,
+footer.site-footer *::before,
+footer.site-footer *::after{
+  color:#ffffff!important;
+}
+footer.site-footer .footer-col h4,
+footer.site-footer .footer-col a,
+footer.site-footer .footer-col p,
+footer.site-footer .footer-brand-col p,
+footer.site-footer .brand-copy strong,
+footer.site-footer .brand-copy small,
+footer.site-footer .footer-bottom,
+footer.site-footer .footer-bottom span,
+footer.site-footer .footer-bottom a,
+footer.site-footer .footer-contact-button{
+  color:#ffffff!important;
+  opacity:1!important;
+}
+footer.site-footer .social-links a{
+  color:#ffffff!important;
+  border-color:rgba(255,255,255,.65)!important;
+}
+footer.site-footer a:hover{
+  color:#dbeafe!important;
+}
