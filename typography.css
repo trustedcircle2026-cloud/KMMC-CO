@@ -197,3 +197,87 @@ footer.site-footer .social-links a{
 footer.site-footer a:hover{
   color:#dbeafe!important;
 }
+
+
+/* KMMC header subtitle sizing: visually balanced with the firm name. */
+.site-header .brand-copy strong,
+.brand-copy strong{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:clamp(24px,2.15vw,32px)!important;
+  font-weight:800!important;
+  line-height:1.08!important;
+}
+.site-header .brand-copy small,
+.brand-copy small{
+  display:block!important;
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:clamp(14px,1.15vw,17px)!important;
+  font-weight:700!important;
+  letter-spacing:.19em!important;
+  line-height:1.35!important;
+  margin-top:3px!important;
+}
+
+/* White footer surfaces across every public page; retain readable dark text. */
+footer.site-footer,
+.site-footer,
+footer.site-footer .footer-main,
+footer.site-footer .footer-bottom,
+.site-footer .footer-main,
+.site-footer .footer-bottom{
+  background:#ffffff!important;
+  background-color:#ffffff!important;
+  color:#26384b!important;
+}
+footer.site-footer *,
+.site-footer *{
+  color:#334155!important;
+  opacity:1!important;
+}
+footer.site-footer .footer-col h4,
+.site-footer .footer-col h4{
+  color:#123f6b!important;
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-weight:750!important;
+}
+footer.site-footer .brand-copy strong,
+.site-footer .brand-copy strong{
+  color:#123f6b!important;
+}
+footer.site-footer .brand-copy small,
+.site-footer .brand-copy small{
+  color:#477b55!important;
+}
+footer.site-footer .footer-brand-col>p,
+footer.site-footer .footer-contact p,
+footer.site-footer .footer-col>a,
+footer.site-footer .footer-bottom,
+footer.site-footer .footer-bottom span,
+footer.site-footer .footer-bottom a,
+.site-footer .footer-brand-col>p,
+.site-footer .footer-contact p,
+.site-footer .footer-col>a,
+.site-footer .footer-bottom,
+.site-footer .footer-bottom span,
+.site-footer .footer-bottom a{
+  color:#475569!important;
+}
+footer.site-footer .footer-contact-button,
+.site-footer .footer-contact-button{
+  color:#123f6b!important;
+  border:1px solid #123f6b!important;
+  background:#ffffff!important;
+}
+footer.site-footer .social-links a,
+.site-footer .social-links a{
+  color:#123f6b!important;
+  border-color:#9aabba!important;
+}
+footer.site-footer .footer-bottom,
+.site-footer .footer-bottom{
+  border-top:1px solid #dbe3ea!important;
+}
+footer.site-footer a:hover,
+.site-footer a:hover{
+  color:#0b65a5!important;
+}
