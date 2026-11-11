@@ -97,3 +97,27 @@ Post a voucher:
 ```
 
 The first run of `setupKmmcBackend()` after updating the Apps Script adds the `DB_ACCOUNTING_VOUCHERS` tab without clearing existing records. The new report selector includes Ledger, Invoices, Collections, Expenses, Payables, Receipts, Payments, Vouchers, and Chart of Accounts. Validate voucher mappings and opening balances using test entries before using this for live accounting.
+
+
+## Public website enquiry
+
+Public pages submit enquiries through the unauthenticated `publicEnquiry` action. This action accepts only public contact information, creates/updates the `DB_WEBSITE_ENQUIRIES` sheet, and returns a submission reference. It does not grant access to ERP modules or accept tokens, client documents, passwords, or accounting records.
+
+Request:
+```json
+{
+  "action": "publicEnquiry",
+  "record": {
+    "name": "Example Contact",
+    "business": "Example Business",
+    "email": "contact@example.com",
+    "phone": "9000000000",
+    "service": "GST Services",
+    "message": "Please contact me about GST compliance.",
+    "consent": true,
+    "source": "/contact.html"
+  }
+}
+```
+
+The sheet is initialized automatically on the first submission. Review and restrict access to the database spreadsheet to authorized firm staff only.
