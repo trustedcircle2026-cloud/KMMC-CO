@@ -137,15 +137,19 @@
   if (nav) {
     nav.innerHTML = '<div class="container nav-inner">' +
       '<a class="nav-link" href="index.html">Home</a>' +
-      '<div class="nav-item"><a class="nav-link" href="service-audit.html">Audit</a><div class="dropdown"><a href="service-audit.html">Audit &amp; Assurance</a><a href="service-internal-audit.html">Internal Audit</a></div></div>' +
-      '<div class="nav-item"><a class="nav-link" href="service-income-tax.html">Taxes</a><div class="dropdown"><a href="service-income-tax.html">Income Tax</a><a href="service-gst.html">GST Services</a><a href="service-tds.html">TDS Compliance</a></div></div>' +
-      '<div class="nav-item"><a class="nav-link" href="service-company-registration.html">Business Setup</a><div class="dropdown"><a href="service-company-registration.html">Company Registration</a><a href="service-llp.html">LLP Registration</a></div></div>' +
-      '<div class="nav-item"><a class="nav-link" href="services.html">Registrations</a><div class="dropdown"><a href="service-gst.html">GST Registration</a><a href="service-pan-tan.html">PAN / TAN</a><a href="service-msme.html">MSME / Udyam</a></div></div>' +
-      '<div class="nav-item"><a class="nav-link" href="service-roc.html">MCA</a><div class="dropdown"><a href="service-roc.html">ROC Filings</a><a href="service-llp.html">LLP Compliance</a></div></div>' +
-      '<div class="nav-item"><a class="nav-link" href="service-accounting.html">Compliance</a><div class="dropdown"><a href="service-accounting.html">Accounting</a><a href="service-tds.html">Payroll &amp; TDS</a><a href="service-internal-audit.html">Internal Controls</a></div></div>' +
-      '<div class="nav-item"><a class="nav-link" href="resources.html">Resources</a></div>' +
-      '<div class="nav-item"><a class="nav-link" href="about.html">About</a><div class="dropdown"><a href="about.html">About the Firm</a><a href="about.html#approach">Our Approach</a></div></div>' +
-      '<a class="nav-link" href="careers.html">Careers</a><a class="nav-link" href="contact.html">Contact Us</a></div>';
+      '<div class="nav-item services-nav"><a class="nav-link" href="services.html" aria-haspopup="true" aria-expanded="false">Our Services <span class="nav-caret">⌄</span></a>' +
+        '<div class="dropdown services-menu">' +
+          '<div class="service-category"><a class="service-category-link" href="service-audit.html">Audit <span>›</span></a><div class="service-submenu"><a href="service-audit.html">Audit &amp; Assurance</a><a href="service-internal-audit.html">Internal Audit</a><a href="services.html#tax-audit">Tax Audit</a><a href="services.html#statutory-audit">Statutory Audit</a></div></div>' +
+          '<div class="service-category"><a class="service-category-link" href="service-income-tax.html">Taxation <span>›</span></a><div class="service-submenu"><a href="service-income-tax.html">Income Tax</a><a href="service-gst.html">GST Services</a><a href="service-tds.html">TDS Compliance</a></div></div>' +
+          '<div class="service-category"><a class="service-category-link" href="service-company-registration.html">Business Setup <span>›</span></a><div class="service-submenu"><a href="service-company-registration.html">Company Registration</a><a href="service-llp.html">LLP Registration</a><a href="accountant.html">Dedicated Accounting Support</a></div></div>' +
+          '<div class="service-category"><a class="service-category-link" href="services.html">Registrations <span>›</span></a><div class="service-submenu"><a href="service-gst.html">GST Registration</a><a href="service-pan-tan.html">PAN / TAN</a><a href="service-msme.html">MSME / Udyam</a></div></div>' +
+          '<div class="service-category"><a class="service-category-link" href="service-roc.html">MCA <span>›</span></a><div class="service-submenu"><a href="service-roc.html">ROC Filings</a><a href="service-company-registration.html">Company Incorporation</a><a href="service-llp.html">LLP Compliance</a></div></div>' +
+          '<div class="service-category"><a class="service-category-link" href="service-accounting.html">Compliances <span>›</span></a><div class="service-submenu"><a href="service-accounting.html">Accounting &amp; Bookkeeping</a><a href="service-tds.html">Payroll &amp; TDS</a><a href="service-internal-audit.html">Internal Controls</a></div></div>' +
+        '</div></div>' +
+      '<a class="nav-link" href="resources.html">Resources</a>' +
+      '<a class="nav-link" href="about.html">About</a>' +
+      '<a class="nav-link" href="careers.html">Careers</a>' +
+      '<a class="nav-link" href="contact.html">Contact Us</a></div>';
     const menu = header && header.querySelector(".menu-toggle");
     if (menu) menu.addEventListener("click", () => {
       const open = nav.classList.toggle("open");
@@ -155,21 +159,23 @@
     nav.querySelectorAll(".nav-item > .nav-link").forEach(link => link.addEventListener("click", event => {
       if (window.matchMedia("(max-width: 860px)").matches) {
         event.preventDefault();
-        link.parentElement.classList.toggle("expanded");
+        const parent = link.closest(".nav-item");
+        parent.classList.toggle("expanded");
+        link.setAttribute("aria-expanded", String(parent.classList.contains("expanded")));
       }
     }));
-    const map = {
-      "index.html":"Home","service-audit.html":"Audit","service-internal-audit.html":"Audit",
-      "service-income-tax.html":"Taxes","service-gst.html":"Taxes","service-tds.html":"Taxes",
-      "service-company-registration.html":"Business Setup","service-llp.html":"Business Setup",
-      "service-msme.html":"Registrations","service-pan-tan.html":"Registrations","service-roc.html":"MCA",
-      "service-accounting.html":"Compliance","services.html":"Compliance","resources.html":"Resources",
-      "about.html":"About","careers.html":"Careers","contact.html":"Contact Us"
-    };
+    nav.querySelectorAll(".service-category-link").forEach(link => link.addEventListener("click", event => {
+      if (window.matchMedia("(max-width: 860px)").matches) {
+        event.preventDefault();
+        const parent = link.closest(".service-category");
+        parent.classList.toggle("expanded");
+      }
+    }));
+    const servicePages = ["service-audit.html","service-internal-audit.html","service-income-tax.html","service-gst.html","service-tds.html","service-company-registration.html","service-llp.html","service-msme.html","service-pan-tan.html","service-roc.html","service-accounting.html","services.html","accountant.html"];
+    if (servicePages.includes(current)) nav.querySelector(".services-nav > .nav-link")?.classList.add("active");
+    const map = {"index.html":"Home","resources.html":"Resources","about.html":"About","careers.html":"Careers","contact.html":"Contact Us"};
     const active = map[current];
-    if (active) nav.querySelectorAll(".nav-link").forEach(a => {
-      if (a.textContent.trim() === active) a.classList.add("active");
-    });
+    if (active) nav.querySelectorAll(".nav-link").forEach(a => { if (a.textContent.trim() === active) a.classList.add("active"); });
   }
   const year = document.getElementById("year");
   if (year) year.textContent = String(new Date().getFullYear());
