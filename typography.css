@@ -480,3 +480,50 @@ footer.site-footer .footer-brand-col .brand-copy small,
 .site-header .brand-copy > small{
   text-transform:none!important;
 }
+
+
+/* Brand lockup: firm name and designation use identical typography metrics. */
+.site-header .brand-copy > strong,
+.site-header .brand-copy > small,
+footer.site-footer .brand-copy > strong,
+footer.site-footer .brand-copy > small,
+.site-footer .brand-copy > strong,
+.site-footer .brand-copy > small{
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(25px,2.05vw,31px)!important;
+  font-weight:700!important;
+  font-style:normal!important;
+  letter-spacing:-.035em!important;
+  line-height:1.08!important;
+  color:#123f6b!important;
+  text-transform:none!important;
+  white-space:nowrap!important;
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+}
+.site-header .brand-copy,
+footer.site-footer .brand-copy,
+.site-footer .brand-copy{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  gap:0!important;
+}
+.site-header .brand-copy > small,
+footer.site-footer .brand-copy > small,
+.site-footer .brand-copy > small{
+  text-transform:none!important;
+}
+@media(max-width:700px){
+  .site-header .brand-copy > strong,
+  .site-header .brand-copy > small{
+    font-size:clamp(16px,3.8vw,22px)!important;
+  }
+  footer.site-footer .brand-copy > strong,
+  footer.site-footer .brand-copy > small,
+  .site-footer .brand-copy > strong,
+  .site-footer .brand-copy > small{
+    font-size:clamp(13px,3.2vw,17px)!important;
+  }
+}
