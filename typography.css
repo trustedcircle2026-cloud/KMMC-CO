@@ -1,71 +1,103 @@
-/* KMMC universal typography — Cormorant Garamond on every page and every text element. */
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap");
-:root{--kmmc-font:"Cormorant Garamond",Georgia,serif}
-html,body,body * ,button,input,select,textarea,option{
-  font-family:"Cormorant Garamond",Georgia,serif!important;
+/* KMMC professional typography system — modern, clear and corporate.
+   Headings / brand / navigation: Manrope. Body / forms / utility text: Inter. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;650;700;750;800&display=swap");
+
+:root{
+  --kmmc-font-body:"Inter",Arial,sans-serif;
+  --kmmc-font-heading:"Manrope",Arial,sans-serif;
+}
+
+/* Default readable corporate text */
+html,body,body *,
+button,input,select,textarea,option{
+  font-family:"Inter",Arial,sans-serif!important;
   font-style:normal!important;
+  font-weight:400;
+  letter-spacing:0;
 }
+
+/* Clear, confident title hierarchy */
 h1,h2,h3,h4,h5,h6,
-.brand-copy strong,.brand-copy small,
-.site-header,.site-header *,
-.main-nav,.main-nav *,
-.page-hero,.page-hero *,
-.reference-home .team-hero-caption,
-.reference-home .reference-intro *,
-.reference-home .reference-services *,
-.reference-home .reference-cta *,
-.form-card,.form-card *,
-.enquiry-form,.enquiry-form *,
-.site-footer,.site-footer *{
-  font-family:"Cormorant Garamond",Georgia,serif!important;
-  font-style:normal!important;
-}
-em,i,cite,dfn,var,address{font-style:normal!important}
-
-
-/* Emphasise all page titles/headings and navigation labels. */
-h1,h2,h3,h4,h5,h6,
-.page-title,.section-title,.page-hero h1,.page-hero h2,
-.reference-home .team-hero-caption,
-.reference-home .reference-intro h1,
-.reference-home .reference-services h2,
-.reference-home .reference-cta h2,
-.brand-copy strong,.form-card h2{
-  font-weight:700!important;
-}
-.main-nav .nav-link,
-.main-nav .dropdown a,
-.services-menu a,
-.services-menu .service-category-link,
-.services-menu .service-submenu a,
-.site-header .login-button,
-.menu-toggle{
-  font-weight:700!important;
-}
-
-
-/* Slightly stronger Cormorant Garamond weight for better screen readability. */
-html,body,body *,button,input,select,textarea,option{
-  font-weight:500!important;
-}
-p,li,small,label,span,a,td,th,figcaption,blockquote{
-  font-weight:500!important;
-}
-h1,h2,h3,h4,h5,h6,
-.brand-copy strong,.page-title,.section-title,
+.page-title,.section-title,
 .page-hero h1,.page-hero h2,
 .reference-home .team-hero-caption,
 .reference-home .reference-intro h1,
 .reference-home .reference-services h2,
 .reference-home .reference-cta h2,
-.form-card h2{
+.form-card h2,.legal-copy h2,
+.process-grid h3,.values-grid h3{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-style:normal!important;
+  font-weight:750!important;
+  letter-spacing:-.035em!important;
+  line-height:1.16!important;
+}
+
+/* Firm identity */
+.brand-copy strong{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:clamp(21px,2.1vw,31px)!important;
+  font-weight:800!important;
+  letter-spacing:-.045em!important;
+  line-height:1.12!important;
+}
+.brand-copy small{
+  font-family:"Inter",Arial,sans-serif!important;
+  font-weight:600!important;
+  letter-spacing:.14em!important;
+}
+
+/* Main navigation and dropdown hierarchy */
+.main-nav .nav-link{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:15px!important;
+  font-weight:700!important;
+  letter-spacing:-.015em!important;
+}
+.main-nav .dropdown a,
+.services-menu a,
+.services-menu .service-category-link,
+.services-menu .service-submenu a{
+  font-family:"Inter",Arial,sans-serif!important;
+  font-size:14px!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+  line-height:1.45!important;
+}
+.site-header .login-button,
+.menu-toggle{
+  font-family:"Manrope",Arial,sans-serif!important;
   font-weight:700!important;
 }
-.main-nav .nav-link,.main-nav .dropdown a,
-.services-menu a,.services-menu .service-category-link,
-.services-menu .service-submenu a,
-.site-header .login-button,.menu-toggle,
+.reference-home .team-hero-caption small,
+.section-kicker{
+  font-family:"Inter",Arial,sans-serif!important;
+  font-weight:600!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase;
+}
+
+/* Supporting copy: comfortable and restrained */
+p,li,small,label,figcaption,blockquote,
+.enquiry-form,.form-card,.legal-copy,
+.site-footer,.reference-enquiries{
+  font-family:"Inter",Arial,sans-serif!important;
+  font-weight:400!important;
+  letter-spacing:0!important;
+  line-height:1.65;
+}
 .enquiry-form label,.form-card label{
-  font-weight:700!important;
+  font-weight:600!important;
 }
-.brand-copy small{font-weight:600!important}
+.enquiry-form input,.enquiry-form textarea,.enquiry-form select{
+  font-family:"Inter",Arial,sans-serif!important;
+  font-weight:400!important;
+}
+em,i,cite,dfn,var,address{font-style:normal!important}
+
+/* Do not let earlier page-specific font rules override the shared identity. */
+.site-header h1,.site-header h2,.site-header h3,
+.page-hero h1,.page-hero h2,
+.reference-home h1,.reference-home h2,.reference-home h3{
+  font-family:"Manrope",Arial,sans-serif!important;
+}
