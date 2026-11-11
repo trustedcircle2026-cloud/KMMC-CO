@@ -768,7 +768,7 @@ function createEmployeeInvite_(admin,q){
   needAdmin_(admin);
   const email=String(q.email||'').trim().toLowerCase(),base=String(q.registrationUrl||'').trim();
   if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid employee email address.');
-  if(!/^https:\/\//i.test(base))throw Error('Registration page URL must be an HTTPS URL.');
+  if(!/^https:\/\/[a-z0-9.-]+(?::[0-9]+)?(?:\/[a-z0-9._~/-]*)?$/i.test(base))throw Error('Registration page URL must be a clean HTTPS URL without query parameters.');
   if(rows_('employees').some(x=>String(x.email||'').trim().toLowerCase()===email))throw Error('An employee account already exists for this email.');
   const active=rawRows_('DB_EMPLOYEE_INVITES').find(x=>String(x.email||'').toLowerCase()===email&&String(x.status)==='SENT'&&new Date(x.expiresAt).getTime()>Date.now());
   if(active)throw Error('A valid registration invitation already exists for this email.');
