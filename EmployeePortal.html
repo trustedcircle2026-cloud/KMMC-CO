@@ -408,4 +408,31 @@ function pretty(s){return String(s||'').replace(/([a-z])([A-Z])/g,'$1 $2').repla
  begin();
 })();
 </script>
+
+<script id="kmmc-employee-approval-status">
+(function(){
+  var API='https://script.google.com/macros/s/AKfycbxRTYJgXaJ2z16YfYdYxJCey7IuGqEQzEK6Oa8DuMAh5B31nWgVU4xrxzwGJ-ngzTzo/exec';
+  function read(key){try{return JSON.parse(localStorage.getItem(key)||sessionStorage.getItem(key)||'null')}catch(e){return null}}
+  function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));sessionStorage.setItem(key,JSON.stringify(value))}catch(e){}}
+  function token(){return localStorage.getItem('kmmc_session_token')||sessionStorage.getItem('kmmc_session_token')||''}
+  function banner(status){
+    var id='kmmcApprovalNotice',node=document.getElementById(id);
+    if(status==='APPROVED'){if(node)node.remove();return;}
+    if(!node){node=document.createElement('div');node.id=id;node.style.cssText='position:sticky;top:0;z-index:9999;padding:12px 18px;background:#fff7e8;border-bottom:1px solid #efd39b;color:#775014;font:13px Arial,sans-serif;box-shadow:0 3px 12px #172b3a12';document.body.insertBefore(node,document.body.firstChild);}
+    node.innerHTML='<strong>Account Approval Pending</strong><span style="display:block;margin-top:4px">Your registration is submitted and awaiting administrator approval. You can view permitted portal information; employee actions will remain restricted until approval.</span>';
+  }
+  async function refresh(){
+    var t=token(),u=read('kmmc_user');if(!t||!u||String(u.role||'').toUpperCase()!=='EMPLOYEE')return;
+    try{
+      var response=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'validateSession',token:t})});
+      var result=await response.json();if(!result.ok)throw new Error(result.error||'Session validation failed');
+      var current=result.data&&result.data.user;if(!current)return;
+      write('kmmc_user',current);banner(String(current.approvalStatus||'APPROVED').toUpperCase());
+    }catch(e){
+      if(/inactive|locked|login required|session expired/i.test(String(e.message||e))){var n=document.getElementById('kmmcApprovalNotice');if(n)n.textContent='Your account is not currently active. Please contact the KMMC administrator.';}
+    }
+  }
+  refresh();window.setInterval(refresh,30000);
+})();
+</script>
 </body></html>
