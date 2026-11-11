@@ -122,3 +122,55 @@
     });
   });
 })();
+
+/* KMMC unified public-site navigation and page helpers */
+(() => {
+  const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+  const header = document.querySelector(".site-header");
+  const nav = document.querySelector(".main-nav");
+  if (header) {
+    const row = header.querySelector(".brand-row");
+    if (row) {
+      row.innerHTML = '<a class="brand" href="index.html" aria-label="K Mahesh Manickham and Co. home"><img class="brand-logo" src="assets/images/CA%20Logo.png" alt="K Mahesh Manickham and Co. Chartered Accountants"><span class="brand-copy"><strong>K Mahesh Manickham and Co.</strong><small>CHARTERED ACCOUNTANTS</small></span></a><div class="reference-enquiries"><span>Business Enquiries</span><div><a href="mailto:info@kmmc.co.in">info@kmmc.co.in</a><i></i><a href="tel:+919003060652">90030 60652</a><i></i><a href="careers.html">Careers</a></div></div><a class="login-button" href="login.html">Login</a><button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button>';
+    }
+  }
+  if (nav) {
+    nav.innerHTML = '<div class="container nav-inner">' +
+      '<a class="nav-link" href="index.html">Home</a>' +
+      '<div class="nav-item"><a class="nav-link" href="service-audit.html">Audit</a><div class="dropdown"><a href="service-audit.html">Audit &amp; Assurance</a><a href="service-internal-audit.html">Internal Audit</a></div></div>' +
+      '<div class="nav-item"><a class="nav-link" href="service-income-tax.html">Taxes</a><div class="dropdown"><a href="service-income-tax.html">Income Tax</a><a href="service-gst.html">GST Services</a><a href="service-tds.html">TDS Compliance</a></div></div>' +
+      '<div class="nav-item"><a class="nav-link" href="service-company-registration.html">Business Setup</a><div class="dropdown"><a href="service-company-registration.html">Company Registration</a><a href="service-llp.html">LLP Registration</a></div></div>' +
+      '<div class="nav-item"><a class="nav-link" href="services.html">Registrations</a><div class="dropdown"><a href="service-gst.html">GST Registration</a><a href="service-pan-tan.html">PAN / TAN</a><a href="service-msme.html">MSME / Udyam</a></div></div>' +
+      '<div class="nav-item"><a class="nav-link" href="service-roc.html">MCA</a><div class="dropdown"><a href="service-roc.html">ROC Filings</a><a href="service-llp.html">LLP Compliance</a></div></div>' +
+      '<div class="nav-item"><a class="nav-link" href="service-accounting.html">Compliance</a><div class="dropdown"><a href="service-accounting.html">Accounting</a><a href="service-tds.html">Payroll &amp; TDS</a><a href="service-internal-audit.html">Internal Controls</a></div></div>' +
+      '<div class="nav-item"><a class="nav-link" href="resources.html">Resources</a></div>' +
+      '<div class="nav-item"><a class="nav-link" href="about.html">About</a><div class="dropdown"><a href="about.html">About the Firm</a><a href="about.html#approach">Our Approach</a></div></div>' +
+      '<a class="nav-link" href="careers.html">Careers</a><a class="nav-link" href="contact.html">Contact Us</a></div>';
+    const menu = header && header.querySelector(".menu-toggle");
+    if (menu) menu.addEventListener("click", () => {
+      const open = nav.classList.toggle("open");
+      menu.setAttribute("aria-expanded", String(open));
+      menu.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+    });
+    nav.querySelectorAll(".nav-item > .nav-link").forEach(link => link.addEventListener("click", event => {
+      if (window.matchMedia("(max-width: 860px)").matches) {
+        event.preventDefault();
+        link.parentElement.classList.toggle("expanded");
+      }
+    }));
+    const map = {
+      "index.html":"Home","service-audit.html":"Audit","service-internal-audit.html":"Audit",
+      "service-income-tax.html":"Taxes","service-gst.html":"Taxes","service-tds.html":"Taxes",
+      "service-company-registration.html":"Business Setup","service-llp.html":"Business Setup",
+      "service-msme.html":"Registrations","service-pan-tan.html":"Registrations","service-roc.html":"MCA",
+      "service-accounting.html":"Compliance","services.html":"Compliance","resources.html":"Resources",
+      "about.html":"About","careers.html":"Careers","contact.html":"Contact Us"
+    };
+    const active = map[current];
+    if (active) nav.querySelectorAll(".nav-link").forEach(a => {
+      if (a.textContent.trim() === active) a.classList.add("active");
+    });
+  }
+  const year = document.getElementById("year");
+  if (year) year.textContent = String(new Date().getFullYear());
+})();
