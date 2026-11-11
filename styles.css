@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Garamond&display=swap");
 :root {
   --green: #0d5038;
   --green-dark: #083b2a;
@@ -298,14 +299,14 @@ button { font: inherit; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
 
-/* KMMC WEBSITE GLOBAL FONT: Aptos with a clean navy/white/black system */
+/* KMMC WEBSITE GLOBAL FONT: 'Cormorant Garamond' with a clean navy/white/black system */
 :root{--kmmc-blue:#123f6b;--kmmc-blue-dark:#082747;--kmmc-line:#dbe3ec;--kmmc-muted:#526174}
-html,body,body *{font-family:Aptos,"Segoe UI",Arial,sans-serif!important;font-style:normal!important}
+html,body,body *{font-family:'Cormorant Garamond','Cormorant Garamond',Arial,sans-serif!important;font-style:normal!important}
 em,i,cite,dfn,var{font-style:normal!important}
 body{color:#111827!important}
-h1,h2,h3,h4,h5,h6,.page-hero h1,.page-columns h2,.form-card h2{font-family:Aptos,"Segoe UI",Arial,sans-serif!important;font-style:normal!important;letter-spacing:-.02em}
-.page-hero p,.lead,.feature-list li,.form-card>p,.enquiry-form label,.enquiry-form input,.enquiry-form textarea,.enquiry-form select,.enquiry-form small,.notice,.legal-copy p{font-family:Aptos,"Segoe UI",Arial,sans-serif!important;font-style:normal!important}
-.site-header .brand-copy strong,.site-header .brand-copy small,.site-header .reference-enquiries,.site-header .reference-enquiries a,.site-header .login-button,.main-nav .nav-link,.main-nav .dropdown a{font-family:Aptos,"Segoe UI",Arial,sans-serif!important}
+h1,h2,h3,h4,h5,h6,.page-hero h1,.page-columns h2,.form-card h2{font-family:'Cormorant Garamond','Cormorant Garamond',Arial,sans-serif!important;font-style:normal!important;letter-spacing:-.02em}
+.page-hero p,.lead,.feature-list li,.form-card>p,.enquiry-form label,.enquiry-form input,.enquiry-form textarea,.enquiry-form select,.enquiry-form small,.notice,.legal-copy p{font-family:'Cormorant Garamond','Cormorant Garamond',Arial,sans-serif!important;font-style:normal!important}
+.site-header .brand-copy strong,.site-header .brand-copy small,.site-header .reference-enquiries,.site-header .reference-enquiries a,.site-header .login-button,.main-nav .nav-link,.main-nav .dropdown a{font-family:'Cormorant Garamond','Cormorant Garamond',Arial,sans-serif!important}
 .site-header .brand-copy strong{font-size:clamp(20px,2vw,31px)!important;white-space:nowrap!important;letter-spacing:0!important}
 .page-hero{background:linear-gradient(110deg,rgba(8,39,71,.96),rgba(18,63,107,.88)),url("https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1800&q=85") center/cover!important}
 .page-hero h1{font-size:clamp(34px,4vw,52px)!important;font-weight:700!important}
@@ -320,16 +321,27 @@ h1,h2,h3,h4,h5,h6,.page-hero h1,.page-columns h2,.form-card h2{font-family:Aptos
 .enquiry-form input:focus,.enquiry-form textarea:focus,.enquiry-form select:focus{outline:3px solid #d8e6f5!important;border-color:#123f6b!important}
 .enquiry-form .consent{display:flex!important;align-items:flex-start!important;gap:9px!important;font-size:12px!important;line-height:1.5!important}
 .enquiry-form .consent input{width:auto!important;min-height:auto!important;margin-top:3px!important}
-.form-status{padding:11px 13px;border-radius:5px;background:#f3f6fa;border-left:3px solid #315f8b;color:#26394d;font:13px/1.5 Aptos,"Segoe UI",Arial,sans-serif}
+.form-status{padding:11px 13px;border-radius:5px;background:#f3f6fa;border-left:3px solid #315f8b;color:#26394d;font:13px/1.5 'Cormorant Garamond','Cormorant Garamond',Arial,sans-serif}
 .form-status.success{background:#eff8f1;border-left-color:#26824a;color:#15552e}
 .form-status.error{background:#fff4f2;border-left-color:#b54735;color:#7a271a}
 .enquiry-form button:disabled{opacity:.65;cursor:wait}
-.button,.button-primary,.button-outline{font-family:Aptos,"Segoe UI",Arial,sans-serif!important;font-weight:600!important}
+.button,.button-primary,.button-outline{font-family:'Cormorant Garamond','Cormorant Garamond',Arial,sans-serif!important;font-weight:600!important}
 .button-primary,.form-card button[type=submit]{background:#123f6b!important;color:#fff!important;border-color:#123f6b!important}
 .button-outline{background:#fff!important;color:#123f6b!important;border-color:#123f6b!important}
 .main-nav{background:#123f6b!important}
 .main-nav .nav-link{color:#fff!important}
 .main-nav .nav-link:hover,.main-nav .nav-link.active{background:#082747!important}
-.site-header .brand-copy strong,.site-header .brand-copy small{font-family:Aptos,"Segoe UI",Arial,sans-serif!important}
+.site-header .brand-copy strong,.site-header .brand-copy small{font-family:'Cormorant Garamond','Cormorant Garamond',Arial,sans-serif!important}
 .site-header .brand-logo{object-fit:contain!important;border:0!important;border-radius:0!important}
 @media(max-width:640px){.page-hero{padding:52px 0}.page-hero h1{font-size:36px!important}.form-card{padding:20px}.site-header .brand-copy strong{font-size:clamp(15px,4vw,21px)!important}.site-header .brand-copy small{font-size:9px!important}}
+
+
+/* KMMC typography standard: Garamond for titles; Cormorant Garamond for all other text. */
+html,body,body *{font-family:"Cormorant Garamond",Georgia,serif!important;font-style:normal!important}
+h1,h2,h3,h4,h5,h6,
+.page-title,.section-title,.page-hero h1,.page-columns h2,.form-card h2,
+.brand-copy strong,.portal-login-intro h1,.portal-form-heading h2,.portal-side-head h2{
+  font-family:Garamond,"Times New Roman",serif!important;
+  font-style:normal!important;
+}
+em,i,cite,dfn,var{font-style:normal!important}
