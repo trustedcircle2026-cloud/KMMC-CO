@@ -34,3 +34,20 @@ h1,h2,h3,h4,h5,h6,.page-title,.section-title,.page-hero h1,.page-columns h2,.for
  font-family:Garamond,"Times New Roman",serif!important;font-style:normal!important
 }
 em,i,cite,dfn,var{font-style:normal!important}
+
+
+/* Homepage hero and masthead title correction (kept after shared page typography). */
+.reference-home .site-header .brand-copy strong,
+.reference-home .team-hero-caption,
+.reference-home .reference-intro h1,
+.reference-home .reference-services .section-heading h2,
+.reference-home .reference-cta h2{
+  font-family:Garamond,"Times New Roman",serif!important;
+  font-style:normal!important;
+}
+.reference-home .team-hero-caption small,
+.reference-home .reference-intro p,
+.reference-home .heading-aside p{
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-style:normal!important;
+}
