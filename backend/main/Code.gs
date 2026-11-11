@@ -49,7 +49,41 @@ function doPost(e){
     return out_({ok:false,error:String(err&&err.message||'Request failed')});
   }
 }
+/** Public website enquiry endpoint. Accepts only contact fields, no session or ERP data. */
+function publicEnquiry_(q){
+  const x=q.record||{};
+  const name=String(x.name||'').trim().slice(0,120);
+  const email=String(x.email||'').trim().slice(0,180);
+  const phone=String(x.phone||'').trim().slice(0,40);
+  const service=String(x.service||'General enquiry').trim().slice(0,120);
+  const message=String(x.message||'').trim().slice(0,4000);
+  const business=String(x.business||'').trim().slice(0,160);
+  const source=String(x.source||'website').trim().slice(0,160);
+  const interest=String(x.interest||'').trim().slice(0,160);
+  const resume=String(x.resume||'').trim().slice(0,500);
+  if(!name)throw Error('Name is required.');
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('A valid email address is required.');
+  if(!phone)throw Error('Phone number is required.');
+  if(!message&&!interest)throw Error('Please provide a brief requirement.');
+  const consent=x.consent===true||String(x.consent).toLowerCase()==='true';
+  if(!consent)throw Error('Please confirm consent to be contacted.');
+  const lock=LockService.getScriptLock();
+  lock.waitLock(10000);
+  try{
+    const ss=db_();
+    const sheetName='DB_WEBSITE_ENQUIRIES';
+    let sh=ss.getSheetByName(sheetName);
+    const headers=['id','submittedAt','name','business','email','phone','service','message','interest','resume','source','status','consent'];
+    if(!sh){sh=ss.insertSheet(sheetName);sh.appendRow(headers);sh.setFrozenRows(1);}
+    else ensureHeaders_(sh,headers);
+    const id=uid_(),submittedAt=iso_();
+    const record={id,submittedAt,name,business,email,phone,service,message,interest,resume,source,status:'NEW',consent:'TRUE'};
+    sh.appendRow(headers.map(k=>record[k]||''));
+    return {received:true,reference:id,submittedAt};
+  }finally{lock.releaseLock();}
+}
 function route_(a,q){
+  if(String(a||'')==='publicEnquiry')return publicEnquiry_(q);
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
     case 'login':return login_(q);
