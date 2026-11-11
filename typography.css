@@ -281,3 +281,85 @@ footer.site-footer a:hover,
 .site-footer a:hover{
   color:#0b65a5!important;
 }
+
+
+/* Final footer brand lockup and contact contrast corrections. */
+footer.site-footer .footer-brand-col .brand-copy,
+.site-footer .footer-brand-col .brand-copy{
+  min-width:max-content!important;
+  flex:0 0 auto!important;
+}
+footer.site-footer .footer-brand-col .brand-copy strong,
+.site-footer .footer-brand-col .brand-copy strong{
+  display:block!important;
+  white-space:nowrap!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:clamp(17px,1.45vw,22px)!important;
+  font-weight:800!important;
+  line-height:1.15!important;
+  letter-spacing:-.035em!important;
+  color:#123f6b!important;
+}
+footer.site-footer .footer-brand-col .brand-copy small,
+.site-footer .footer-brand-col .brand-copy small{
+  display:block!important;
+  white-space:nowrap!important;
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:clamp(11px,.95vw,14px)!important;
+  font-weight:800!important;
+  letter-spacing:.105em!important;
+  line-height:1.35!important;
+  color:#123f6b!important;
+}
+
+/* Same typography for the subtitle in the main header and footer identity. */
+.site-header .brand-copy small,
+.site-header .brand-copy .subtitle,
+.site-header .brand-copy small *,
+footer.site-footer .brand-copy small{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-weight:800!important;
+  color:#123f6b!important;
+}
+
+/* Footer contact details and all footer copy must remain blue/navy on white. */
+footer.site-footer .footer-contact,
+footer.site-footer .footer-contact *,
+footer.site-footer .footer-contact a,
+footer.site-footer .footer-contact p,
+footer.site-footer .footer-col,
+footer.site-footer .footer-col *,
+footer.site-footer .footer-col a,
+footer.site-footer .footer-bottom,
+footer.site-footer .footer-bottom *,
+.site-footer .footer-contact,
+.site-footer .footer-contact *,
+.site-footer .footer-contact a,
+.site-footer .footer-contact p,
+.site-footer .footer-col,
+.site-footer .footer-col *,
+.site-footer .footer-col a,
+.site-footer .footer-bottom,
+.site-footer .footer-bottom *{
+  color:#174a78!important;
+  opacity:1!important;
+}
+footer.site-footer .footer-col h4,
+footer.site-footer .footer-contact h4,
+.site-footer .footer-col h4,
+.site-footer .footer-contact h4{
+  color:#123f6b!important;
+  font-weight:800!important;
+}
+footer.site-footer .footer-contact-button,
+.site-footer .footer-contact-button{
+  color:#174a78!important;
+  border-color:#174a78!important;
+  background:#ffffff!important;
+}
+footer.site-footer .footer-bottom,
+.site-footer .footer-bottom{
+  border-top:1px solid #dbe3ea!important;
+}
