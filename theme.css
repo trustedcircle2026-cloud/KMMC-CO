@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap");
 /* Reference-inspired KMMC theme: green navigation, white masthead, Garamond type */
 :root{--green:#69a852;--green-dark:#174b36;--green-light:#79b65f;--green-pale:#eef4e9;--ink:#183329;--muted:#69786c;--line:#e2e8df;--serif:Garamond,"EB Garamond",Georgia,serif;--sans:Garamond,"EB Garamond",Georgia,serif;--display:Garamond,"EB Garamond",Georgia,serif}
 body,button{font-family:Garamond,"EB Garamond",Georgia,serif}
@@ -403,7 +404,6 @@ em, i, cite, dfn, address, var {
 
 
 /* KMMC final typography and navigation system — Nov 2026 */
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap");
 html,body,body *{font-family:"Cormorant Garamond",Georgia,serif!important;font-style:normal!important}
 h1,h2,h3,h4,h5,h6,.brand-copy strong,.page-title,.section-title,.page-hero h1,.reference-intro h1,.reference-cta h2,.section-heading h2,.page-columns h2,.form-card h2,.footer-col h4{
  font-family:Garamond,"Times New Roman",serif!important;font-style:normal!important
@@ -437,3 +437,24 @@ h1,h2,h3,h4,h5,h6,.brand-copy strong,.page-title,.section-title,.page-hero h1,.r
  .services-menu .service-category:hover>.service-submenu{display:none!important}
  .services-menu .service-category.expanded:hover>.service-submenu{display:block!important}
 }
+
+/* Homepage title hierarchy: all title elements use Garamond; supporting text uses Cormorant Garamond. */
+.reference-home .brand-copy strong,
+.reference-home .team-hero-caption,
+.reference-home .reference-intro h1,
+.reference-home .reference-services .section-heading h2,
+.reference-home .reference-cta h2,
+.reference-home h1,.reference-home h2,.reference-home h3,.reference-home h4,.reference-home h5,.reference-home h6{
+  font-family:Garamond,"Times New Roman",serif!important;
+  font-style:normal!important;
+}
+.reference-home .team-hero-caption small,
+.reference-home .reference-intro p,
+.reference-home .section-kicker,
+.reference-home .heading-aside p{
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-style:normal!important;
+}
+/* Navigation labels have no decorative arrow glyphs. */
+.services-menu .service-category-link::after,
+.services-nav>.nav-link::after{content:none!important;display:none!important}
