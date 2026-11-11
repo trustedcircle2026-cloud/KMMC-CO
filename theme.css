@@ -400,3 +400,40 @@ em, i, cite, dfn, address, var {
   .main-nav .nav-item:focus-within>.dropdown{display:block!important}
 }
 
+
+
+/* KMMC final typography and navigation system — Nov 2026 */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap");
+html,body,body *{font-family:"Cormorant Garamond",Georgia,serif!important;font-style:normal!important}
+h1,h2,h3,h4,h5,h6,.brand-copy strong,.page-title,.section-title,.page-hero h1,.reference-intro h1,.reference-cta h2,.section-heading h2,.page-columns h2,.form-card h2,.footer-col h4{
+ font-family:Garamond,"Times New Roman",serif!important;font-style:normal!important
+}
+.brand-copy small,.reference-enquiries,.login-button,.main-nav .nav-link,.main-nav .dropdown a,.enquiry-form input,.enquiry-form textarea,.enquiry-form select{font-family:"Cormorant Garamond",Georgia,serif!important}
+.brand-copy strong{font-size:clamp(22px,2.2vw,32px)!important;white-space:nowrap!important;letter-spacing:0!important}
+.main-nav .nav-inner{display:flex!important;align-items:stretch!important;justify-content:center!important;gap:clamp(18px,4vw,62px)!important}
+.main-nav .nav-link{font-size:18px!important;font-weight:600!important;padding:13px 8px!important;white-space:nowrap!important}
+.main-nav .nav-link.active{background:rgba(0,0,0,.12)!important}
+.services-nav{position:relative!important}
+.services-menu{display:none;position:absolute!important;top:100%!important;left:0!important;min-width:250px!important;width:270px!important;padding:7px!important;background:#fff!important;border-top:3px solid #123f6b!important;box-shadow:0 12px 28px rgba(8,39,71,.2)!important;z-index:10000!important}
+.services-nav:hover>.services-menu,.services-nav:focus-within>.services-menu{display:block!important}
+.services-menu .service-category{position:relative!important}
+.services-menu .service-category-link{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:11px 13px!important;color:#183329!important;font-size:17px!important;line-height:1.25!important;text-decoration:none!important;border-radius:3px!important}
+.services-menu .service-category-link span{font-size:25px!important;line-height:15px!important;color:#809080!important}
+.services-menu .service-category:hover>.service-category-link,.services-menu .service-category:focus-within>.service-category-link,.services-menu .service-category.expanded>.service-category-link{background:#edf3f9!important;color:#123f6b!important}
+.services-menu .service-submenu{display:none;position:absolute!important;top:0!important;left:calc(100% - 1px)!important;width:270px!important;min-width:270px!important;padding:7px!important;background:#fff!important;border-left:1px solid #e4e9e3!important;box-shadow:0 12px 28px rgba(8,39,71,.2)!important}
+.services-menu .service-category:hover>.service-submenu,.services-menu .service-category:focus-within>.service-submenu{display:block!important}
+.services-menu .service-submenu a{display:block!important;padding:10px 13px!important;color:#27372d!important;font-size:16px!important;line-height:1.3!important;text-decoration:none!important;border-radius:3px!important;white-space:normal!important}
+.services-menu .service-submenu a:hover,.services-menu .service-submenu a:focus{background:#edf3f9!important;color:#123f6b!important}
+@media(max-width:1100px) and (min-width:861px){.main-nav .nav-inner{gap:14px!important}.main-nav .nav-link{font-size:16px!important;padding:12px 5px!important}}
+@media(max-width:860px){
+ .main-nav .nav-inner{display:none!important;gap:0!important;align-items:stretch!important}
+ .main-nav.open .nav-inner{display:flex!important;flex-direction:column!important}
+ .main-nav .nav-link{display:flex!important;justify-content:space-between!important;text-align:left!important;padding:13px 16px!important;font-size:18px!important}
+ .services-menu{position:static!important;width:100%!important;min-width:0!important;box-shadow:none!important;border:0!important;border-top:1px solid #e2e8df!important;padding:0 0 0 14px!important}
+ .services-nav.expanded>.services-menu{display:block!important}
+ .services-menu .service-category-link{padding:11px 15px!important}
+ .services-menu .service-submenu{display:none!important;position:static!important;width:100%!important;min-width:0!important;box-shadow:none!important;border:0!important;padding:0 0 5px 15px!important}
+ .services-menu .service-category.expanded>.service-submenu{display:block!important}
+ .services-menu .service-category:hover>.service-submenu{display:none!important}
+ .services-menu .service-category.expanded:hover>.service-submenu{display:block!important}
+}
