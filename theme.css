@@ -458,3 +458,26 @@ h1,h2,h3,h4,h5,h6,.brand-copy strong,.page-title,.section-title,.page-hero h1,.r
 /* Navigation labels have no decorative arrow glyphs. */
 .services-menu .service-category-link::after,
 .services-nav>.nav-link::after{content:none!important;display:none!important}
+
+
+/* Footer contrast: make every footer text element consistently white. */
+.site-footer,
+.site-footer *,
+.site-footer .brand-copy strong,
+.site-footer .brand-copy small,
+.site-footer .footer-brand-col>p,
+.site-footer .footer-col h4,
+.site-footer .footer-col>a,
+.site-footer .footer-contact p,
+.site-footer .footer-contact a,
+.site-footer .footer-bottom,
+.site-footer .footer-bottom a,
+.site-footer .footer-bottom span,
+.site-footer .social-links a{
+  color:#fff!important;
+}
+.site-footer .footer-brand-col>p{opacity:.92!important}
+.site-footer .footer-col>a:hover,
+.site-footer .footer-contact a:hover,
+.site-footer .footer-bottom a:hover{color:#dcecff!important}
+.site-footer .social-links a{border-color:rgba(255,255,255,.55)!important}
