@@ -812,7 +812,7 @@ function submitEmployeeRegistration_(q){
   }finally{lock.releaseLock();}
 }
 function listEmployeeInvites_(admin){
-  needAdmin_(admin);return {records:rawRows_('DB_EMPLOYEE_INVITES').map(x=>({id:x.id,email:x.email,status:x.status,expiresAt:x.expiresAt,createdAt:x.createdAt,registeredAt:x.registeredAt,registeredEmployeeId:x.registeredEmployeeId})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))};
+  needAdmin_(admin);return {records:rawRows_('DB_EMPLOYEE_INVITES').map(x=>({id:x.id,email:x.email,status:String(x.status)==='SENT'&&new Date(x.expiresAt).getTime()<=Date.now()?'EXPIRED':x.status,expiresAt:x.expiresAt,createdAt:x.createdAt,registeredAt:x.registeredAt,registeredEmployeeId:x.registeredEmployeeId})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))};
 }
 function setEmployeeApproval_(admin,q,status){
   needAdmin_(admin);const id=String(q.id||''),e=rows_('employees').find(x=>String(x.id)===id);if(!e)throw Error('Employee not found.');
