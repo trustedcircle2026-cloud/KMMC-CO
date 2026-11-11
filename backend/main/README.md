@@ -138,3 +138,27 @@ A GitHub commit does not update the Apps Script Web App automatically. Do not us
 The public website now submits contact, service, careers and portal-information enquiries to the `publicEnquiry` API action. The backend creates the `DB_WEBSITE_ENQUIRIES` sheet on the first submission and records each enquiry with a unique reference and NEW status. This action is intentionally separate from ERP authentication and accepts only basic public contact information.
 
 After updating `Code.gs`, save the Apps Script project and deploy the existing Web App as a **new version**. The GitHub Pages website can load the new frontend before that deployment; enquiries will not be stored until the updated Apps Script version is active.
+
+
+## Employee self-registration and administrator approval (11-Nov-2026)
+
+The employee onboarding flow now supports secure, one-time invitations:
+
+1. Admin → Employees → **Invite Employee** opens an email field and sends a registration link to the entered address.
+2. Each invitation has a random token stored only as a SHA-256 hash in `DB_EMPLOYEE_INVITES`. The link expires after 48 hours and can be submitted once.
+3. The employee completes `employee-register.html`; the invited email is locked to the address selected by Admin.
+4. The backend immediately creates the employee master record and linked Employee login. The employee code is also the login username. A strong temporary password is generated, emailed, and shown once on the successful registration screen. The first login requires a password change.
+5. The new employee has `approvalStatus=PENDING_APPROVAL`, while the login account remains ACTIVE so the employee can sign in and view permitted portal information.
+6. Pending employees are blocked server-side from employee write actions. They may view permitted records, dashboard information, and change their initial password. The Employee Portal refreshes the approval status every 30 seconds.
+7. Admin → Employees → **Pending Approvals** lists pending registrations and invitation history. Approve enables full access and emails the employee; Reject locks the login and emails the employee.
+
+### Apply the onboarding update
+
+1. Copy the updated `backend/main/Code.gs` from this branch into the bound Apps Script project and save.
+2. Run `setupKmmcBackend()` once after this update. This safely creates `DB_EMPLOYEE_INVITES` and appends the approval columns to `DB_EMPLOYEES`; it does not clear existing data.
+3. Authorize the Apps Script project to send email using `MailApp`. The invitation and credential emails are sent from the account that owns/runs the web app.
+4. Confirm the static website publishes `employee-register.html` at the same site root as `portal.html`. The Admin portal builds the registration URL from its current website origin.
+5. Deploy the existing Apps Script Web App as a **new version**. The API URL already configured in the login and portal pages is retained.
+6. Test with a dummy employee email: invite → open link → submit → sign in before approval → verify write actions are blocked → approve → verify the existing session receives full access without signing in again. Also test expired and reused links, duplicate email addresses, and rejected accounts.
+
+The invitation lifetime is enforced by the backend, not by the browser. A frontend-only GitHub commit does not update the Apps Script deployment. Do not use real employee identifiers or payroll data for the first test.
