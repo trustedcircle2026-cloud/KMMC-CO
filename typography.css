@@ -101,3 +101,48 @@ em,i,cite,dfn,var,address{font-style:normal!important}
 .reference-home h1,.reference-home h2,.reference-home h3{
   font-family:"Manrope",Arial,sans-serif!important;
 }
+
+
+/* Header identity and contact strip: apply the same crisp corporate typography. */
+.site-header .brand-copy small,
+.site-header .brand-copy .subtitle,
+.brand-copy small{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  letter-spacing:.13em!important;
+  line-height:1.35!important;
+}
+.site-header .reference-enquiries,
+.site-header .reference-enquiries *,
+.reference-enquiries,
+.reference-enquiries span,
+.reference-enquiries div,
+.reference-enquiries a{
+  font-family:"Inter",Arial,sans-serif!important;
+  font-style:normal!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+}
+.site-header .reference-enquiries>span,
+.reference-enquiries>span{
+  font-family:"Manrope",Arial,sans-serif!important;
+  font-size:13px!important;
+  font-weight:700!important;
+  letter-spacing:.015em!important;
+}
+.site-header .reference-enquiries a,
+.reference-enquiries a{
+  font-family:"Inter",Arial,sans-serif!important;
+  font-size:13px!important;
+  font-weight:600!important;
+  line-height:1.35!important;
+}
+.site-header .reference-enquiries a:last-child,
+.reference-enquiries a:last-child{
+  font-weight:700!important;
+}
+.site-header .reference-enquiries i,
+.reference-enquiries i{
+  font-family:"Inter",Arial,sans-serif!important;
+}
