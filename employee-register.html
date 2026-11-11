@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Employee Registration | KMMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{font-family:"Cormorant Garamond",Georgia,serif;color:#19364d;background:#f3f6f9;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 10% 0,#e4f0f7 0,transparent 34%),#f3f6f9}
+.shell{width:min(980px,calc(100% - 28px));margin:36px auto}.brand{display:flex;align-items:center;gap:13px;margin:0 0 18px}.brand-mark{width:46px;height:46px;border-radius:12px;background:#174b70;color:#fff;display:grid;place-items:center;font-size:21px;font-weight:700}.brand h1{font-size:22px;line-height:1;margin:0;color:#163d5b}.brand p{font-size:13px;margin:5px 0 0;color:#607789}
+.card{background:#fff;border:1px solid #dce5ec;border-radius:16px;box-shadow:0 18px 55px #193b5510;overflow:hidden}.hero{padding:25px 30px;background:linear-gradient(115deg,#143f60,#1c6388);color:white}.eyebrow{font:700 10px Arial,sans-serif;letter-spacing:.17em;color:#b8d9eb}.hero h2{font-size:30px;margin:5px 0 2px}.hero p{font-size:15px;margin:0;color:#e0edf5}.content{padding:26px 30px}.section-title{font-size:19px;margin:0 0 13px;color:#1d4d70}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.field{min-width:0}.field.wide{grid-column:span 2}.field.full{grid-column:1/-1}label{display:block;font-size:14px;font-weight:700;color:#314f65;margin:0 0 5px}input,select,textarea{width:100%;min-height:41px;padding:9px 11px;border:1px solid #cbd8e2;border-radius:8px;background:#fbfdff;color:#18384f;font:14px Arial,sans-serif;outline:0}textarea{min-height:78px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:#3486b4;box-shadow:0 0 0 3px #e1f1fa}.locked{background:#eef3f7;color:#5d7180}.divider{border:0;border-top:1px solid #e8eef3;margin:22px 0}.hint{font:12px Arial,sans-serif;color:#6d8190;margin:0 0 15px}.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:23px}.btn{border:1px solid #c9d8e4;background:#fff;color:#35546a;border-radius:8px;padding:11px 17px;font:700 13px Arial,sans-serif;cursor:pointer}.btn.primary{background:#17638d;border-color:#17638d;color:white}.btn:disabled{opacity:.55;cursor:wait}.alert{display:none;margin:0 0 17px;padding:12px 14px;border-radius:9px;font:13px Arial,sans-serif;line-height:1.5}.alert.error{display:block;background:#fff0ef;border:1px solid #f2c7c3;color:#9b2f28}.alert.success{display:block;background:#edf8f1;border:1px solid #c8e8d2;color:#236b3c}.status-card{padding:24px;border:1px solid #d9e6ee;border-radius:12px;background:#f8fbfd}.status-card h3{margin:0 0 8px;font-size:24px;color:#194d70}.credentials{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.credential{background:#fff;border:1px solid #dce6ee;border-radius:9px;padding:12px}.credential small{display:block;font:11px Arial,sans-serif;color:#748797;margin-bottom:5px}.credential strong{font:700 16px Arial,sans-serif;overflow-wrap:anywhere}.foot{font:12px Arial,sans-serif;color:#718493;text-align:center;margin:16px 0}
+@media(max-width:760px){.shell{margin:16px auto}.hero,.content{padding:20px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.field.wide{grid-column:span 2}}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.field.wide,.field.full{grid-column:1}.credentials{grid-template-columns:1fr}.brand h1{font-size:19px}.hero h2{font-size:25px}.actions{flex-direction:column-reverse}.btn{width:100%}}
+</style>
+</head>
+<body>
+<main class="shell">
+<div class="brand"><div class="brand-mark">K</div><div><h1>K MAHESH MANICKHAM AND CO.</h1><p>Employee onboarding portal</p></div></div>
+<section class="card">
+<header class="hero"><div class="eyebrow">EMPLOYEE ONBOARDING</div><h2>Employee Registration</h2><p>Complete your details to create your KMMC employee portal account.</p></header>
+<div class="content">
+<div id="alert" class="alert"></div>
+<div id="loading" class="hint">Validating your secure registration invitation…</div>
+<form id="registrationForm" hidden>
+<h3 class="section-title">Personal Information</h3>
+<div class="grid">
+<div class="field"><label for="name">Full Name *</label><input id="name" name="name" required maxlength="120" autocomplete="name"></div>
+<div class="field"><label for="email">Email Address</label><input id="email" name="email" class="locked" readonly></div>
+<div class="field"><label for="phone">Mobile Number *</label><input id="phone" name="phone" required type="tel" maxlength="20" autocomplete="tel"></div>
+<div class="field"><label for="alternatePhone">Alternate Mobile</label><input id="alternatePhone" name="alternatePhone" type="tel" maxlength="20"></div>
+<div class="field"><label for="dob">Date of Birth</label><input id="dob" name="dob" type="date"></div>
+<div class="field"><label for="gender">Gender</label><select id="gender" name="gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select></div>
+<div class="field"><label for="maritalStatus">Marital Status</label><select id="maritalStatus" name="maritalStatus"><option value="">Select</option><option>Single</option><option>Married</option><option>Other</option></select></div>
+<div class="field"><label for="bloodGroup">Blood Group</label><select id="bloodGroup" name="bloodGroup"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+<div class="field"><label for="education">Educational Qualification</label><input id="education" name="education" maxlength="180"></div>
+<div class="field full"><label for="address">Residential Address</label><textarea id="address" name="address" maxlength="1000"></textarea></div>
+<div class="field"><label for="city">City</label><input id="city" name="city" maxlength="80"></div>
+<div class="field"><label for="state">State</label><input id="state" name="state" value="Tamil Nadu" maxlength="80"></div>
+<div class="field"><label for="pincode">PIN Code</label><input id="pincode" name="pincode" inputmode="numeric" maxlength="10"></div>
+</div>
+<hr class="divider">
+<h3 class="section-title">Employment Information</h3>
+<div class="grid">
+<div class="field"><label for="department">Department</label><select id="department" name="department"><option value="">Select</option><option>Audit</option><option>Taxation</option><option>GST</option><option>Accounting</option><option>Administration</option><option>Other</option></select></div>
+<div class="field"><label for="designation">Designation</label><input id="designation" name="designation" maxlength="100"></div>
+<div class="field"><label for="joiningDate">Joining Date</label><input id="joiningDate" name="joiningDate" type="date"></div>
+<div class="field"><label for="employmentType">Employment Type</label><select id="employmentType" name="employmentType"><option value="FULL_TIME">Full Time</option><option value="PART_TIME">Part Time</option><option value="ARTICLESHIP">Articleship</option><option value="INTERN">Intern</option><option value="CONTRACT">Contract</option></select></div>
+</div>
+<hr class="divider">
+<h3 class="section-title">Emergency Contact</h3>
+<div class="grid">
+<div class="field"><label for="emergencyContactName">Contact Person</label><input id="emergencyContactName" name="emergencyContactName" maxlength="120"></div>
+<div class="field"><label for="emergencyContactPhone">Contact Number</label><input id="emergencyContactPhone" name="emergencyContactPhone" type="tel" maxlength="20"></div>
+</div>
+<hr class="divider">
+<h3 class="section-title">Additional Details</h3>
+<p class="hint">Provide only the requested partial identifiers. Do not enter a full Aadhaar number or full bank account number here.</p>
+<div class="grid">
+<div class="field"><label for="pan">PAN</label><input id="pan" name="pan" maxlength="10" style="text-transform:uppercase"></div>
+<div class="field"><label for="aadhaarLast4">Aadhaar – Last 4 Digits</label><input id="aadhaarLast4" name="aadhaarLast4" inputmode="numeric" maxlength="4"></div>
+<div class="field"><label for="bankName">Bank Name</label><input id="bankName" name="bankName" maxlength="120"></div>
+<div class="field"><label for="bankAccountLast4">Bank Account – Last 4 Digits</label><input id="bankAccountLast4" name="bankAccountLast4" inputmode="numeric" maxlength="4"></div>
+<div class="field"><label for="ifsc">IFSC</label><input id="ifsc" name="ifsc" maxlength="11" style="text-transform:uppercase"></div>
+</div>
+<p class="hint" style="margin-top:18px">Your account will be created immediately after submission. You can log in while approval is pending, but employee actions will remain restricted until the administrator approves your registration.</p>
+<div class="actions"><button class="btn" type="reset">Clear Form</button><button class="btn primary" id="submitButton" type="submit">Submit Registration</button></div>
+</form>
+<div id="successPanel" hidden></div>
+</div></section>
+<p class="foot">© K MAHESH MANICKHAM AND CO. · Secure Employee Registration</p>
+</main>
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbxRTYJgXaJ2z16YfYdYxJCey7IuGqEQzEK6Oa8DuMAh5B31nWgVU4xrxzwGJ-ngzTzo/exec';
+const token=new URLSearchParams(location.search).get('token')||'';
+const $=id=>document.getElementById(id);
+function showError(message){$('alert').className='alert error';$('alert').textContent=message;}
+async function api(action,payload={}){const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'Request failed.');return data.data;}
+async function initialize(){if(!token){$('loading').hidden=true;showError('This registration link is missing or invalid. Please contact the KMMC administrator.');return;}try{const invite=await api('getEmployeeInvite',{token});$('email').value=invite.email;$('loading').hidden=true;$('registrationForm').hidden=false;}catch(e){$('loading').hidden=true;showError(e.message);}}
+$('registrationForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;if(!form.reportValidity())return;const button=$('submitButton');button.disabled=true;button.textContent='Submitting…';$('alert').className='alert';const record={};new FormData(form).forEach((value,key)=>record[key]=String(value).trim());try{const result=await api('submitEmployeeRegistration',{token,record});form.hidden=true;$('successPanel').hidden=false;$('successPanel').innerHTML='<div class="status-card"><div class="eyebrow" style="color:#28734a">REGISTRATION COMPLETED</div><h3>Registration submitted successfully</h3><p>Your employee account has been generated. Your current status is <b>Pending Approval</b>. You may log in now, but employee actions will be enabled only after administrator approval.</p><div class="credentials"><div class="credential"><small>EMPLOYEE ID / USERNAME</small><strong>'+escapeHtml(result.username)+'</strong></div><div class="credential"><small>TEMPORARY PASSWORD</small><strong>'+escapeHtml(result.initialPassword)+'</strong></div></div><p class="hint">'+escapeHtml(result.message)+'</p><p class="hint">Please save these credentials securely and change your password after your first login.</p><a class="btn primary" href="login.html" style="display:inline-block;text-decoration:none">Go to Employee Login</a></div>';}catch(e){showError(e.message);button.disabled=false;button.textContent='Submit Registration';}});
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+initialize();
+</script>
+</body></html>
