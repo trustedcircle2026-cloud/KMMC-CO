@@ -447,3 +447,30 @@ footer.site-footer .footer-brand-col .brand-copy small,
     font-size:clamp(8px,2vw,10px)!important;
   }
 }
+
+
+/* Header lockup: force identical font metrics for the firm name and CA designation.
+   Only the subtitle's uppercase casing differs; family, size, weight and spacing match. */
+.site-header .brand-copy > strong,
+.site-header .brand-copy > small{
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(24px,2.05vw,31px)!important;
+  font-weight:700!important;
+  letter-spacing:-.035em!important;
+  line-height:1.08!important;
+  color:#123f6b!important;
+  display:block!important;
+  margin:0!important;
+  white-space:nowrap!important;
+  text-transform:none!important;
+}
+.site-header .brand-copy > small{
+  text-transform:uppercase!important;
+}
+@media(max-width:700px){
+  .site-header .brand-copy > strong,
+  .site-header .brand-copy > small{
+    font-size:clamp(15px,3.6vw,21px)!important;
+    letter-spacing:-.025em!important;
+  }
+}
