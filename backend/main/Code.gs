@@ -11,7 +11,7 @@ const KMMC = {
   M:{
     users:{s:'DB_USERS',h:['id','username','passwordHash','salt','role','name','email','phone','clientId','employeeId','status','mustChangePassword','createdAt','updatedAt','lastLoginAt'],r:['ADMIN']},
     clients:{s:'DB_CLIENTS',h:['id','clientCode','name','pan','email','phone','gstin','address','city','state','pincode','majorHeads','otherWork','referenceName','assignedEmployeeId','openingBalance','status','portalUsername','notes','driveFolderId','driveFolderUrl','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
-    employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt'],r:['ADMIN']},
+    employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt','approvalStatus','approvalNote','approvedAt','approvedBy'],r:['ADMIN']},
 
 
     tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
@@ -83,7 +83,12 @@ function publicEnquiry_(q){
   }finally{lock.releaseLock();}
 }
 function route_(a,q){
-  if(String(a||'')==='publicEnquiry')return publicEnquiry_(q);
+  const action=String(a||'');
+  if(action==='publicEnquiry')return publicEnquiry_(q);
+  if(action==='getEmployeeInvite')return getEmployeeInvite_(q);
+  if(action==='submitEmployeeRegistration')return submitEmployeeRegistration_(q);
+  const restrictedWrites=['changePassword','create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','setTaskStatus','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
+  if(restrictedWrites.includes(action)){const actor=auth_(q);if(actor.role==='EMPLOYEE'&&employeeApprovalStatus_(actor)!=='APPROVED')throw Error('Your account is awaiting administrator approval. This action is unavailable until approval.');}
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
     case 'login':return login_(q);
@@ -105,6 +110,10 @@ function route_(a,q){
     case 'bulkImportClients':return bulkImportClients_(auth_(q),q);
     case 'bulkImportEmployees':return bulkImportEmployees_(auth_(q),q);
     case 'createEmployee':return createEmployee_(auth_(q),q);
+    case 'createEmployeeInvite':return createEmployeeInvite_(auth_(q),q);
+    case 'listEmployeeInvites':return listEmployeeInvites_(auth_(q));
+    case 'approveEmployee':return setEmployeeApproval_(auth_(q),q,'APPROVED');
+    case 'rejectEmployee':return setEmployeeApproval_(auth_(q),q,'REJECTED');
     case 'updateEmployee':return updateEmployee_(auth_(q),q);
     case 'deleteEmployee':return deleteEmployee_(auth_(q),q);
     case 'setUserStatus':return setUserStatus_(auth_(q),q);
@@ -155,7 +164,7 @@ function setupKmmcBackend(){
   });
   [['DB_SESSIONS',['id','userId','tokenHash','expiresAt','createdAt','revokedAt']],
    ['DB_SYSTEM_CONFIG',['key','value','updatedAt']],
-   ['DB_ERROR_LOG',['id','action','message','createdAt']]].forEach(x=>{
+   ['DB_ERROR_LOG',['id','action','message','createdAt']],['DB_EMPLOYEE_INVITES',['id','email','tokenHash','expiresAt','status','createdAt','createdBy','registeredEmployeeId','registeredAt','lastSentAt']]].forEach(x=>{
     let sh=ss.getSheetByName(x[0])||ss.insertSheet(x[0]);if(!sh.getLastRow())sh.appendRow(x[1]);sh.setFrozenRows(1);
   });
   const p=PropertiesService.getScriptProperties();
@@ -710,7 +719,8 @@ function sanitize_(k,input){
   h.forEach(key=>{if(['id','createdAt','updatedAt','passwordHash','salt','lastLoginAt','createdBy','receivedBy','uploadedBy'].includes(key))return;if(Object.prototype.hasOwnProperty.call(input,key)){const v=input[key];if(typeof v==='string'&&v.length>20000)throw Error('Field too long: '+key);out[key]=v==null?'':v;}});
   return out;
 }
-function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,mustChangePassword:u.mustChangePassword===true||String(u.mustChangePassword).toUpperCase()==='TRUE',createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
+function employeeApprovalStatus_(u){if(!u||String(u.role||'').toUpperCase()!=='EMPLOYEE'||!u.employeeId)return 'APPROVED';const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));return String(e&&e.approvalStatus||'APPROVED').toUpperCase();}
+function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,approvalStatus:employeeApprovalStatus_(u),mustChangePassword:u.mustChangePassword===true||String(u.mustChangePassword).toUpperCase()==='TRUE',createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
 function publicRec_(k,r){if(k==='users')return pubUser_(r);const o={};Object.keys(r).forEach(x=>{if(!['passwordHash','salt'].includes(x))o[x]=r[x];});return o;}
 function needAdmin_(u){if(u.role!=='ADMIN')throw Error('Admin access required.');}
 function db_(){const id=PropertiesService.getScriptProperties().getProperty(KMMC.DB_PROP);if(!id)throw Error('Set '+KMMC.DB_PROP+' in Script Properties.');return SpreadsheetApp.openById(id);}
@@ -753,6 +763,67 @@ function createClient_(admin,q){needAdmin_(admin);const x=q.record||{};if(!Strin
 function updateClient_(admin,q){needAdmin_(admin);const id=String(q.id||''),old=rows_('clients').find(r=>r.id===id);if(!old)throw Error('Client not found.');const patch=q.record||{};['name','pan','email','phone','gstin','address','city','state','pincode','majorHeads','otherWork','referenceName','assignedEmployeeId','openingBalance','status','notes'].forEach(k=>{if(patch[k]!==undefined)old[k]=k==='pan'||k==='gstin'?String(patch[k]).toUpperCase():k==='majorHeads'&&Array.isArray(patch[k])?patch[k].join(' | '):patch[k];});if(!String(old.name||'').trim())throw Error('Client name is required.');old.updatedAt=iso_();write_('clients',id,old);const user=rows_('users').find(u=>u.role==='CLIENT'&&u.clientId===id);if(user){user.name=old.name;user.email=old.email;user.phone=old.phone;user.updatedAt=iso_();write_('users',user.id,user);}activity_(admin,'UPDATE_CLIENT','clients',id,old.clientCode);return publicRec_('clients',old);}
 function deleteClient_(admin,q){needAdmin_(admin);const id=String(q.id||''),r=rows_('clients').find(x=>x.id===id);if(!r)throw Error('Client not found.');if(rows_('invoices').some(x=>x.clientId===id)||rows_('collections').some(x=>x.clientId===id))throw Error('Client has invoice/collection records. Mark inactive instead of deleting.');const user=rows_('users').find(x=>x.role==='CLIENT'&&x.clientId===id);if(user){user.status='INACTIVE';user.updatedAt=iso_();write_('users',user.id,user);}const sh=sheet_(KMMC.M.clients.s),row=findRow_(sh,id);if(row>1)sh.deleteRow(row);activity_(admin,'DELETE_CLIENT','clients',id,r.clientCode);return {deleted:true,clientCode:r.clientCode};}
 function bulkImportClients_(admin,q){needAdmin_(admin);const input=Array.isArray(q.records)?q.records:[];if(!input.length)throw Error('No client rows supplied.');if(input.length>500)throw Error('Upload is limited to 500 clients at a time.');const created=[],errors=[];input.forEach((x,i)=>{try{const result=createClient_(admin,{record:x});created.push({row:i+2,clientCode:result.client.clientCode,name:result.client.name,username:result.portal.username,initialPassword:result.portal.initialPassword});}catch(e){errors.push({row:i+2,name:String(x.name||''),error:String(e.message||e)});}});return {createdCount:created.length,failedCount:errors.length,created,errors};}
+/** Admin creates a one-time employee invitation. Link lifetime is exactly 48 hours. */
+function createEmployeeInvite_(admin,q){
+  needAdmin_(admin);
+  const email=String(q.email||'').trim().toLowerCase(),base=String(q.registrationUrl||'').trim();
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid employee email address.');
+  if(!/^https:\/\//i.test(base))throw Error('Registration page URL must be an HTTPS URL.');
+  if(rows_('employees').some(x=>String(x.email||'').trim().toLowerCase()===email))throw Error('An employee account already exists for this email.');
+  const active=rawRows_('DB_EMPLOYEE_INVITES').find(x=>String(x.email||'').toLowerCase()===email&&String(x.status)==='SENT'&&new Date(x.expiresAt).getTime()>Date.now());
+  if(active)throw Error('A valid registration invitation already exists for this email.');
+  const token=uid_()+uid_(),now=new Date(),expires=new Date(now.getTime()+48*60*60*1000),url=base.split('?')[0].split('#')[0]+'?token='+encodeURIComponent(token);
+  const invite={id:uid_(),email,tokenHash:sha_(token),expiresAt:expires.toISOString(),status:'SENT',createdAt:now.toISOString(),createdBy:admin.id,registeredEmployeeId:'',registeredAt:'',lastSentAt:now.toISOString()};
+  rawAppend_('DB_EMPLOYEE_INVITES',invite);
+  try{MailApp.sendEmail({to:email,subject:'KMMC Employee Registration Invitation',name:'K MAHESH MANICKHAM AND CO.',htmlBody:'<div style="font-family:Arial,sans-serif;color:#20364b;max-width:600px;margin:auto;padding:24px;border:1px solid #dce6ee;border-radius:12px"><h2 style="color:#17466b">Employee Registration</h2><p>You have been invited to complete your employee registration with <b>K MAHESH MANICKHAM AND CO.</b></p><p><a href="'+url+'" style="display:inline-block;background:#17679a;color:#fff;padding:12px 20px;border-radius:7px;text-decoration:none">Complete Registration</a></p><p>This secure link expires in <b>48 hours</b> and can be used only once.</p></div>',body:'Complete your KMMC employee registration using this link (valid for 48 hours): '+url});}
+  catch(err){const sh=sheet_('DB_EMPLOYEE_INVITES'),row=findRow_(sh,invite.id);if(row>1)sh.deleteRow(row);throw Error('Invitation email could not be sent: '+String(err.message||err));}
+  activity_(admin,'CREATE_EMPLOYEE_INVITE','employees',invite.id,email);
+  return {sent:true,email,expiresAt:expires.toISOString(),status:'SENT'};
+}
+function getEmployeeInvite_(q){
+  const token=String(q.token||'').trim();if(!token)throw Error('Registration link is invalid.');
+  const invite=rawRows_('DB_EMPLOYEE_INVITES').find(x=>x.tokenHash===sha_(token));
+  if(!invite||String(invite.status)!=='SENT')throw Error('Registration link is invalid or has already been used.');
+  if(new Date(invite.expiresAt).getTime()<=Date.now())throw Error('This registration link has expired. Please contact KMMC for a new invitation.');
+  return {valid:true,email:invite.email,expiresAt:invite.expiresAt};
+}
+function submitEmployeeRegistration_(q){
+  const token=String(q.token||'').trim(),x=q.record||{};if(!token)throw Error('Registration link is invalid.');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    const invite=rawRows_('DB_EMPLOYEE_INVITES').find(v=>v.tokenHash===sha_(token));
+    if(!invite||String(invite.status)!=='SENT')throw Error('This registration link is invalid or has already been used.');
+    if(new Date(invite.expiresAt).getTime()<=Date.now())throw Error('This registration link has expired. Please contact KMMC for a new invitation.');
+    const email=String(invite.email||'').trim().toLowerCase();
+    if(rows_('employees').some(e=>String(e.email||'').trim().toLowerCase()===email))throw Error('An employee account already exists for this email.');
+    const name=String(x.name||'').trim(),phone=String(x.phone||'').trim();
+    if(!name)throw Error('Full name is required.');if(!phone)throw Error('Mobile number is required.');
+    const now=iso_(),id=uid_(),code=nextCode_('employees','',10001);
+    const r={id,employeeCode:code,name,email,phone,alternatePhone:String(x.alternatePhone||''),dob:String(x.dob||''),gender:String(x.gender||''),maritalStatus:String(x.maritalStatus||''),bloodGroup:String(x.bloodGroup||''),address:String(x.address||''),city:String(x.city||''),state:String(x.state||''),pincode:String(x.pincode||''),emergencyContactName:String(x.emergencyContactName||''),emergencyContactPhone:String(x.emergencyContactPhone||''),education:String(x.education||''),department:String(x.department||''),designation:String(x.designation||''),joiningDate:String(x.joiningDate||''),employmentType:String(x.employmentType||'FULL_TIME'),reportingTo:'',pan:String(x.pan||'').trim().toUpperCase(),aadhaarLast4:String(x.aadhaarLast4||'').replace(/\D/g,'').slice(-4),bankName:String(x.bankName||''),bankAccountLast4:String(x.bankAccountLast4||'').replace(/\D/g,'').slice(-4),ifsc:String(x.ifsc||'').trim().toUpperCase(),salary:0,resumeFileId:'',resumeUrl:'',status:'ACTIVE',notes:'',createdAt:now,updatedAt:now,approvalStatus:'PENDING_APPROVAL',approvalNote:'',approvedAt:'',approvedBy:''};
+    append_('employees',r);
+    const password=makeTempPassword_(),salt=uid_(),user={id:uid_(),username:code,passwordHash:hash_(password,salt),salt,role:'EMPLOYEE',name,email,phone,clientId:'',employeeId:id,status:'ACTIVE',mustChangePassword:true,createdAt:now,updatedAt:now,lastLoginAt:''};
+    append_('users',user);
+    invite.status='REGISTERED';invite.registeredEmployeeId=id;invite.registeredAt=now;rawWrite_('DB_EMPLOYEE_INVITES',invite.id,invite);
+    activity_(user,'EMPLOYEE_SELF_REGISTER','employees',id,code);
+    MailApp.sendEmail({to:email,subject:'KMMC Employee Portal Login Credentials',name:'K MAHESH MANICKHAM AND CO.',htmlBody:'<div style="font-family:Arial,sans-serif;color:#20364b;max-width:600px;margin:auto;padding:24px;border:1px solid #dce6ee;border-radius:12px"><h2 style="color:#17466b">Registration Submitted Successfully</h2><p>Your employee account has been created and is awaiting administrator approval. You can log in immediately with the credentials below. Employee actions remain restricted until approval.</p><p><b>Employee ID / Username:</b> '+code+'<br><b>Temporary Password:</b> '+password+'</p><p>Please change your password after your first login.</p><p><b>Current status:</b> Pending Approval</p></div>',body:'Your KMMC employee registration was submitted. Employee ID / Username: '+code+'. Temporary password: '+password+'. Change your password after first login. Your account is Pending Approval.'});
+    const props=PropertiesService.getScriptProperties(),admins=rows_('users').filter(u=>u.role==='ADMIN'&&u.email),notify=String(props.getProperty('KMMC_ADMIN_NOTIFICATION_EMAIL')||admins[0]?.email||'').trim();
+    if(notify){try{MailApp.sendEmail({to:notify,subject:'KMMC: Employee registration pending approval',body:'A new employee registration is awaiting approval. Employee: '+name+' ('+code+'), Email: '+email+'. Sign in to the KMMC Admin Portal and review Employees.'});}catch(ignore){}}
+    return {submitted:true,employeeId:code,username:code,approvalStatus:'PENDING_APPROVAL',message:'Registration submitted. Login credentials have been sent to your email.'};
+  }finally{lock.releaseLock();}
+}
+function listEmployeeInvites_(admin){
+  needAdmin_(admin);return {records:rawRows_('DB_EMPLOYEE_INVITES').map(x=>({id:x.id,email:x.email,status:x.status,expiresAt:x.expiresAt,createdAt:x.createdAt,registeredAt:x.registeredAt,registeredEmployeeId:x.registeredEmployeeId})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))};
+}
+function setEmployeeApproval_(admin,q,status){
+  needAdmin_(admin);const id=String(q.id||''),e=rows_('employees').find(x=>String(x.id)===id);if(!e)throw Error('Employee not found.');
+  if(String(e.approvalStatus||'APPROVED').toUpperCase()!=='PENDING_APPROVAL')throw Error('This employee is not awaiting approval.');
+  const next=String(status).toUpperCase(),reason=String(q.reason||'').slice(0,500);e.approvalStatus=next;e.approvalNote=reason;e.approvedAt=iso_();e.approvedBy=admin.id;e.updatedAt=iso_();write_('employees',id,e);
+  const u=rows_('users').find(x=>x.role==='EMPLOYEE'&&String(x.employeeId)===id);
+  if(u){u.status=next==='APPROVED'?'ACTIVE':'LOCKED';u.updatedAt=iso_();write_('users',u.id,u);}
+  activity_(admin,next==='APPROVED'?'APPROVE_EMPLOYEE':'REJECT_EMPLOYEE','employees',id,e.employeeCode);
+  if(u&&e.email){try{MailApp.sendEmail({to:e.email,subject:next==='APPROVED'?'KMMC Employee Account Approved':'KMMC Employee Registration Update',body:next==='APPROVED'?'Your KMMC employee account has been approved. You now have full access to the employee portal.':'Your KMMC employee registration was not approved. Please contact the KMMC administrator for details.'+(reason?' Reason: '+reason:'')});}catch(ignore){}}
+  return {employee:publicRec_('employees',e),user:u?pubUser_(u):null};
+}
 function createEmployee_(admin,q){needAdmin_(admin);const x=q.record||{};if(!String(x.name||'').trim())throw Error('Employee name is required.');const now=iso_(),id=uid_(),code=nextCode_('employees','',10001),email=String(x.email||'').trim().toLowerCase();if(email&&rows_('employees').some(r=>String(r.email||'').toLowerCase()===email))throw Error('An employee with this email already exists.');const r={id,employeeCode:code,name:String(x.name).trim(),email,phone:String(x.phone||''),alternatePhone:String(x.alternatePhone||''),dob:String(x.dob||''),gender:String(x.gender||''),maritalStatus:String(x.maritalStatus||''),bloodGroup:String(x.bloodGroup||''),address:String(x.address||''),city:String(x.city||''),state:String(x.state||''),pincode:String(x.pincode||''),emergencyContactName:String(x.emergencyContactName||''),emergencyContactPhone:String(x.emergencyContactPhone||''),education:String(x.education||''),department:String(x.department||''),designation:String(x.designation||''),joiningDate:String(x.joiningDate||''),employmentType:String(x.employmentType||'FULL_TIME'),reportingTo:String(x.reportingTo||''),pan:String(x.pan||'').toUpperCase(),aadhaarLast4:String(x.aadhaarLast4||''),bankName:String(x.bankName||''),bankAccountLast4:String(x.bankAccountLast4||''),ifsc:String(x.ifsc||'').toUpperCase(),salary:num_(x.salary),resumeFileId:'',resumeUrl:'',status:String(x.status||'ACTIVE'),notes:String(x.notes||''),createdAt:now,updatedAt:now};if(x.resumeBase64){const saved=saveEmployeeResume_(r,x);r.resumeFileId=saved.id;r.resumeUrl=saved.url;}append_('employees',r);const password=String(x.initialPassword||makeTempPassword_()),username=code;const login=createUser_(admin,{record:{username,password,role:'EMPLOYEE',name:r.name,email:r.email,phone:r.phone,employeeId:id,mustChangePassword:true}});activity_(admin,'CREATE_EMPLOYEE','employees',id,code);return {employee:publicRec_('employees',r),portal:{username:login.username,initialPassword:password,mustChangePassword:true}};}
 function bulkImportEmployees_(admin,q){needAdmin_(admin);const input=Array.isArray(q.records)?q.records:[];if(!input.length)throw Error('No employee rows supplied.');if(input.length>500)throw Error('Upload is limited to 500 employees at a time.');const created=[],errors=[];input.forEach((x,i)=>{try{const result=createEmployee_(admin,{record:x});created.push({row:i+2,employeeCode:result.employee.employeeCode,name:result.employee.name,username:result.portal.username,initialPassword:result.portal.initialPassword});}catch(e){errors.push({row:i+2,name:String(x.name||''),error:String(e.message||e)});}});return {createdCount:created.length,failedCount:errors.length,created,errors};}
 function updateEmployee_(admin,q){needAdmin_(admin);const id=String(q.id||''),old=rows_('employees').find(r=>r.id===id);if(!old)throw Error('Employee not found.');const p=q.record||{};if(p.resumeBase64){const saved=saveEmployeeResume_(old,p);old.resumeFileId=saved.id;old.resumeUrl=saved.url;}Object.keys(old).forEach(k=>{if(p[k]!==undefined&&!['id','employeeCode','createdAt','resumeFileId','resumeUrl','resumeBase64','resumeName','resumeMimeType','initialPassword'].includes(k))old[k]=p[k];});old.updatedAt=iso_();write_('employees',id,old);const u=rows_('users').find(x=>x.role==='EMPLOYEE'&&x.employeeId===id);if(u){u.name=old.name;u.email=old.email;u.phone=old.phone;u.updatedAt=iso_();write_('users',u.id,u);}activity_(admin,'UPDATE_EMPLOYEE','employees',id,old.employeeCode);return publicRec_('employees',old);}
