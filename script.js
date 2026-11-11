@@ -131,7 +131,7 @@
   if (header) {
     const row = header.querySelector(".brand-row");
     if (row) {
-      row.innerHTML = '<a class="brand" href="index.html" aria-label="K Mahesh Manickham and Co. home"><img class="brand-logo" src="assets/images/CA%20Logo.png" alt="K Mahesh Manickham and Co. Chartered Accountants"><span class="brand-copy"><strong>K Mahesh Manickham and Co.</strong><small>CHARTERED ACCOUNTANTS</small></span></a><div class="reference-enquiries"><span>Business Enquiries</span><div><a href="mailto:info@kmmc.co.in">info@kmmc.co.in</a><i></i><a href="tel:+919003060652">90030 60652</a><i></i><a href="careers.html">Careers</a></div></div><a class="login-button" href="login.html">Login</a><button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button>';
+      row.innerHTML = '<a class="brand" href="index.html" aria-label="K Mahesh Manickham and Co. home"><img class="brand-logo" src="assets/images/CA%20Logo.png" alt="K Mahesh Manickham and Co. Chartered Accountants"><span class="brand-copy"><strong>K Mahesh Manickham and Co.</strong><small>Chartered Accountants</small></span></a><div class="reference-enquiries"><span>Business Enquiries</span><div><a href="mailto:info@kmmc.co.in">info@kmmc.co.in</a><i></i><a href="tel:+919003060652">90030 60652</a><i></i><a href="careers.html">Careers</a></div></div><a class="login-button" href="login.html">Login</a><button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button>';
     }
   }
   if (nav) {
