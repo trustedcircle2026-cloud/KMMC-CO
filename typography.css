@@ -42,3 +42,30 @@ h1,h2,h3,h4,h5,h6,
 .menu-toggle{
   font-weight:700!important;
 }
+
+
+/* Slightly stronger Cormorant Garamond weight for better screen readability. */
+html,body,body *,button,input,select,textarea,option{
+  font-weight:500!important;
+}
+p,li,small,label,span,a,td,th,figcaption,blockquote{
+  font-weight:500!important;
+}
+h1,h2,h3,h4,h5,h6,
+.brand-copy strong,.page-title,.section-title,
+.page-hero h1,.page-hero h2,
+.reference-home .team-hero-caption,
+.reference-home .reference-intro h1,
+.reference-home .reference-services h2,
+.reference-home .reference-cta h2,
+.form-card h2{
+  font-weight:700!important;
+}
+.main-nav .nav-link,.main-nav .dropdown a,
+.services-menu a,.services-menu .service-category-link,
+.services-menu .service-submenu a,
+.site-header .login-button,.menu-toggle,
+.enquiry-form label,.form-card label{
+  font-weight:700!important;
+}
+.brand-copy small{font-weight:600!important}
