@@ -474,3 +474,9 @@ footer.site-footer .footer-brand-col .brand-copy small,
     letter-spacing:-.025em!important;
   }
 }
+
+
+/* Use title case for the CA designation, matching the firm-name typography. */
+.site-header .brand-copy > small{
+  text-transform:none!important;
+}
