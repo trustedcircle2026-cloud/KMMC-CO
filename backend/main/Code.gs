@@ -321,8 +321,8 @@ function create_(u,q){
     try{
       if(u.role==='EMPLOYEE'){
         const clientId=String(r.clientId||'');if(!clientId)throw Error('Select a client for this assignment.');
-        const client=rows_('clients').find(c=>String(c.id)===clientId&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));
-        if(!client)throw Error('Selected client is not assigned or accessible to you.');
+        const client=rows_('clients').find(c=>String(c.id)===clientId);
+        if(!client)throw Error('Selected client does not exist.');
         r.employeeId=u.employeeId;r.createdBy=u.id;
       }
       const maxJob=rows_('tasks').reduce((max,t)=>{const m=String(t.jobNumber||'').match(/^Job-([0-9]+)$/i);return m?Math.max(max,Number(m[1])||0):max;},10000);
@@ -369,7 +369,7 @@ function visible_(u,k,r){
   if(k==='employees')return false;
   if(k==='messages')return String(r.fromUserId)===String(u.id)||String(r.toUserId)===String(u.id);
   if(k==='notifications')return String(r.userId)===String(u.id);
-  if(k==='clients')return !r.assignedEmployeeId||String(r.assignedEmployeeId)===String(u.employeeId);
+  if(k==='clients')return true;
   if(k==='tasks'||k==='time'||k==='workdone'||k==='attendance'||k==='leave')return String(r.employeeId)===String(u.employeeId);
   if(['invoices','collections','documents'].includes(k)){
     const c=rows_('clients').find(x=>x.id===r.clientId);if(!c)return false;if(k==='documents')return !!c.assignedEmployeeId&&String(c.assignedEmployeeId)===String(u.employeeId);return !c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId);
@@ -787,9 +787,9 @@ function quickCreateClient_(u,q){
   if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
   const x=q.record||{},name=String(x.name||'').trim();if(!name)throw Error('Enter a client name.');
   const email=String(x.email||'').trim().toLowerCase(),phone=String(x.phone||'').trim();
-  const existing=rows_('clients').find(c=>String(c.name||'').trim().toLowerCase()===name.toLowerCase()&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));
+  const existing=rows_('clients').find(c=>String(c.name||'').trim().toLowerCase()===name.toLowerCase());
   if(existing)return {client:publicRec_('clients',existing),existing:true};
-  const now=iso_(),id=uid_(),code=nextCode_('clients','CL',1),r={id,clientCode:code,name,pan:String(x.pan||'').toUpperCase(),email,phone,gstin:'',address:'',city:'',state:'',pincode:'',majorHeads:'',otherWork:'',referenceName:'',assignedEmployeeId:String(u.employeeId),openingBalance:0,status:'ACTIVE',portalUsername:'',notes:'Added by employee from Workdone client picker',createdAt:now,updatedAt:now};
+  const now=iso_(),id=uid_(),code=nextCode_('clients','CL',1),r={id,clientCode:code,name,pan:String(x.pan||'').toUpperCase(),email,phone,gstin:'',address:'',city:'',state:'',pincode:'',majorHeads:'',otherWork:'',referenceName:'',assignedEmployeeId:'',openingBalance:0,status:'ACTIVE',portalUsername:'',notes:'Added to shared client master from Workdone client picker',createdAt:now,updatedAt:now};
   append_('clients',r);activity_(u,'QUICK_CREATE_CLIENT','clients',id,code);return {client:publicRec_('clients',r),existing:false};
 }
 function createClient_(admin,q){needAdmin_(admin);const x=q.record||{};if(!String(x.name||'').trim())throw Error('Client name is required.');const email=String(x.email||'').trim().toLowerCase();if(email&&rows_('clients').some(r=>String(r.email||'').toLowerCase()===email))throw Error('A client with this email already exists.');const now=iso_(),id=uid_(),code=nextCode_('clients','CL',1);const r={id,clientCode:code,name:String(x.name).trim(),pan:String(x.pan||'').toUpperCase(),email,phone:String(x.phone||''),gstin:String(x.gstin||'').toUpperCase(),address:String(x.address||''),city:String(x.city||''),state:String(x.state||''),pincode:String(x.pincode||''),majorHeads:Array.isArray(x.majorHeads)?x.majorHeads.join(' | '):String(x.majorHeads||''),otherWork:String(x.otherWork||''),referenceName:String(x.referenceName||''),assignedEmployeeId:String(x.assignedEmployeeId||''),openingBalance:num_(x.openingBalance),status:String(x.status||'ACTIVE'),portalUsername:code,notes:String(x.notes||''),createdAt:now,updatedAt:now};append_('clients',r);const password=String(x.initialPassword||makeTempPassword_());const login=createUser_(admin,{record:{username:code,password,role:'CLIENT',name:r.name,email:r.email,phone:r.phone,clientId:id,mustChangePassword:true}});activity_(admin,'CREATE_CLIENT','clients',id,code);return {client:publicRec_('clients',r),portal:{username:login.username,initialPassword:password,mustChangePassword:true}};}
