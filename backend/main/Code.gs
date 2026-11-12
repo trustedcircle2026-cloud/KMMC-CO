@@ -87,7 +87,7 @@ function route_(a,q){
   if(action==='publicEnquiry')return publicEnquiry_(q);
   if(action==='getEmployeeInvite')return getEmployeeInvite_(q);
   if(action==='submitEmployeeRegistration')return submitEmployeeRegistration_(q);
-  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','setTaskStatus','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
+  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
   if(restrictedWrites.includes(action)){const actor=auth_(q);if(actor.role==='EMPLOYEE'&&employeeApprovalStatus_(actor)!=='APPROVED')throw Error('Your account is awaiting administrator approval. This action is unavailable until approval.');}
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
@@ -132,6 +132,7 @@ function route_(a,q){
     case 'startBreak':return startBreak_(auth_(q));
     case 'stopBreak':return stopBreak_(auth_(q));
     case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
+    case 'submitTaskForVerification':return submitTaskForVerification_(auth_(q),q);
     case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
     case 'completeTask':return taskStatus_(auth_(q),q,'COMPLETED');
     case 'uploadDocument':return uploadDoc_(auth_(q),q);
@@ -471,6 +472,21 @@ function driveRename_(u,q){
   driveCanAccess_(u);const id=String(q.id||''),name=String(q.name||'').trim().slice(0,180);if(!name)throw Error('Enter a name.');let type=String(q.type||'FILE').toUpperCase(),item;if(type==='FOLDER'){item=driveFolderForUser_(u,id);if(u.role==='EMPLOYEE'&&item.getId()===employeeDriveRoot_(u).getId())throw Error('The My Files root folder cannot be renamed.');}else item=driveFileForUser_(u,id);item.setName(name);activity_(u,'DRIVE_RENAME',type==='FOLDER'?'drive-folder':'drive-file',id,name);return {id:id,name:item.getName(),url:item.getUrl(),type:type};
 }
 function setTaskStatus_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'){const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);if(!rows_('attendance').some(a=>String(a.employeeId)===String(u.employeeId)&&dateKey_(a.workDate)===day&&!a.checkOut))throw Error('Clock in before starting work on an assignment.');if(r.clientId){const client=rows_('clients').find(c=>String(c.id)===String(r.clientId)&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));if(!client)throw Error('Client is not assigned or accessible to you.');ensureClientFolder_(r.clientId);}switchWorkToTask_(u,r);}write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
+function submitTaskForVerification_(u,q){
+  if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    const task=rows_('tasks').find(x=>String(x.id)===String(q.id));
+    if(!task||!visible_(u,'tasks',task)||String(task.employeeId)!==String(u.employeeId))throw Error('Assignment not found or not assigned to you.');
+    const current=String(task.status||'').toUpperCase();
+    if(!['IN_PROGRESS','PAUSED','WORK_PAUSED'].includes(current))throw Error('Only an assignment that has been started can be submitted for verification.');
+    const now=new Date(),day=localDay_(now),open=openTimerSegment_(u.employeeId,day);
+    if(open&&String(open.taskId||'')===String(task.id))closeTimerSegment_(open,now);
+    task.status='SUBMITTED_FOR_VERIFICATION';task.submittedForVerificationAt=iso_();task.updatedAt=iso_();
+    write_('tasks',task.id,task);activity_(u,'TASK_SUBMITTED_FOR_VERIFICATION','tasks',task.id,task.jobNumber||task.title);
+    return {task:task,timer:timerStatus_(u)};
+  }finally{lock.releaseLock();}
+}
 function taskStatus_(u,q,status){
   const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
   if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
