@@ -329,6 +329,7 @@ function update_(u,q){
 function delete_(u,q){
   const k=module_(q.module);authorize_(u,k,'delete');if(['users','activity','loginlog','invoices','collections','expenses','documents','accounts','receipts','payments','ledger','reimbursement'].includes(k))throw Error('Deletion disabled for audit/financial records.');
   const r=rows_(k).find(x=>x.id===String(q.id));if(!r||!visible_(u,k,r))throw Error('Record not found/access denied.');
+  if(k==='time'&&String(r.entryType||'').toUpperCase()==='BREAK')throw Error('Break time entries cannot be removed.');
   const sh=sheet_(KMMC.M[k].s),row=findRow_(sh,r.id);if(row>1)sh.deleteRow(row);activity_(u,'DELETE',k,r.id,'');return {deleted:true,id:r.id};
 }
 function authorize_(u,k,op){
