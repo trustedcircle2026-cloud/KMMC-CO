@@ -15,34 +15,34 @@ main{min-width:0;padding:20px 22px 36px;max-width:none;width:100%;margin:0}.eyeb
 
 
 /* Consistent employee workspace UI across all modules — presentation only */
-body[data-active-module] main{min-width:0;}
-body[data-active-module] .page-head{padding:5px 2px 15px;margin-bottom:13px;border-bottom:1px solid #e5ebef;align-items:center;}
-body[data-active-module] .page-head h1{font-family:inherit;font-size:25px;font-weight:700;letter-spacing:-.35px;color:#153b59;}
-body[data-active-module] .page-head p{font-size:12px;color:#71808b;}
-body[data-active-module] #moduleView>.panel{border:1px solid #dce5eb;border-radius:9px;overflow:hidden;box-shadow:0 2px 9px #16334a08;background:#fff;}
-body[data-active-module] #moduleView>.panel>.panel-head{padding:16px 19px;background:linear-gradient(180deg,#fff,#fbfcfd);border-bottom:1px solid #e5ebef;}
-body[data-active-module] #moduleView>.panel>.panel-head h2{font-size:15px;font-weight:700;color:#173d5a;}
-body[data-active-module] #moduleView>.panel>.panel-body{padding:18px;background:#fff;}
-body[data-active-module] #tableContainer>.table-wrap{border:1px solid #e1e8ed;border-radius:7px;overflow:auto;}
-body[data-active-module] #tableContainer table{font-size:12px;min-width:760px;}
-body[data-active-module] #tableContainer th{padding:12px 13px;background:#f3f7f9;color:#40586a;font-size:11px;text-transform:uppercase;letter-spacing:.35px;border-bottom:1px solid #dfe7ec;}
-body[data-active-module] #tableContainer td{padding:12px 13px;vertical-align:middle;border-bottom:1px solid #edf1f4;color:#344b5c;}
-body[data-active-module] #tableContainer tbody tr:hover{background:#f8fbfd;}
-body[data-active-module] #tableContainer .btn,body[data-active-module] #pageActions .btn{border-radius:6px;font-weight:600;}
-body[data-active-module] #tableContainer .workspace-toolbar,body[data-active-module] #tableContainer .time-filters,body[data-active-module] #tableContainer .work-sheet-tools{border:1px solid #dce5eb;border-radius:8px;background:#f9fbfc;box-shadow:0 2px 8px #16334a06;padding:15px 16px;}
-body[data-active-module] #tableContainer .workspace-toolbar .field,body[data-active-module] #tableContainer .time-filters .field{gap:6px;}
-body[data-active-module] #tableContainer .workspace-toolbar input,body[data-active-module] #tableContainer .workspace-toolbar select,body[data-active-module] #tableContainer .time-filters input,body[data-active-module] #tableContainer .time-filters select{min-height:39px;border-radius:6px;}
-body[data-active-module] #tableContainer .time-summary-card{border:1px solid #dce5eb;border-radius:8px;box-shadow:0 2px 7px #16334a06;padding:16px;}
-body[data-active-module] #tableContainer .time-summary-card strong{font-size:21px;}
-body[data-active-module] #tableContainer .time-history-panel{border:1px solid #dce5eb;border-radius:8px;overflow:hidden;}
-body[data-active-module] #tableContainer .time-history-panel .panel-head{background:#f8fafb;}
-body[data-active-module] #tableContainer .work-sheet-tools{gap:9px;}
-body[data-active-module] #tableContainer .chat-layout{border:1px solid #dce5eb;border-radius:8px;box-shadow:0 2px 8px #16334a06;}
-body[data-active-module] #tableContainer .chat-main-head,body[data-active-module] #tableContainer .chat-sidebar-head{background:#f6f9fb;color:#1d425d;font-weight:700;}
-body[data-active-module] #tableContainer .workspace-empty{border:1px dashed #ccd9e1;border-radius:8px;background:#fafcfd;padding:38px 20px;}
-body[data-active-module] #pageActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-body[data-active-module] .notice{border-radius:7px;}
-@media(max-width:800px){body[data-active-module] #moduleView>.panel>.panel-body{padding:12px;}body[data-active-module] .page-head h1{font-size:22px;}}
+body[data-active-module]:not([data-active-module="workdone"]) main{min-width:0;}
+body[data-active-module]:not([data-active-module="workdone"]) .page-head{padding:5px 2px 15px;margin-bottom:13px;border-bottom:1px solid #e5ebef;align-items:center;}
+body[data-active-module]:not([data-active-module="workdone"]) .page-head h1{font-family:inherit;font-size:25px;font-weight:700;letter-spacing:-.35px;color:#153b59;}
+body[data-active-module]:not([data-active-module="workdone"]) .page-head p{font-size:12px;color:#71808b;}
+body[data-active-module]:not([data-active-module="workdone"]) #moduleView>.panel{border:1px solid #dce5eb;border-radius:9px;overflow:hidden;box-shadow:0 2px 9px #16334a08;background:#fff;}
+body[data-active-module]:not([data-active-module="workdone"]) #moduleView>.panel>.panel-head{padding:16px 19px;background:linear-gradient(180deg,#fff,#fbfcfd);border-bottom:1px solid #e5ebef;}
+body[data-active-module]:not([data-active-module="workdone"]) #moduleView>.panel>.panel-head h2{font-size:15px;font-weight:700;color:#173d5a;}
+body[data-active-module]:not([data-active-module="workdone"]) #moduleView>.panel>.panel-body{padding:18px;background:#fff;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer>.table-wrap{border:1px solid #e1e8ed;border-radius:7px;overflow:auto;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer table{font-size:12px;min-width:760px;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer th{padding:12px 13px;background:#f3f7f9;color:#40586a;font-size:11px;text-transform:uppercase;letter-spacing:.35px;border-bottom:1px solid #dfe7ec;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer td{padding:12px 13px;vertical-align:middle;border-bottom:1px solid #edf1f4;color:#344b5c;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer tbody tr:hover{background:#f8fbfd;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .btn,body[data-active-module]:not([data-active-module="workdone"]) #pageActions .btn{border-radius:6px;font-weight:600;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .workspace-toolbar,body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-filters,body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .work-sheet-tools{border:1px solid #dce5eb;border-radius:8px;background:#f9fbfc;box-shadow:0 2px 8px #16334a06;padding:15px 16px;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .workspace-toolbar .field,body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-filters .field{gap:6px;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .workspace-toolbar input,body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .workspace-toolbar select,body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-filters input,body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-filters select{min-height:39px;border-radius:6px;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-summary-card{border:1px solid #dce5eb;border-radius:8px;box-shadow:0 2px 7px #16334a06;padding:16px;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-summary-card strong{font-size:21px;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-history-panel{border:1px solid #dce5eb;border-radius:8px;overflow:hidden;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .time-history-panel .panel-head{background:#f8fafb;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .work-sheet-tools{gap:9px;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .chat-layout{border:1px solid #dce5eb;border-radius:8px;box-shadow:0 2px 8px #16334a06;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .chat-main-head,body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .chat-sidebar-head{background:#f6f9fb;color:#1d425d;font-weight:700;}
+body[data-active-module]:not([data-active-module="workdone"]) #tableContainer .workspace-empty{border:1px dashed #ccd9e1;border-radius:8px;background:#fafcfd;padding:38px 20px;}
+body[data-active-module]:not([data-active-module="workdone"]) #pageActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+body[data-active-module]:not([data-active-module="workdone"]) .notice{border-radius:7px;}
+@media(max-width:800px){body[data-active-module]:not([data-active-module="workdone"]) #moduleView>.panel>.panel-body{padding:12px;}body[data-active-module]:not([data-active-module="workdone"]) .page-head h1{font-size:22px;}}
 
 /* Employee dashboard layout */
 .employee-welcome{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;margin-bottom:16px;border:1px solid #d8e3eb;border-radius:9px;background:linear-gradient(110deg,#f2f7fb 0%,#fff 72%);}
