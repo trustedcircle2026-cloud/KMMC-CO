@@ -315,7 +315,21 @@ function create_(u,q){
   const r=sanitize_(k,q.record||{});ownership_(u,k,r,false);const now=iso_();r.id=uid_();r.createdAt=now;if(KMMC.M[k].h.includes('updatedAt'))r.updatedAt=now;
   if(k==='accounts'){validateAccount_(r);r.active=r.active||'ACTIVE';}
   if(k==='receipts'||k==='payments')throw Error('Use postReceipt / postPayment so the voucher and ledger remain consistent.');
-  if(k==='tasks'){if(u.role==='EMPLOYEE'){const clientId=String(r.clientId||'');if(!clientId)throw Error('Select a client for this assignment.');const client=rows_('clients').find(c=>String(c.id)===clientId&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));if(!client)throw Error('Selected client is not assigned or accessible to you.');r.employeeId=u.employeeId;r.createdBy=u.id;}if(!r.jobNumber)r.jobNumber='KMMC-JOB-'+Utilities.formatDate(new Date(),'Asia/Kolkata','yyyyMMdd')+'-'+r.id.slice(0,6).toUpperCase();if(!r.status)r.status='OPEN';if(!r.priority)r.priority='NORMAL';if(!r.startDate)r.startDate=localDay_(new Date());}if(k==='leave'&&u.role==='EMPLOYEE'){r.status='PENDING';r.approvedBy='';}if(k==='invoices')invoiceMath_(r);if(k==='collections')collectionMath_(r);
+  if(k==='tasks'){
+    const lock=LockService.getScriptLock();lock.waitLock(10000);
+    try{
+      if(u.role==='EMPLOYEE'){
+        const clientId=String(r.clientId||'');if(!clientId)throw Error('Select a client for this assignment.');
+        const client=rows_('clients').find(c=>String(c.id)===clientId&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));
+        if(!client)throw Error('Selected client is not assigned or accessible to you.');
+        r.employeeId=u.employeeId;r.createdBy=u.id;
+      }
+      const maxJob=rows_('tasks').reduce((max,t)=>{const m=String(t.jobNumber||'').match(/^Job-(\\d+)$/i);return m?Math.max(max,Number(m[1])||0):max;},10000);
+      r.jobNumber='Job-'+String(maxJob+1).padStart(5,'0');
+      if(!r.status)r.status='OPEN';if(!r.priority)r.priority='NORMAL';if(!r.startDate)r.startDate=localDay_(new Date());
+      append_(k,r);activity_(u,'CREATE',k,r.id,'');return publicRec_(k,r);
+    }finally{lock.releaseLock();}
+  }if(k==='leave'&&u.role==='EMPLOYEE'){r.status='PENDING';r.approvedBy='';}if(k==='invoices')invoiceMath_(r);if(k==='collections')collectionMath_(r);
   append_(k,r);activity_(u,'CREATE',k,r.id,'');return publicRec_(k,r);
 }
 function update_(u,q){
