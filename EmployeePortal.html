@@ -345,6 +345,27 @@ body.drive-view .drive-workspace table{min-width:620px}
 body.drive-view .drive-workspace .drive-statusline{display:none}
 body.drive-view .drive-sidebar .drive-side-link{min-height:40px}
 @media(max-width:760px){body.drive-view .drive-workspace{height:auto;min-height:calc(100vh - 132px);grid-template-columns:1fr}body.drive-view .drive-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-right:0;border-bottom:1px solid #dbe4ef}body.drive-view .drive-sidebar-title{grid-column:1/-1}body.drive-view .drive-main{padding:12px}body.drive-view .drive-toolbar{flex-wrap:wrap!important}body.drive-view .drive-toolbar .field{flex-basis:100%!important}}
+
+/* Employee dashboard detail popups opened from the report shortcut buttons. */
+.employee-detail-backdrop{position:fixed;inset:0;z-index:190;background:rgba(13,28,42,.48);display:flex;align-items:center;justify-content:center;padding:18px;}
+.employee-detail-modal{width:min(1120px,96vw);max-height:min(82dvh,760px);display:flex;flex-direction:column;min-height:0;background:#fff;border:1px solid #d8e1e9;border-radius:10px;box-shadow:0 20px 55px rgba(12,35,55,.25);overflow:hidden;}
+.employee-detail-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 19px;border-bottom:1px solid #e3e9ef;background:#f8fafc;flex:none;}
+.employee-detail-head h2{margin:0;color:#173b59;font-size:17px;font-weight:700;}
+.employee-detail-head p{margin:4px 0 0;color:#728397;font-size:11px;}
+.employee-detail-close{width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#536779;font-size:25px;line-height:1;cursor:pointer;}
+.employee-detail-close:hover{background:#eaf0f5;}
+.employee-detail-body{padding:15px 18px;overflow:auto;min-height:100px;flex:1;}
+.employee-detail-table-wrap{width:100%;overflow:auto;border:1px solid #e0e7ed;border-radius:7px;}
+.employee-detail-table{width:100%;min-width:720px;border-collapse:collapse;font-size:12px;background:#fff;}
+.employee-detail-table th,.employee-detail-table td{padding:10px 11px;text-align:left;vertical-align:top;border-bottom:1px solid #e9eef2;line-height:1.4;}
+.employee-detail-table th{position:sticky;top:0;background:#f1f5f8;color:#36536b;font-weight:700;white-space:nowrap;z-index:1;}
+.employee-detail-table td{color:#354b5d;max-width:300px;overflow-wrap:anywhere;}
+.employee-detail-table tbody tr:last-child td{border-bottom:0;}
+.employee-detail-table tbody tr:hover{background:#f8fbfd;}
+.employee-detail-empty{padding:38px 15px;text-align:center;color:#7a8b9b;font-size:13px;}
+.employee-detail-foot{display:flex;justify-content:flex-end;padding:11px 18px;border-top:1px solid #e3e9ef;background:#fbfcfd;flex:none;}
+@media(max-width:700px){.employee-detail-backdrop{padding:8px;}.employee-detail-modal{width:100%;max-height:88dvh;}.employee-detail-head{padding:12px 14px;}.employee-detail-body{padding:10px;}}
+
 </style>
   <link rel="stylesheet" href="theme.css"><style id="kmmc-cormorant-global">html,body,body *{font-family:"Cormorant Garamond",Georgia,serif!important;font-style:normal!important}em,i{font-style:normal!important}</style>
   <link rel="stylesheet" href="typography.css">
@@ -596,13 +617,7 @@ async function renderEmployeeDashboard(){
   const fmt=v=>v?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(v)).toUpperCase():'—';
   const clientName=t=>t.clientName||clientLookup[String(t.clientId)]?.name||clients.find(c=>String(c.id)===String(t.clientId))?.name||'—';
   const status=t=>String(t.status||'OPEN').replace(/_/g,' ');
-  const escCell=v=>String(v??'').replace(/"/g,'""');
-  const csv=(name,headers,rows)=>{
-   const content=[headers,...rows].map(row=>row.map(v=>'"'+escCell(v)+'"').join(',')).join('\r\n');
-   const blob=new Blob(['\ufeff'+content],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-   a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-  };
-  const dateText=t=>t?dateForLog(t):'';
+const dateText=t=>t?dateForLog(t):'';
   const recentTasks=[...tasks].sort((a,b)=>String(b.updatedAt||b.createdAt||b.createdOn||'').localeCompare(String(a.updatedAt||a.createdAt||a.createdOn||'')));
   const dueSorted=[...pendingTasks].sort((a,b)=>String(a.dueDate||'9999-12-31').localeCompare(String(b.dueDate||'9999-12-31')));
   const taskItem=t=>'<div class="employee-compact-task"><div class="employee-compact-task-main"><strong>'+esc(t.title||'Assignment')+'</strong><small>'+esc(t.jobNumber||'No job number')+' · '+esc(clientName(t))+'</small></div><div class="employee-compact-task-meta"><span class="employee-status '+(String(t.status||'').toUpperCase()==='IN_PROGRESS'?'is-active':'')+'">'+esc(status(t))+'</span><small>'+esc(t.dueDate||'No due date')+'</small></div></div>';
@@ -610,7 +625,7 @@ async function renderEmployeeDashboard(){
   if(!root.isConnected||activeModule!=='dashboard')return;
   const workSeconds=todayLogs.filter(r=>String(r.entryType||'WORK').toUpperCase()==='WORK').reduce((n,r)=>n+logSeconds(r),0);
   root.innerHTML='<div class="employee-dashboard-shell">'+
-   '<section class="employee-dash-heading"><div><span class="employee-eyebrow">EMPLOYEE WORKSPACE</span><h2>Welcome, '+esc(String(user.name||user.employeeName||user.fullName||'there').split(' ')[0])+'</h2><p>'+esc(new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(new Date()))+'</p></div><div class="employee-dash-tools"><button class="btn" id="employeeDashRefresh">↻ Refresh</button><button class="btn employee-export" id="downloadDailyWork">Daily Work ↓</button><button class="btn employee-export" id="downloadAttendance">Attendance ↓</button><button class="btn employee-export" id="downloadTasks">Assignments ↓</button></div></section>'+
+   '<section class="employee-dash-heading"><div><span class="employee-eyebrow">EMPLOYEE WORKSPACE</span><h2>Welcome, '+esc(String(user.name||user.employeeName||user.fullName||'there').split(' ')[0])+'</h2><p>'+esc(new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(new Date()))+'</p></div><div class="employee-dash-tools"><button class="btn" id="employeeDashRefresh">↻ Refresh</button><button type="button" class="btn employee-export" id="showDailyWork">Daily Work</button><button type="button" class="btn employee-export" id="showAttendance">Attendance</button><button type="button" class="btn employee-export" id="showAssignments">Assignments</button></div></section>'+
    '<section class="employee-overview-grid">'+
     '<article class="employee-overview-card total"><span>Total Tasks</span><strong>'+tasks.length+'</strong><small>All assignments</small></article>'+
     '<article class="employee-overview-card completed"><span>Completed</span><strong>'+completedTasks.length+'</strong><small>Successfully finished</small></article>'+
@@ -626,9 +641,21 @@ async function renderEmployeeDashboard(){
   '</div>';
   root.querySelectorAll('[data-employee-go]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.employeeGo)));
   root.querySelector('#employeeDashRefresh')?.addEventListener('click',()=>{cacheClear('dashboard');loadDashboard();});
-  root.querySelector('#downloadDailyWork')?.addEventListener('click',()=>csv('KMMC_Daily_Work_'+today+'.csv',['Date','From','To','Minutes','Job No.','Client','Task','Description','Status'],todayLogs.map(r=>[today,fmt(r.startTime),fmt(r.endTime),Math.round(logSeconds(r)/60),r.jobNumber||'',clientName(r),dataTaskName(r,tasks),r.description||'',String(r.entryType||'WORK')==='BREAK'?'Break':r.endTime?'Completed':'WIP'])));
-  root.querySelector('#downloadAttendance')?.addEventListener('click',()=>csv('KMMC_Attendance_'+today+'.csv',['Date','In Time','Out Time','Status'],todayAttendance.map(a=>[today,dateText(a.checkIn),dateText(a.checkOut),a.checkOut?'Completed':'Present'])));
-  root.querySelector('#downloadTasks')?.addEventListener('click',()=>csv('KMMC_Assignments_'+today+'.csv',['Job No.','Assignment','Client','Description','Priority','Status','Due Date'],tasks.map(t=>[t.jobNumber||'',t.title||'',clientName(t),t.description||'',t.priority||'',status(t),t.dueDate||''])));
+  const openDashboardDetail=(title,subtitle,columns,rows)=>{
+   document.getElementById('employeeDashboardDetailModal')?.remove();
+   const modal=document.createElement('div');modal.id='employeeDashboardDetailModal';modal.className='employee-detail-backdrop';
+   const body=rows.length?'<div class="employee-detail-table-wrap"><table class="employee-detail-table"><thead><tr>'+columns.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v==null||v===''?'—':v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<div class="employee-detail-empty">No records available for this section.</div>';
+   modal.innerHTML='<section class="employee-detail-modal" role="dialog" aria-modal="true" aria-labelledby="employeeDetailTitle"><header class="employee-detail-head"><div><h2 id="employeeDetailTitle">'+esc(title)+'</h2><p>'+esc(subtitle)+' · '+rows.length+' record(s)</p></div><button type="button" class="employee-detail-close" aria-label="Close">×</button></header><div class="employee-detail-body">'+body+'</div><footer class="employee-detail-foot"><button type="button" class="btn" data-detail-close>Close</button></footer></section>';
+   document.body.appendChild(modal);
+   const close=()=>{modal.remove();document.removeEventListener('keydown',onKey);};
+   const onKey=e=>{if(e.key==='Escape')close();};
+   modal.querySelectorAll('.employee-detail-close,[data-detail-close]').forEach(b=>b.addEventListener('click',close));
+   modal.addEventListener('click',e=>{if(e.target===modal)close();});
+   document.addEventListener('keydown',onKey);
+  };
+  root.querySelector('#showDailyWork')?.addEventListener('click',()=>openDashboardDetail('Daily Work','Work entries for '+today.split('-').reverse().join('-'),['From','To','Minutes','Job No.','Client','Task','Description','Status'],todayLogs.map(r=>[fmt(r.startTime),fmt(r.endTime),Math.round(logSeconds(r)/60),r.jobNumber||'',clientName(r),dataTaskName(r,tasks),r.description||'',String(r.entryType||'WORK').toUpperCase()==='BREAK'?'Break':r.endTime?'Completed':'WIP'])));
+  root.querySelector('#showAttendance')?.addEventListener('click',()=>openDashboardDetail('Attendance','Attendance entries for '+today.split('-').reverse().join('-'),['Date','In Time','Out Time','Status'],todayAttendance.map(a=>[today.split('-').reverse().join('-'),fmt(a.checkIn),fmt(a.checkOut),a.checkOut?'Clocked out':'Present'])));
+  root.querySelector('#showAssignments')?.addEventListener('click',()=>openDashboardDetail('Assignments','All assignments assigned to you',['Job No.','Assignment','Client','Description','Priority','Status','Due Date'],tasks.map(t=>[t.jobNumber||'',t.title||'Assignment',clientName(t),t.description||'',t.priority||'',status(t),t.dueDate||''])));
  }catch(e){
   if(!root.isConnected||activeModule!=='dashboard')return;
   root.innerHTML='<div class="employee-dashboard-loading">Could not load dashboard details: '+esc(e.message)+' <button class="btn" id="employeeDashRetry">Retry</button></div>';
