@@ -324,7 +324,7 @@ function create_(u,q){
         if(!client)throw Error('Selected client is not assigned or accessible to you.');
         r.employeeId=u.employeeId;r.createdBy=u.id;
       }
-      const maxJob=rows_('tasks').reduce((max,t)=>{const m=String(t.jobNumber||'').match(/^Job-(\\d+)$/i);return m?Math.max(max,Number(m[1])||0):max;},10000);
+      const maxJob=rows_('tasks').reduce((max,t)=>{const m=String(t.jobNumber||'').match(/^Job-([0-9]+)$/i);return m?Math.max(max,Number(m[1])||0):max;},10000);
       r.jobNumber='Job-'+String(maxJob+1).padStart(5,'0');
       if(!r.status)r.status='OPEN';if(!r.priority)r.priority='NORMAL';if(!r.startDate)r.startDate=localDay_(new Date());
       append_(k,r);activity_(u,'CREATE',k,r.id,'');return publicRec_(k,r);
