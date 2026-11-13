@@ -15,7 +15,7 @@ const KMMC = {
 
 
     tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
-    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','seconds','description','calls','source','isManual','status','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','seconds','description','calls','source','isManual','status','publicationStatus','revisionGroupId','logTime','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     workdone:{s:'DB_WORKDONE',h:['id','employeeId','workDate','jobNumber','taskId','clientId','summary','minutes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     attendance:{s:'DB_ATTENDANCE',h:['id','employeeId','workDate','checkIn','checkOut','minutes','status','note','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     leave:{s:'DB_LEAVE',h:['id','employeeId','fromDate','toDate','leaveType','reason','status','approvedBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
@@ -87,7 +87,7 @@ function route_(a,q){
   if(action==='publicEnquiry')return publicEnquiry_(q);
   if(action==='getEmployeeInvite')return getEmployeeInvite_(q);
   if(action==='submitEmployeeRegistration')return submitEmployeeRegistration_(q);
-  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
+  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','submitManualWorkdoneForApproval','reviewManualWorkdoneRevision','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
   if(restrictedWrites.includes(action)){const actor=auth_(q);if(actor.role==='EMPLOYEE'&&employeeApprovalStatus_(actor)!=='APPROVED')throw Error('Your account is awaiting administrator approval. This action is unavailable until approval.');}
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
@@ -131,6 +131,8 @@ function route_(a,q){
     case 'driveDelete':return driveDelete_(auth_(q),q);
     case 'startBreak':return startBreak_(auth_(q));
     case 'stopBreak':return stopBreak_(auth_(q));
+    case 'submitManualWorkdoneForApproval':return submitManualWorkdoneForApproval_(auth_(q),q);
+    case 'reviewManualWorkdoneRevision':return reviewManualWorkdoneRevision_(auth_(q),q);
     case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
     case 'submitTaskForVerification':return submitTaskForVerification_(auth_(q),q);
     case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
@@ -311,6 +313,40 @@ function list_(u,q){
   const clients= (k==='tasks'||k==='time'||k==='workdone'||k==='documents')?rows_('clients'):[];const records=a.slice(offset,offset+limit).map(r=>{const out=publicRec_(k,r);if(['tasks','time','workdone','documents'].includes(k)){const c=clients.find(x=>String(x.id)===String(r.clientId));if(c){out.clientCode=String(c.clientCode||'');out.clientName=String(c.name||'');}}return out;});return {records,total:a.length,limit,offset};
 }
 function get_(u,q){const k=module_(q.module);authorize_(u,k,'read');const r=rows_(k).find(x=>x.id===String(q.id));if(!r||!visible_(u,k,r))throw Error('Record not found/access denied.');return publicRec_(k,r);}
+
+function submitManualWorkdoneForApproval_(u,q){
+  if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const records=Array.isArray(q.records)?q.records:[];if(!records.length)throw Error('No revised work lines supplied.');
+  if(records.length>100)throw Error('A revision cannot contain more than 100 work lines.');
+  const group=uid_(),now=iso_(),created=[];
+  records.forEach(x=>{
+    if(String(x.employeeId||'')!==String(u.employeeId))throw Error('Employee mismatch in revised work line.');
+    if(String(x.source||'').toUpperCase()!=='MANUAL'||x.isManual!==true)throw Error('Only manual workdone lines can be submitted for approval.');
+    const r=sanitize_('time',Object.assign({},x,{publicationStatus:'PENDING_APPROVAL',revisionGroupId:group,logTime:now}));
+    ownership_(u,'time',r,false);r.id=uid_();r.createdAt=now;r.updatedAt=now;append_('time',r);created.push(r);
+  });
+  const admins=rows_('users').filter(x=>String(x.role)==='ADMIN'&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE');
+  admins.forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Manual Workdone revision approval required',message:String(u.name||u.username)+' submitted '+created.length+' revised work line(s) for '+String(created[0].workDate||'')+'. Revision: '+group,type:'WORKDONE_APPROVAL',relatedId:group,readAt:'',createdAt:now});}catch(e){logError_(e);}});
+  activity_(u,'SUBMIT_WORKDONE_REVISION','time',group,String(created.length)+' line(s)');
+  return {submitted:true,publicationStatus:'PENDING_APPROVAL',revisionGroupId:group,count:created.length,logTime:now};
+}
+function reviewManualWorkdoneRevision_(admin,q){
+  needAdmin_(admin);const group=String(q.revisionGroupId||''),decision=String(q.decision||'').toUpperCase();
+  if(!group||!['APPROVE','REJECT'].includes(decision))throw Error('A revision and valid decision are required.');
+  const pending=rows_('time').filter(x=>String(x.revisionGroupId||'')===group&&String(x.publicationStatus||'')==='PENDING_APPROVAL');
+  if(!pending.length)throw Error('Pending workdone revision not found.');
+  const now=iso_();
+  if(decision==='APPROVE'){
+    const employeeId=String(pending[0].employeeId),day=String(pending[0].workDate);
+    rows_('time').filter(x=>String(x.employeeId)===employeeId&&String(x.workDate)===day&&String(x.source||'').toUpperCase()==='MANUAL'&&x.isManual===true&&String(x.publicationStatus||'PUBLISHED')==='PUBLISHED').forEach(old=>{old.publicationStatus='SUPERSEDED';old.updatedAt=now;write_('time',old.id,old);});
+    pending.forEach(r=>{r.publicationStatus='PUBLISHED';r.logTime=now;r.updatedAt=now;write_('time',r.id,r);});
+  }else pending.forEach(r=>{r.publicationStatus='REJECTED';r.updatedAt=now;write_('time',r.id,r);});
+  activity_(admin,decision+'_WORKDONE_REVISION','time',group,String(pending.length)+' line(s)');
+  const employee=rows_('users').find(x=>String(x.role)==='EMPLOYEE'&&String(x.employeeId)===String(pending[0].employeeId));
+  if(employee)try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:employee.id,title:'Manual Workdone revision '+(decision==='APPROVE'?'approved':'rejected'),message:'Your revised workdone for '+String(pending[0].workDate)+' was '+decision.toLowerCase()+' by Admin.',type:'WORKDONE_REVIEW',relatedId:group,readAt:'',createdAt:now});}catch(e){logError_(e);}
+  return {reviewed:true,decision,revisionGroupId:group,count:pending.length};
+}
+
 function create_(u,q){
   const k=module_(q.module);authorize_(u,k,'create');if(k==='time')ensureHeaders_(sheet_(KMMC.M.time.s),KMMC.M.time.h);if(k==='users')throw Error('Use createUser.');if(k==='documents')throw Error('Use uploadDocument to securely store files in Drive.');if(k==='messages'){if(u.role==='CLIENT')return createClientMessage_(u,q);throw Error('Use sendMessage to create a chat message.');}
   const r=sanitize_(k,q.record||{});ownership_(u,k,r,false);const now=iso_();r.id=uid_();r.createdAt=now;if(KMMC.M[k].h.includes('updatedAt'))r.updatedAt=now;
