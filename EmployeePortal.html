@@ -192,6 +192,72 @@ body.messages-mode .chat-scroll{min-height:0}
 @media(max-width:700px){body.messages-mode main{height:calc(100vh - 128px);height:calc(100dvh - 128px);max-height:calc(100dvh - 128px);padding:0}body.messages-mode .chat-layout{height:100%;min-height:0}}
 
 
+/* Final Workdone header alignment: centered status, mode controls at far right, no inner boxes or divider lines. */
+.workdone-topline{
+ position:relative;
+ display:flex;
+ align-items:center;
+ justify-content:flex-end;
+ gap:14px;
+ min-height:58px;
+ padding:10px 22px;
+ background:transparent;
+ border:0!important;
+ box-shadow:none!important;
+}
+.workdone-status-slot{
+ position:absolute;
+ left:50%;
+ top:50%;
+ transform:translate(-50%,-50%);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ width:max-content;
+ max-width:calc(100% - 330px);
+ min-width:0;
+ flex:none;
+}
+.workdone-topline .manual-workdone-hint{
+ width:auto!important;
+ min-width:0;
+ display:flex!important;
+ align-items:center;
+ justify-content:center;
+ flex-wrap:wrap;
+ gap:18px;
+ padding:0!important;
+ margin:0!important;
+ border:0!important;
+ border-radius:0!important;
+ outline:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+ font-size:13px;
+ text-align:center;
+}
+.workdone-topline .workdone-mode-switch{
+ position:relative;
+ z-index:1;
+ display:flex;
+ align-items:center;
+ justify-content:flex-end;
+ flex:none;
+ gap:8px;
+ margin:0 0 0 auto!important;
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+}
+.workdone-topline .workdone-mode-switch>span{margin-right:3px;}
+.workdone-topline .workdone-mode-switch button{white-space:nowrap;}
+@media(max-width:700px){
+ .workdone-topline{display:grid;grid-template-columns:1fr;justify-content:stretch;gap:10px;padding:10px 12px;min-height:0;}
+ .workdone-status-slot{position:static;left:auto;top:auto;transform:none;width:100%;max-width:none;justify-content:center;grid-row:1;}
+ .workdone-topline .manual-workdone-hint{justify-content:center;}
+ .workdone-topline .workdone-mode-switch{grid-row:2;width:100%;justify-content:flex-end;}
+}
 /* Workdone top line: status/log on the left, mode switch on the right. */
 .workdone-topline{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 22px;background:#fff;border-bottom:1px solid #dce5eb;min-height:56px;}
 .workdone-status-slot{display:flex;align-items:center;flex:1;min-width:0;}
