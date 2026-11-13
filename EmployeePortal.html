@@ -1060,7 +1060,6 @@ async function renderWorkdoneReports(manualOnly=false){
  const modeSwitch=host.querySelector('#workdoneTopline');
  const setMode=async mode=>{
   const report=mode==='REPORT';
-  modeSwitch?.classList.toggle('report-active',report);
   if(toggle){toggle.setAttribute('aria-checked',String(report));toggle.setAttribute('aria-label',report?'Switch to Data Entry mode':'Switch to Report mode');}
   if(mode==='ENTRY'){
    await renderWorkdoneDataEntry(manualEntryMode);
