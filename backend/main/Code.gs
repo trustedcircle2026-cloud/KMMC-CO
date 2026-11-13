@@ -94,6 +94,7 @@ function route_(a,q){
     case 'login':return login_(q);
     case 'logout':return logout_(q);
     case 'validateSession':case 'myProfile':return {user:pubUser_(auth_(q))};
+    case 'myEmployeeProfile':return myEmployeeProfile_(auth_(q));
     case 'changePassword':return changePassword_(auth_(q),q);
     case 'resetPasswordByRegisteredEmail':return resetPasswordByRegisteredEmail_(q);
     case 'dashboard':return dashboard_(auth_(q));
@@ -789,6 +790,12 @@ function sanitize_(k,input){
   return out;
 }
 function employeeApprovalStatus_(u){if(!u||String(u.role||'').toUpperCase()!=='EMPLOYEE'||!u.employeeId)return 'APPROVED';const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));return String(e&&e.approvalStatus||'APPROVED').toUpperCase();}
+function myEmployeeProfile_(u){
+  if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));
+  if(!e)return {employeeId:String(u.employeeId),name:String(u.name||''),joiningDate:''};
+  return {employeeId:String(e.id),employeeCode:String(e.employeeCode||''),name:String(e.name||u.name||''),designation:String(e.designation||''),joiningDate:String(e.joiningDate||'')};
+}
 function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,approvalStatus:employeeApprovalStatus_(u),mustChangePassword:u.mustChangePassword===true||String(u.mustChangePassword).toUpperCase()==='TRUE',createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
 function publicRec_(k,r){if(k==='users')return pubUser_(r);const o={};Object.keys(r).forEach(x=>{if(!['passwordHash','salt'].includes(x))o[x]=r[x];});return o;}
 function needAdmin_(u){if(u.role!=='ADMIN')throw Error('Admin access required.');}
