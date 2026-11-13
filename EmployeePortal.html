@@ -1054,21 +1054,10 @@ async function renderWorkdoneReports(manualOnly=false){
  const manualEntryMode=manualOnly===true;
  const host=el('tableContainer');
  const shellHead=document.querySelector('#moduleView>.panel>.panel-head');
- if(shellHead){
-  shellHead.classList.add('workdone-main-head');
-  shellHead.style.setProperty('display','grid','important');shellHead.style.gridTemplateColumns='auto minmax(0,1fr) 32px';shellHead.style.alignItems='center';shellHead.style.columnGap='18px';shellHead.style.minHeight='62px';shellHead.style.padding='10px 18px';shellHead.style.borderBottom='0';
-  const heading=shellHead.querySelector('#tableHeading');if(heading){heading.textContent='Workdone';heading.style.gridColumn='1';heading.style.gridRow='1';heading.style.whiteSpace='nowrap';}
-  const tools=shellHead.querySelector('.panel-head-tools');if(tools)tools.style.display='none';
-  shellHead.querySelector('#workdoneStatusSlot')?.remove();
-  shellHead.querySelector('#workdoneModeSwitch')?.remove();
-  const slot=document.createElement('div');slot.id='workdoneStatusSlot';slot.className='workdone-status-slot';slot.style.cssText='display:flex!important;visibility:visible!important;grid-column:2;grid-row:1;align-items:center;justify-content:center;min-width:0;width:100%;';slot.innerHTML='<div class="workdone-header-meta" role="status" aria-live="polite" style="display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap;width:100%;font-size:13px;line-height:1.4;white-space:nowrap"><span>Status: <strong data-workdone-header-state style="color:#64748b">Fresh</strong></span><span>Log Time: <strong data-workdone-header-log style="color:#245d86">—</strong></span></div>';
-  const mode=document.createElement('div');mode.id='workdoneModeSwitch';mode.className='workdone-mode-switch';mode.setAttribute('role','group');mode.setAttribute('aria-label','Workdone mode');
-  mode.innerHTML='<button type="button" class="workdone-toggle" style="width:30px;height:16px;min-width:30px;flex:0 0 30px;padding:2px" role="switch" aria-checked="false" aria-label="Switch to Report mode" title="Switch between Data Entry and Report" data-workdone-toggle><span class="workdone-toggle-knob" style="width:10px;height:10px"></span></button>';
-  mode.style.cssText='display:flex;align-items:center;justify-content:flex-end;grid-column:3;grid-row:1;width:32px;min-width:32px;margin:0;padding:0;';
-  shellHead.append(slot,mode);
- }
- host.innerHTML='<section class="workdone-shell"><div id="workdoneModeBody"><div class="workspace-empty">Loading Data Entry…</div></div></section>';
- const body=host.querySelector('#workdoneModeBody'),slot=document.querySelector('#workdoneStatusSlot'),modeSwitch=document.querySelector('#workdoneModeSwitch'),toggle=modeSwitch?.querySelector('[data-workdone-toggle]');
+ if(shellHead){shellHead.classList.add('workdone-main-head');shellHead.style.setProperty('display','none','important');shellHead.querySelector('#workdoneStatusSlot')?.remove();shellHead.querySelector('#workdoneModeSwitch')?.remove();}
+ host.innerHTML='<section class="workdone-shell"><div class="workdone-topline" id="workdoneTopline" style="display:grid!important;grid-template-columns:1fr minmax(280px,1.4fr) 38px;align-items:center;gap:14px;min-height:58px;padding:9px 22px;background:#fff;border:0!important;border-bottom:1px solid #dce5eb!important;box-shadow:none!important"><strong style="font-size:14px;color:#173b59;font-weight:700;white-space:nowrap">Workdone</strong><div id="workdoneStatusSlot" class="workdone-status-slot" role="status" aria-live="polite" style="position:static!important;transform:none!important;display:flex!important;align-items:center;justify-content:center;min-width:0;width:100%;max-width:none;margin:0"><div class="workdone-header-meta" style="display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap;width:100%;font-size:13px;line-height:1.4;white-space:nowrap"><span>Status: <strong data-workdone-header-state style="color:#64748b;font-weight:700">Fresh</strong></span><span>Log Time: <strong data-workdone-header-log style="color:#245d86;font-weight:700">—</strong></span></div></div><button type="button" class="workdone-toggle" style="width:30px;height:16px;min-width:30px;flex:0 0 30px;padding:2px;justify-self:end" role="switch" aria-checked="false" aria-label="Switch to Report mode" title="Switch between Data Entry and Report" data-workdone-toggle><span class="workdone-toggle-knob" style="width:10px;height:10px"></span></button></div><div id="workdoneModeBody"><div class="workspace-empty">Loading Data Entry…</div></div></section>';
+ const body=host.querySelector('#workdoneModeBody'),slot=host.querySelector('#workdoneStatusSlot'),toggle=host.querySelector('[data-workdone-toggle]');
+ const modeSwitch=host.querySelector('#workdoneTopline');
  const setMode=async mode=>{
   const report=mode==='REPORT';
   modeSwitch?.classList.toggle('report-active',report);
