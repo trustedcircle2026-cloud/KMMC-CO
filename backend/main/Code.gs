@@ -15,7 +15,7 @@ const KMMC = {
 
 
     tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
-    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','seconds','description','calls','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','seconds','description','calls','source','isManual','status','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     workdone:{s:'DB_WORKDONE',h:['id','employeeId','workDate','jobNumber','taskId','clientId','summary','minutes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     attendance:{s:'DB_ATTENDANCE',h:['id','employeeId','workDate','checkIn','checkOut','minutes','status','note','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     leave:{s:'DB_LEAVE',h:['id','employeeId','fromDate','toDate','leaveType','reason','status','approvedBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
@@ -312,7 +312,7 @@ function list_(u,q){
 }
 function get_(u,q){const k=module_(q.module);authorize_(u,k,'read');const r=rows_(k).find(x=>x.id===String(q.id));if(!r||!visible_(u,k,r))throw Error('Record not found/access denied.');return publicRec_(k,r);}
 function create_(u,q){
-  const k=module_(q.module);authorize_(u,k,'create');if(k==='users')throw Error('Use createUser.');if(k==='documents')throw Error('Use uploadDocument to securely store files in Drive.');if(k==='messages'){if(u.role==='CLIENT')return createClientMessage_(u,q);throw Error('Use sendMessage to create a chat message.');}
+  const k=module_(q.module);authorize_(u,k,'create');if(k==='time')ensureHeaders_(sheet_(KMMC.M.time.s),KMMC.M.time.h);if(k==='users')throw Error('Use createUser.');if(k==='documents')throw Error('Use uploadDocument to securely store files in Drive.');if(k==='messages'){if(u.role==='CLIENT')return createClientMessage_(u,q);throw Error('Use sendMessage to create a chat message.');}
   const r=sanitize_(k,q.record||{});ownership_(u,k,r,false);const now=iso_();r.id=uid_();r.createdAt=now;if(KMMC.M[k].h.includes('updatedAt'))r.updatedAt=now;
   if(k==='accounts'){validateAccount_(r);r.active=r.active||'ACTIVE';}
   if(k==='receipts'||k==='payments')throw Error('Use postReceipt / postPayment so the voucher and ledger remain consistent.');
