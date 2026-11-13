@@ -192,6 +192,16 @@ body.messages-mode .chat-scroll{min-height:0}
 @media(max-width:700px){body.messages-mode main{height:calc(100vh - 128px);height:calc(100dvh - 128px);max-height:calc(100dvh - 128px);padding:0}body.messages-mode .chat-layout{height:100%;min-height:0}}
 
 
+/* Workdone top line: status/log on the left, mode switch on the right. */
+.workdone-topline{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 22px;background:#fff;border-bottom:1px solid #dce5eb;min-height:56px;}
+.workdone-status-slot{display:flex;align-items:center;flex:1;min-width:0;}
+.workdone-topline .manual-workdone-hint{width:100%;min-width:0;display:flex!important;align-items:center;flex-wrap:wrap;gap:16px;padding:8px 10px!important;border:1px solid #dce5eb!important;border-radius:6px;background:#f8fafb;font-size:12px;}
+.workdone-topline .workdone-mode-switch{flex:none;margin-left:auto;}
+.workdone-topline .workdone-mode-switch button{white-space:nowrap;}
+body[data-active-module="workdone"] .page-head,
+body[data-active-module="workdone"] #moduleView>.panel>.panel-head{display:none!important;}
+body[data-active-module="workdone"] #moduleView>.panel{border:0!important;border-radius:0!important;box-shadow:none!important;}
+@media(max-width:700px){.workdone-topline{align-items:stretch;flex-direction:column;padding:10px 12px;gap:8px}.workdone-topline .workdone-mode-switch{width:100%;margin:0}.workdone-topline .workdone-mode-switch button{flex:1}}
 /* Workdone full-screen workspace: remove duplicate outer heading and use the full content viewport. */
 body[data-active-module="workdone"]{height:100dvh;overflow:hidden;}
 body[data-active-module="workdone"] .app-layout{height:calc(100dvh - 124px);min-height:0;overflow:hidden;display:block;}
@@ -855,9 +865,17 @@ el('wsRefresh').addEventListener('click',async()=>{const b=el('wsRefresh');b.dis
 async function renderWorkdoneReports(manualOnly=false){
  const manualEntryMode=manualOnly===true;
  const host=el('tableContainer');
- host.innerHTML='<section class="workdone-shell"><div class="workdone-mode-head"><div class="workdone-mode-title">Workdone</div><div class="workdone-mode-switch" role="group" aria-label="Workdone mode"><span>Mode</span><button type="button" class="active" data-workdone-mode="ENTRY">Data entry</button><button type="button" data-workdone-mode="REPORT">Report</button></div></div><div id="workdoneModeBody"><div class="workspace-empty">Loading Data Entry…</div></div></section>';
- const body=host.querySelector('#workdoneModeBody'),buttons=[...host.querySelectorAll('[data-workdone-mode]')];
- const setMode=async mode=>{buttons.forEach(b=>b.classList.toggle('active',b.dataset.workdoneMode===mode));if(mode==='ENTRY'){await renderWorkdoneDataEntry(manualEntryMode);}else{await renderWorkdoneReportMode(body);}};
+ host.innerHTML='<section class="workdone-shell"><div class="workdone-topline"><div class="workdone-status-slot" id="workdoneStatusSlot"></div><div class="workdone-mode-switch" role="group" aria-label="Workdone mode"><span>Mode</span><button type="button" class="active" data-workdone-mode="ENTRY">Data entry</button><button type="button" data-workdone-mode="REPORT">Report</button></div></div><div id="workdoneModeBody"><div class="workspace-empty">Loading Data Entry…</div></div></section>';
+ const body=host.querySelector('#workdoneModeBody'),slot=host.querySelector('#workdoneStatusSlot'),buttons=[...host.querySelectorAll('[data-workdone-mode]')];
+ const setMode=async mode=>{
+  buttons.forEach(b=>b.classList.toggle('active',b.dataset.workdoneMode===mode));
+  slot.innerHTML='';
+  if(mode==='ENTRY'){
+   await renderWorkdoneDataEntry(manualEntryMode);
+   const hint=body.querySelector('#manualWorkdoneHint');
+   if(hint){hint.style.margin='0';hint.style.flex='1';slot.appendChild(hint);}
+  }else{await renderWorkdoneReportMode(body);}
+ };
  buttons.forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.workdoneMode)));
  await setMode('ENTRY');
 }
