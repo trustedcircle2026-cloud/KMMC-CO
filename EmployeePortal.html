@@ -833,11 +833,11 @@ el('wsRefresh').addEventListener('click',async()=>{const b=el('wsRefresh');b.dis
  }catch(e){host.innerHTML='<div class="workspace-empty">'+esc(e.message)+'</div>';showNotice('Could not load Workdone: '+e.message,'error');}
 }
 async function renderWorkdoneReports(manualOnly=false){
- if(manualOnly){await renderWorkdoneDataEntry(true);return;}
+ const manualEntryMode=manualOnly===true;
  const host=el('tableContainer');
  host.innerHTML='<section class="workdone-shell"><div class="workdone-mode-head"><div class="workdone-mode-title">Workdone</div><div class="workdone-mode-switch" role="group" aria-label="Workdone mode"><span>Mode</span><button type="button" class="active" data-workdone-mode="ENTRY">Data entry</button><button type="button" data-workdone-mode="REPORT">Report</button></div></div><div id="workdoneModeBody"><div class="workspace-empty">Loading Data Entry…</div></div></section>';
  const body=host.querySelector('#workdoneModeBody'),buttons=[...host.querySelectorAll('[data-workdone-mode]')];
- const setMode=async mode=>{buttons.forEach(b=>b.classList.toggle('active',b.dataset.workdoneMode===mode));if(mode==='ENTRY'){await renderWorkdoneDataEntry(false);}else{await renderWorkdoneReportMode(body);}};
+ const setMode=async mode=>{buttons.forEach(b=>b.classList.toggle('active',b.dataset.workdoneMode===mode));if(mode==='ENTRY'){await renderWorkdoneDataEntry(manualEntryMode);}else{await renderWorkdoneReportMode(body);}};
  buttons.forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.workdoneMode)));
  await setMode('ENTRY');
 }
