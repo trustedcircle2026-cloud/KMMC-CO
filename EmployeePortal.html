@@ -450,6 +450,25 @@ body.drive-view .drive-sidebar .drive-side-link{min-height:40px}
 .manual-workdone-foot span{margin-right:auto;color:#667b8b;font-size:11px;}
 @media(max-width:700px){.manual-workdone-overlay{padding:7px}.manual-workdone-dialog{width:100%;max-height:96vh;padding:12px}.manual-workdone-toolbar{align-items:stretch}.manual-workdone-toolbar-actions{width:100%}.manual-workdone-toolbar-actions .btn{flex:1}.manual-workdone-foot span{width:100%;}}
 
+
+/* Refined neutral employee dashboard with soft monochrome gradients */
+body[data-active-module="dashboard"] .employee-dashboard-shell{color:#263746;}
+body[data-active-module="dashboard"] .employee-dash-heading{background:linear-gradient(115deg,#f7f9fb 0%,#ffffff 62%,#f0f4f7 100%);border-color:#d9e1e7;}
+body[data-active-module="dashboard"] .employee-eyebrow{display:none!important;}
+body[data-active-module="dashboard"] .employee-overview-card{background:linear-gradient(135deg,#ffffff 0%,#f3f6f8 100%);border-color:#d9e1e7;box-shadow:0 3px 12px rgba(35,55,72,.055);}
+body[data-active-module="dashboard"] .employee-overview-card:before{display:none!important;}
+body[data-active-module="dashboard"] .employee-overview-card>span{display:block!important;padding:0!important;background:transparent!important;color:#526474!important;border-radius:0!important;}
+body[data-active-module="dashboard"] .employee-overview-card>strong{color:#1e3040;}
+body[data-active-module="dashboard"] .employee-overview-card>small{color:#7b8995;}
+body[data-active-module="dashboard"] .employee-work-stats article{background:linear-gradient(135deg,#fff 0%,#f4f7f9 100%);border-color:#d9e1e7;}
+body[data-active-module="dashboard"] .employee-dash-task-columns{grid-template-columns:repeat(3,minmax(0,1fr));}
+body[data-active-module="dashboard"] .employee-dash-task-columns .employee-dash-list-panel{background:linear-gradient(180deg,#fff 0%,#f8fafb 100%);border-color:#d9e1e7;}
+body[data-active-module="dashboard"] .employee-dash-task-columns .employee-dash-list-head{background:linear-gradient(110deg,#f0f4f7 0%,#fff 100%);border-bottom-color:#e1e7ec;}
+body[data-active-module="dashboard"] .employee-dash-task-columns .employee-list-count{background:#e9eef2;color:#344b5d;}
+body[data-active-module="dashboard"] .employee-dash-task-columns .employee-status{background:#edf1f4;color:#425666;border:1px solid #dce3e8;}
+body[data-active-module="dashboard"] .employee-dash-task-columns .employee-status.is-active{background:#edf1f4;color:#425666;}
+@media(max-width:900px){body[data-active-module="dashboard"] .employee-dash-task-columns{grid-template-columns:1fr;}}
+
 </style>
   <link rel="stylesheet" href="typography.css">
 </head>
@@ -755,9 +774,10 @@ async function renderEmployeeDashboard(){
   const logs=timeData.logs||[],attendance=timeData.attendance||[],clients=clientData.records||[];
   const today=istDateInput(),todayLogs=logs.filter(r=>dateKeyForPortal(r.workDate)===today);
   const todayAttendance=attendance.filter(r=>dateKeyForPortal(r.workDate)===today).sort((a,b)=>String(a.checkIn||'').localeCompare(String(b.checkIn||'')));
-  const activeTasks=tasks.filter(t=>String(t.status||'').toUpperCase()==='IN_PROGRESS');
+  const reviewStatuses=['SUBMITTED_FOR_VERIFICATION','SUBMITTED_FOR_REVIEW','PENDING_VERIFICATION','UNDER_REVIEW'];
+  const submittedTasks=tasks.filter(t=>reviewStatuses.includes(String(t.status||'').toUpperCase()));
   const completedTasks=tasks.filter(t=>String(t.status||'').toUpperCase()==='COMPLETED');
-  const pendingTasks=tasks.filter(t=>['OPEN','PENDING','ASSIGNED','ACCEPTED','PAUSED','WORK_PAUSED','TRANSFERRED'].includes(String(t.status||'').toUpperCase()));
+  const pendingTasks=tasks.filter(t=>['OPEN','PENDING','ASSIGNED','ACCEPTED','PAUSED','WORK_PAUSED','TRANSFERRED','IN_PROGRESS'].includes(String(t.status||'').toUpperCase())&&!reviewStatuses.includes(String(t.status||'').toUpperCase())&&String(t.status||'').toUpperCase()!=='COMPLETED');
   const overdueTasks=tasks.filter(t=>{const st=String(t.status||'').toUpperCase(),due=String(t.dueDate||'').slice(0,10);return due&&due<today&&!['COMPLETED','CANCELLED'].includes(st);});
   const activeLog=todayLogs.find(r=>!r.endTime&&String(r.entryType||'').toUpperCase()==='WORK');
   const firstAttendance=todayAttendance[0];
@@ -765,26 +785,27 @@ async function renderEmployeeDashboard(){
   const clientName=t=>t.clientName||clientLookup[String(t.clientId)]?.name||clients.find(c=>String(c.id)===String(t.clientId))?.name||'—';
   const status=t=>String(t.status||'OPEN').replace(/_/g,' ');
 const dateText=t=>t?dateForLog(t):'';
-  const recentTasks=[...tasks].sort((a,b)=>String(b.updatedAt||b.createdAt||b.createdOn||'').localeCompare(String(a.updatedAt||a.createdAt||a.createdOn||'')));
   const dueSorted=[...pendingTasks].sort((a,b)=>String(a.dueDate||'9999-12-31').localeCompare(String(b.dueDate||'9999-12-31')));
+  const completedSorted=[...completedTasks].sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
+  const reviewSorted=[...submittedTasks].sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   const taskItem=t=>'<div class="employee-compact-task"><div class="employee-compact-task-main"><strong>'+esc(t.title||'Assignment')+'</strong><small>'+esc(t.jobNumber||'No job number')+' · '+esc(clientName(t))+'</small></div><div class="employee-compact-task-meta"><span class="employee-status '+(String(t.status||'').toUpperCase()==='IN_PROGRESS'?'is-active':'')+'">'+esc(status(t))+'</span><small>'+esc(t.dueDate||'No due date')+'</small></div></div>';
   const taskPanel=(title,subtitle,list,kind)=>'<section class="employee-dash-list-panel"><div class="employee-dash-list-head"><div><h3>'+title+'</h3><p>'+subtitle+'</p></div><strong class="employee-list-count">'+list.length+'</strong></div><div class="employee-compact-list">'+(list.length?list.slice(0,3).map(taskItem).join(''):'<div class="employee-compact-empty">No '+(kind==='pending'?'pending':'recent')+' assignments to show.</div>')+'</div>'+(list.length>3?'<div class="employee-list-footer"><button type="button" data-employee-go="task">More assignments <span>→</span></button></div>':'')+'</section>';
   if(!root.isConnected||activeModule!=='dashboard')return;
   const workSeconds=todayLogs.filter(r=>String(r.entryType||'WORK').toUpperCase()==='WORK').reduce((n,r)=>n+logSeconds(r),0);
   root.innerHTML='<div class="employee-dashboard-shell">'+
-   '<section class="employee-dash-heading"><div><span class="employee-eyebrow">EMPLOYEE WORKSPACE</span><h2>Welcome, '+esc(String(user.name||user.employeeName||user.fullName||'there').split(' ')[0])+'</h2><p>'+esc(new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(new Date()))+'</p></div><div class="employee-dash-tools"><button class="btn" id="employeeDashRefresh">↻ Refresh</button><button type="button" class="btn employee-export" id="showDailyWork">Daily Work</button><button type="button" class="btn employee-export" id="showAttendance">Attendance</button><button type="button" class="btn employee-export" id="showAssignments">Assignments</button></div></section>'+
+   '<section class="employee-dash-heading"><div><h2>Welcome, '+esc(String(user.name||user.employeeName||user.fullName||'there').split(' ')[0])+'</h2><p>'+esc(new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(new Date()))+'</p></div><div class="employee-dash-tools"><button class="btn" id="employeeDashRefresh">↻ Refresh</button><button type="button" class="btn employee-export" id="showDailyWork">Daily Work</button><button type="button" class="btn employee-export" id="showAttendance">Attendance</button><button type="button" class="btn employee-export" id="showAssignments">Assignments</button></div></section>'+
    '<section class="employee-overview-grid">'+
-    '<article class="employee-overview-card total"><span>Total Tasks</span><strong>'+tasks.length+'</strong><small>All assignments</small></article>'+
-    '<article class="employee-overview-card completed"><span>Completed</span><strong>'+completedTasks.length+'</strong><small>Successfully finished</small></article>'+
-    '<article class="employee-overview-card pending"><span>Pending</span><strong>'+pendingTasks.length+'</strong><small>Waiting to be worked on</small></article>'+
-    '<article class="employee-overview-card overdue"><span>Overdue</span><strong>'+overdueTasks.length+'</strong><small>Past due date</small></article>'+
+    '<article class="employee-overview-card total"><span>Total Tasks</span><strong>'+tasks.length+'</strong><small>All assigned tasks</small></article>'+
+    '<article class="employee-overview-card pending"><span>Pending Tasks</span><strong>'+pendingTasks.length+'</strong><small>Awaiting your action</small></article>'+
+    '<article class="employee-overview-card completed"><span>Completed Tasks</span><strong>'+completedTasks.length+'</strong><small>Successfully finished</small></article>'+
+    '<article class="employee-overview-card review"><span>Submitted for Review</span><strong>'+submittedTasks.length+'</strong><small>Awaiting verification</small></article>'+
    '</section>'+
    '<section class="employee-work-stats">'+
     '<article><span>Today’s Work Time</span><strong>'+durationText(workSeconds)+'</strong><small>'+(activeLog?'Currently working':'Recorded work time')+'</small></article>'+
     '<article><span>Attendance</span><strong>'+(firstAttendance?fmt(firstAttendance.checkIn):'Not clocked in')+'</strong><small>'+(firstAttendance?(firstAttendance.checkOut?'Clocked out · '+fmt(firstAttendance.checkOut):'Attendance active'):'No attendance entry today')+'</small></article>'+
     '<article><span>Assigned Clients</span><strong>'+clients.length+'</strong><small>Clients in your workspace</small></article>'+
    '</section>'+
-   '<section class="employee-dash-lists">'+taskPanel('Recent Tasks','Latest assignment activity',recentTasks,'recent')+taskPanel('Pending Tasks','Assignments awaiting completion',dueSorted,'pending')+'</section>'+
+   '<section class="employee-dash-lists employee-dash-task-columns">'+taskPanel('Pending Tasks','Tasks waiting for action',dueSorted,'pending')+taskPanel('Completed Tasks','Successfully completed assignments',completedSorted,'completed')+taskPanel('Submitted for Review','Assignments awaiting verification',reviewSorted,'review')+'</section>'+
   '</div>';
   root.querySelectorAll('[data-employee-go]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.employeeGo)));
   root.querySelector('#employeeDashRefresh')?.addEventListener('click',()=>{cacheClear('dashboard');loadDashboard();});
