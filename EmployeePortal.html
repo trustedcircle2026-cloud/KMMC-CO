@@ -842,16 +842,17 @@ async function refreshCurrentPage(){
  try{
   cacheClear();
   const page=activeModule;
-  if(page==='dashboard'){loadDashboard();return;}
-  if(page==='taskmanager'&&user.role==='EMPLOYEE'){renderEmployeeTaskManager();return;}
-  if(page==='task'&&user.role==='EMPLOYEE'){renderAcceptedTasks();return;}
-  if(page==='drive'){const refresh=el('driveNavRefresh');if(refresh){refresh.click();return;}renderDriveBrowser();return;}
-  if(page==='workdone'&&user.role==='EMPLOYEE'){const refresh=el('wsRefresh');if(refresh){refresh.click();return;}renderWorkdoneReports();return;}
-  if(page==='time'&&user.role==='EMPLOYEE'){renderTimeSheet();return;}
-  if(page==='messages'&&['ADMIN','EMPLOYEE'].includes(user.role)){chatContactsCache=[];renderMessages();return;}
-  if(page==='documents'){renderDocuments();return;}
-  if(page==='leave'){renderLeave();return;}
+  if(page==='dashboard'){await loadDashboard();return;}
+  if(page==='taskmanager'&&user.role==='EMPLOYEE'){await renderEmployeeTaskManager();return;}
+  if(page==='task'&&user.role==='EMPLOYEE'){await renderAcceptedTasks();return;}
+  if(page==='drive'){const refresh=el('driveNavRefresh');if(refresh){refresh.click();}else{renderDriveBrowser();}while(kmmcActiveRequests>0)await new Promise(resolve=>setTimeout(resolve,80));return;}
+  if(page==='workdone'&&user.role==='EMPLOYEE'){const refresh=el('wsRefresh');if(refresh){refresh.click();}else{await renderWorkdoneReports();}while(kmmcActiveRequests>0)await new Promise(resolve=>setTimeout(resolve,80));return;}
+  if(page==='time'&&user.role==='EMPLOYEE'){await renderTimeSheet();return;}
+  if(page==='messages'&&['ADMIN','EMPLOYEE'].includes(user.role)){chatContactsCache=[];await renderMessages();return;}
+  if(page==='documents'){await renderDocuments();return;}
+  if(page==='leave'){await renderLeave();return;}
   navigate(page);
+  while(kmmcActiveRequests>0)await new Promise(resolve=>setTimeout(resolve,80));
  }catch(error){showNotice('Could not refresh this page: '+(error?.message||error),'error');}
  finally{
   globalRefreshInProgress=false;
