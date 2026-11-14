@@ -151,3 +151,9 @@ Review a task submitted by an employee:
 Use decision REJECT and optional reason to return the task to IN_PROGRESS. Approval changes the task to COMPLETED, records the verifier and timestamp, and notifies the employee. The task schema adds verificationStatus, submittedForVerificationAt, verifiedAt, verifiedBy, and verificationNote; run setupKmmcBackend() after deploying the updated Apps Script to add missing columns without clearing existing data.
 
 Leave requests continue to use setLeaveStatus with APPROVED or REJECTED. All approval actions require Admin authorization and are written to the activity log.
+
+
+## Employee self-service profile
+- `myEmployeeProfile` returns the authenticated employee's profile and private profile photo data URL.
+- `updateMyEmployeeProfile` accepts a `record` object containing only employee-editable personal, contact, education, PAN/Aadhaar-last-four and bank-detail fields. The API synchronizes name, email and phone to the linked login account.
+- `uploadMyProfilePhoto` accepts `name`, `mimeType` (`image/jpeg`, `image/png`, or `image/webp`) and `base64Data`; maximum encoded size is about 1.4 MB. The image is stored in the employee's private Google Drive folder. These write actions require an approved employee session.
