@@ -1276,15 +1276,15 @@ const dateText=t=>t?dateForLog(t):'';
   const workHours=Math.floor(workSeconds/3600),workMins=Math.floor((workSeconds%3600)/60);
   const taskPanelV2=(title,subtitle,list,kind)=>'<section class="employee-dash-list-panel dash-panel-'+kind+'" data-dashboard-panel="'+kind+'" '+(kind==='completed'?'data-dashboard-drop-target="completed"':'')+'><div class="employee-dash-list-head"><div class="dash-panel-title"><span class="dash-panel-icon">'+dashIcon(kind==='review'?'review':kind)+'</span><div><h3>'+title+'</h3><p>'+subtitle+'</p></div></div><strong class="employee-list-count">'+list.length+'</strong></div><div class="employee-compact-list">'+(list.length?list.slice(0,3).map(t=>taskItem(t,kind)).join(''):'<div class="employee-compact-empty"><span class="dash-empty-icon">'+dashIcon(kind==='completed'?'completed':kind)+'</span><strong>No '+(kind==='pending'?'pending':kind==='review'?'submitted':'completed')+' assignments</strong><small>Nothing to display right now</small></div>')+'</div>'+(list.length>3?'<div class="employee-list-footer"><button type="button" data-employee-go="task">View all assignments <span>→</span></button></div>':'')+'</section>';
   root.innerHTML='<div class="employee-dashboard-shell employee-dashboard-v2">'+
+
+   '<div class="dash-section-heading"><div><h3>My assignments</h3><p>Track your work by current status</p></div><span>'+tasks.length+' total</span></div>'+
+   '<section class="employee-dash-lists employee-dash-task-columns">'+taskPanelV2('Pending Tasks','Tasks waiting for your action',dueSorted,'pending')+taskPanelV2('Completed Tasks','Successfully completed assignments',completedSorted,'completed')+taskPanelV2('Submitted for Review','Assignments awaiting verification',reviewSorted,'review')+'</section>'+
    '<section class="employee-overview-grid">'+
     '<article class="employee-overview-card total" role="button" tabindex="0" data-dashboard-detail="total"><span class="dash-kpi-icon">'+dashIcon('total')+'</span><div class="dash-kpi-content"><span>Total Tasks</span><strong>'+tasks.length+'</strong></div></article>'+
     '<article class="employee-overview-card pending" role="button" tabindex="0" data-dashboard-detail="pending"><span class="dash-kpi-icon">'+dashIcon('pending')+'</span><div class="dash-kpi-content"><span>Pending Tasks</span><strong>'+pendingTasks.length+'</strong></div></article>'+
     '<article class="employee-overview-card completed" role="button" tabindex="0" data-dashboard-detail="completed"><span class="dash-kpi-icon">'+dashIcon('completed')+'</span><div class="dash-kpi-content"><span>Completed Tasks</span><strong>'+completedTasks.length+'</strong></div></article>'+
     '<article class="employee-overview-card review" role="button" tabindex="0" data-dashboard-detail="review"><span class="dash-kpi-icon">'+dashIcon('review')+'</span><div class="dash-kpi-content"><span>Submitted for Review</span><strong>'+submittedTasks.length+'</strong></div></article>'+
    '</section>'+
-
-   '<div class="dash-section-heading"><div><h3>My assignments</h3><p>Track your work by current status</p></div><span>'+tasks.length+' total</span></div>'+
-   '<section class="employee-dash-lists employee-dash-task-columns">'+taskPanelV2('Pending Tasks','Tasks waiting for your action',dueSorted,'pending')+taskPanelV2('Completed Tasks','Successfully completed assignments',completedSorted,'completed')+taskPanelV2('Submitted for Review','Assignments awaiting verification',reviewSorted,'review')+'</section>'+
   '</div>';
   root.querySelectorAll('[data-employee-go]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.employeeGo)));
   root.querySelector('#employeeDashRefresh')?.addEventListener('click',()=>{cacheClear('dashboard');loadDashboard();});
@@ -1434,7 +1434,7 @@ const fullscreenButton=el('fullscreenButton');function syncFullscreenButton(){co
 /* Employee dashboard v2 — refined enterprise workspace */
 body[data-active-module="dashboard"] .app-layout>main{padding:16px 22px 22px!important;overflow:auto!important;}
 body[data-active-module="dashboard"] #dashboardView{height:auto!important;min-height:100%!important;overflow:visible!important;}
-.employee-dashboard-v2{height:auto!important;min-height:100%;grid-template-rows:auto auto minmax(270px,1fr)!important;gap:14px!important;color:#18334b!important;}
+.employee-dashboard-v2{height:auto!important;min-height:100%;grid-template-rows:auto minmax(270px,1fr) auto!important;gap:14px!important;color:#18334b!important;}
 .employee-dashboard-v2 .employee-dash-heading{min-height:86px!important;padding:17px 20px!important;background:#fff!important;border:1px solid #dce5ed!important;border-radius:12px!important;box-shadow:0 3px 12px rgba(19,48,72,.045)!important;}
 .dash-welcome-kicker{display:block;color:#668095;font-size:9px;font-weight:800;letter-spacing:.15em;margin-bottom:5px;}
 .employee-dashboard-v2 .employee-dash-heading h2{font-family:inherit!important;font-size:23px!important;font-weight:750!important;letter-spacing:-.35px;color:#153a58!important;margin:0 0 4px!important;}
