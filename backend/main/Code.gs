@@ -11,7 +11,7 @@ const KMMC = {
   M:{
     users:{s:'DB_USERS',h:['id','username','passwordHash','salt','role','name','email','phone','clientId','employeeId','status','mustChangePassword','createdAt','updatedAt','lastLoginAt'],r:['ADMIN']},
     clients:{s:'DB_CLIENTS',h:['id','clientCode','name','pan','email','phone','gstin','address','city','state','pincode','majorHeads','otherWork','referenceName','assignedEmployeeId','openingBalance','status','portalUsername','notes','driveFolderId','driveFolderUrl','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
-    employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt','approvalStatus','approvalNote','approvedAt','approvedBy'],r:['ADMIN']},
+    employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','profilePhotoFileId','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt','approvalStatus','approvalNote','approvedAt','approvedBy'],r:['ADMIN']},
 
 
     tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','verificationStatus','submittedForVerificationAt','verifiedAt','verifiedBy','verificationNote','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
@@ -87,7 +87,7 @@ function route_(a,q){
   if(action==='publicEnquiry')return publicEnquiry_(q);
   if(action==='getEmployeeInvite')return getEmployeeInvite_(q);
   if(action==='submitEmployeeRegistration')return submitEmployeeRegistration_(q);
-  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','submitManualWorkdoneForApproval','reviewManualWorkdoneRevision','reviewTaskVerification','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
+  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','updateMyEmployeeProfile','uploadMyProfilePhoto','submitManualWorkdoneForApproval','reviewManualWorkdoneRevision','reviewTaskVerification','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
   if(restrictedWrites.includes(action)){const actor=auth_(q);if(actor.role==='EMPLOYEE'&&employeeApprovalStatus_(actor)!=='APPROVED')throw Error('Your account is awaiting administrator approval. This action is unavailable until approval.');}
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
@@ -95,6 +95,8 @@ function route_(a,q){
     case 'logout':return logout_(q);
     case 'validateSession':case 'myProfile':return {user:pubUser_(auth_(q))};
     case 'myEmployeeProfile':return myEmployeeProfile_(auth_(q));
+    case 'updateMyEmployeeProfile':return updateMyEmployeeProfile_(auth_(q),q);
+    case 'uploadMyProfilePhoto':return uploadMyProfilePhoto_(auth_(q),q);
     case 'changePassword':return changePassword_(auth_(q),q);
     case 'resetPasswordByRegisteredEmail':return resetPasswordByRegisteredEmail_(q);
     case 'dashboard':return dashboard_(auth_(q));
@@ -834,9 +836,44 @@ function sanitize_(k,input){
 function employeeApprovalStatus_(u){if(!u||String(u.role||'').toUpperCase()!=='EMPLOYEE'||!u.employeeId)return 'APPROVED';const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));return String(e&&e.approvalStatus||'APPROVED').toUpperCase();}
 function myEmployeeProfile_(u){
   if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  ensureHeaders_(sheet_(KMMC.M.employees.s),KMMC.M.employees.h);
   const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));
   if(!e)return {employeeId:String(u.employeeId),name:String(u.name||''),joiningDate:''};
-  return {employeeId:String(e.id),employeeCode:String(e.employeeCode||''),name:String(e.name||u.name||''),designation:String(e.designation||''),joiningDate:String(e.joiningDate||'')};
+  const out={};KMMC.M.employees.h.forEach(k=>{if(k!=='salary'&&k!=='approvalNote'&&k!=='approvedBy')out[k]=e[k]??'';});
+  out.employeeId=String(e.id);out.name=String(e.name||u.name||'');
+  if(e.profilePhotoFileId){try{const file=DriveApp.getFileById(String(e.profilePhotoFileId)),blob=file.getBlob(),mime=blob.getContentType();if(/^image\/(png|jpeg|webp)$/.test(mime))out.profilePhotoDataUrl='data:'+mime+';base64,'+Utilities.base64Encode(blob.getBytes());}catch(err){logError_(err);}}
+  return out;
+}
+function updateMyEmployeeProfile_(u,q){
+  if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    ensureHeaders_(sheet_(KMMC.M.employees.s),KMMC.M.employees.h);
+    const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));if(!e)throw Error('Employee profile not found.');
+    const p=q.record||{},allowed=['name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc'];
+    allowed.forEach(k=>{if(p[k]!==undefined)e[k]=String(p[k]??'').trim();});
+    if(!String(e.name||'').trim())throw Error('Name is required.');
+    const email=String(e.email||'').trim().toLowerCase();
+    if(email&&rows_('employees').some(x=>String(x.id)!==String(e.id)&&String(x.email||'').trim().toLowerCase()===email))throw Error('This email address is already used by another employee.');
+    e.email=email;e.updatedAt=iso_();write_('employees',e.id,e);
+    const account=rows_('users').find(x=>String(x.role)==='EMPLOYEE'&&String(x.employeeId)===String(e.id));
+    if(account){account.name=e.name;account.email=e.email;account.phone=e.phone;account.updatedAt=iso_();write_('users',account.id,account);}
+    activity_(u,'UPDATE_OWN_PROFILE','employees',e.id,e.employeeCode);
+    return {saved:true,profile:myEmployeeProfile_(u)};
+  }finally{lock.releaseLock();}
+}
+function uploadMyProfilePhoto_(u,q){
+  if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const mime=String(q.mimeType||'').toLowerCase(),name=String(q.name||'Profile photo').slice(0,120),b64=String(q.base64Data||'').replace(/^data:[^,]*,/,'');
+  if(!['image/jpeg','image/png','image/webp'].includes(mime))throw Error('Choose a JPG, PNG or WebP profile photo.');
+  if(!b64||b64.length>1400000)throw Error('Profile photo must be smaller than 1 MB.');
+  const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));if(!e)throw Error('Employee profile not found.');
+  const root=employeeDriveRoot_(u),folders=root.getFoldersByName('Profile');const folder=folders.hasNext()?folders.next():root.createFolder('Profile');
+  const file=folder.createFile(Utilities.newBlob(Utilities.base64Decode(b64),mime,name));
+  if(e.profilePhotoFileId){try{DriveApp.getFileById(String(e.profilePhotoFileId)).setTrashed(true);}catch(ignore){}}
+  e.profilePhotoFileId=file.getId();e.updatedAt=iso_();write_('employees',e.id,e);
+  activity_(u,'UPDATE_PROFILE_PHOTO','employees',e.id,name);
+  return {saved:true,profile:myEmployeeProfile_(u)};
 }
 function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,approvalStatus:employeeApprovalStatus_(u),mustChangePassword:u.mustChangePassword===true||String(u.mustChangePassword).toUpperCase()==='TRUE',createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
 function publicRec_(k,r){if(k==='users')return pubUser_(r);const o={};Object.keys(r).forEach(x=>{if(!['passwordHash','salt'].includes(x))o[x]=r[x];});return o;}
