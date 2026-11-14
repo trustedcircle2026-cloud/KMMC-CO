@@ -931,7 +931,7 @@ async function renderEmployeeProfile(){
   ['email','Email Address','email'],['phone','Mobile Number','tel'],['alternatePhone','Alternate Phone','tel'],['address','Residential Address','textarea'],['city','City','text'],['state','State','text'],['pincode','PIN Code','text'],
   ['emergencyContactName','Emergency Contact Name','text'],['emergencyContactPhone','Emergency Contact Number','tel'],['education','Education / Qualification','textarea'],['pan','PAN','text'],['aadhaarLast4','Aadhaar Last 4 Digits','text'],['bankName','Bank Name','text'],['bankAccountLast4','Bank Account Last 4 Digits','text'],['ifsc','IFSC','text']
  ];
- let profile=null,modal=null,cropImage=null,cropCanvas=null,cropZoom=1,cropX=50,cropY=50;
+ let profile=null,modal=null,cropImage=null,cropCanvas=null,cropZoom=1,cropX=50,cropY=50,cropRotate=0,employeeDocuments=[],profileHistory=[];
  const displayValue=v=>{if(v===null||v===undefined||String(v).trim()==='')return '—';if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(v)){const d=new Date(v);if(!Number.isNaN(d.getTime()))return d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});}return String(v);};
  const filled=()=>editable.filter(([k])=>String(profile[k]||'').trim()!=='').length+(profile.profilePhotoFileId?1:0)+(profile.resumeFileId?1:0);
  const completion=()=>Math.round(filled()/(editable.length+2)*100);
@@ -948,14 +948,58 @@ async function renderEmployeeProfile(){
   const entries=Object.entries(p.changes||{});
   return '<section class="employee-profile-pending-card"><div><strong>Profile updates awaiting Admin approval</strong><small>Submitted '+esc(displayValue(p.submittedAt))+'</small></div><span class="employee-profile-pending-pill">PENDING</span><div class="employee-profile-pending-list">'+(entries.length?entries.map(([k,v])=>'<div><span>'+esc(k.replace(/([A-Z])/g,' $1'))+'</span><strong>'+esc(displayValue(v))+'</strong></div>').join(''):'')+(p.photoDataUrl?'<div><span>Profile Photo</span><strong>New photo awaiting approval</strong></div>':'')+'</div></section>';
  };
+ const value=(key)=>displayValue(profile[key]);
+ const field=(key,label)=>'<div class="employee-profile-detail-row"><span>'+label+'</span><strong>'+esc(value(key))+'</strong></div>';
+ const card=(title,icon,body)=>'<section class="employee-profile-reference-card"><h3><span class="employee-profile-reference-icon">'+icon+'</span>'+title+'</h3><div class="employee-profile-reference-body">'+body+'</div></section>';
+ const educationBody=profile.education?'<div class="employee-profile-education-table"><div><strong>Qualification</strong><span>'+esc(profile.education)+'</span></div></div>':'<div class="employee-profile-empty">No education details added</div>';
+ const docsBody=()=>{
+  const resume=profile.resumeFileId||profile.resumeUrl;
+  const others=employeeDocuments.length;
+  return '<div class="employee-profile-document-row"><span>Resume</span><div>'+(resume?'<a class="employee-profile-mini-btn" href="'+esc(profile.resumeUrl||('https://drive.google.com/file/d/'+encodeURIComponent(profile.resumeFileId)+'/view'))+'" target="_blank" rel="noopener">◉ View</a><button type="button" class="employee-profile-mini-btn" id="resumeAction">↗ Update</button>':'<button type="button" class="employee-profile-mini-btn" id="resumeAction">＋ Upload</button>')+'</div></div><div class="employee-profile-document-row"><span>Other Docs</span><div><span class="employee-profile-doc-count">▱ '+others+' Files</span>'+(others?'<button type="button" class="employee-profile-mini-btn" id="otherDocsView">◉ View</button>':'<span class="employee-profile-doc-none">—</span>')+'</div></div>';
+ };
  const render=()=>{
-  const photo=profile.profilePhotoDataUrl||'',initial=(profile.name||user.name||'E').trim().charAt(0).toUpperCase(),hasResume=!!(profile.resumeFileId||profile.resumeUrl);
-  if(el('profilePageButton'))el('profilePageButton').textContent='My Profile - '+completion()+'%';
-  host.innerHTML='<div class="employee-profile-compact"><section class="employee-profile-summary"><div class="employee-profile-summary-photo">'+(photo?'<img src="'+photo+'" alt="Profile photo">':esc(initial))+'</div><div class="employee-profile-summary-main"><div class="employee-profile-summary-title"><div><h2>'+esc(profile.name||user.name||'Employee')+'</h2><p>'+esc(profile.designation||'Employee')+' · '+esc(profile.department||'')+'</p></div><button type="button" class="btn primary employee-profile-edit-trigger" id="profileEditButton">✎ Edit Profile</button></div><div class="employee-profile-summary-meta"><span>Employee ID: <strong>'+esc(profile.employeeCode||profile.employeeId||'—')+'</strong></span><span>Joining: '+esc(displayValue(profile.joiningDate))+'</span><span>Status: '+esc(displayValue(profile.status||'ACTIVE'))+'</span></div><div class="employee-profile-completion"><div><strong>My Profile - '+completion()+'%</strong><span>'+filled()+' of '+(editable.length+2)+' details completed</span></div><div class="employee-profile-completion-track"><i style="width:'+completion()+'%"></i></div></div><div class="employee-profile-document-actions"><div class="employee-profile-action-item"><span>Profile Photo</span><button type="button" class="btn small" id="profilePhotoAction">'+(photo?'Change Photo':'Upload Photo')+'</button></div><div class="employee-profile-action-item"><span>Resume</span>'+(hasResume?'<a class="btn small" href="'+esc(profile.resumeUrl||('https://drive.google.com/file/d/'+encodeURIComponent(profile.resumeFileId)+'/view'))+'" target="_blank" rel="noopener">View</a><button type="button" class="btn small" id="resumeAction">Update</button>':'<button type="button" class="btn small" id="resumeAction">Upload Resume</button>')+'</div></div></div></section>'+pendingMarkup()+'<div class="employee-profile-details-grid">'+detailsMarkup()+'</div></div>';
+  const photo=profile.profilePhotoDataUrl||'',initial=(profile.name||user.name||'E').trim().charAt(0).toUpperCase(),hasResume=!!(profile.resumeFileId||profile.resumeUrl),pending=profile.pendingProfileChange,percent=completion();
+  if(el('profilePageButton'))el('profilePageButton').textContent='My Profile - '+percent+'%';
+  const phone=profile.phone||'',email=profile.email||'',location=[profile.city,profile.state].filter(Boolean).join(', '),lastUpdated=displayValue(profile.updatedAt);
+  const employment=field('department','Department')+field('designation','Designation')+field('employmentType','Employment Type')+field('reportingTo','Reporting To')+field('status','Employment Status');
+  const personal=field('dob','Date of Birth')+field('gender','Gender')+field('maritalStatus','Marital Status')+field('bloodGroup','Blood Group');
+  const contact=field('phone','Mobile')+field('alternatePhone','Alternate Mobile')+field('email','Email')+field('address','Address');
+  const emergency=field('emergencyContactName','Name')+field('emergencyContactPhone','Mobile');
+  const identity=field('pan','PAN')+field('aadhaarLast4','Aadhaar (Last 4)');
+  const bank=field('bankName','Bank Name')+field('bankAccountLast4','Account No. (Last 4)')+field('ifsc','IFSC');
+  const other=field('notes','Additional Notes')+field('createdAt','Record Created')+field('updatedAt','Last Updated');
+  host.innerHTML='<div class="employee-profile-reference"><div class="employee-profile-reference-heading"><div class="employee-profile-heading-title"><h2>Employee Profile <span>– '+percent+'% Complete</span></h2><div class="employee-profile-heading-progress"><i style="width:'+percent+'%"></i></div></div><div class="employee-profile-heading-actions"><button type="button" class="employee-profile-outline-btn" id="profileHistoryButton">◷ <span>Update History</span></button><button type="button" class="employee-profile-outline-btn employee-profile-pending-button" id="profilePendingButton">▤ <span>Pending Updates</span>'+(pending?'<b>1</b>':'')+'</button><button type="button" class="employee-profile-primary-btn" id="profileEditButton">✎ <span>Edit Profile</span></button></div></div><section class="employee-profile-reference-hero"><div class="employee-profile-hero-person"><div class="employee-profile-reference-avatar">'+(photo?'<img src="'+photo+'" alt="Employee profile photo">':esc(initial))+'</div><div class="employee-profile-reference-name"><h2>'+esc(profile.name||user.name||'Employee')+'</h2><p>'+esc(profile.designation||'Employee')+' <i></i> Employee ID: '+esc(profile.employeeCode||profile.employeeId||'—')+'</p><div class="employee-profile-hero-status"><span class="employee-profile-active-pill">'+esc(profile.status||'ACTIVE')+'</span><span>Joined: '+esc(displayValue(profile.joiningDate))+'</span></div></div></div><div class="employee-profile-hero-contact">'+(phone?'<div><span>☎</span>'+esc(phone)+'</div>':'')+(email?'<div><span>✉</span>'+esc(email)+'</div>':'')+((location||profile.address)?'<div><span>⌖</span>'+esc(location||profile.address)+'</div>':'')+'</div><div class="employee-profile-hero-actions"><div><span class="employee-profile-action-icon">▤</span><strong>Resume:</strong>'+(hasResume?'<a class="employee-profile-mini-btn" href="'+esc(profile.resumeUrl||('https://drive.google.com/file/d/'+encodeURIComponent(profile.resumeFileId)+'/view'))+'" target="_blank" rel="noopener">◉ View</a>':'<span class="employee-profile-doc-none">Not uploaded</span>')+'<button type="button" class="employee-profile-mini-btn" id="resumeAction">'+(hasResume?'Update':'Upload')+'</button></div><div><span class="employee-profile-action-icon">♙</span><strong>Profile Photo:</strong><button type="button" class="employee-profile-mini-btn" id="profilePhotoAction">▧ Change Photo</button></div></div><div class="employee-profile-hero-updated"><span>Last Updated: '+esc(lastUpdated)+'</span>'+(pending?'<strong class="employee-profile-approval-pending">Approval Pending</strong>':'')+'</div></section><div class="employee-profile-reference-grid">'+card('Employment Details','▣',employment)+card('Personal Details','♙',personal)+card('Contact Details','☎',contact)+card('Emergency Contact','♧',emergency)+card('Education Details','◇',educationBody)+card('Identity Details','▧',identity)+card('Bank Details','♜',bank)+card('Documents','▤',docsBody())+'</div></div>';
   el('profileEditButton')?.addEventListener('click',openEditModal);
   el('profilePhotoAction')?.addEventListener('click',openPhotoModal);
   el('resumeAction')?.addEventListener('click',openResumeModal);
+  el('otherDocsView')?.addEventListener('click',openDocumentsModal);
+  el('profilePendingButton')?.addEventListener('click',openPendingModal);
+  el('profileHistoryButton')?.addEventListener('click',openHistoryModal);
  };
+ function openPendingModal(){
+  const p=profile.pendingProfileChange,entries=Object.entries((p&&p.changes)||{});
+  const rows=entries.map(([k,v])=>'<div class="employee-profile-history-row"><span>'+esc(k.replace(/([A-Z])/g,' $1'))+'</span><strong>'+esc(displayValue(v))+'</strong></div>').join('');
+  openModal('Pending Profile Updates','<div class="employee-profile-pending-modal-status"><span>●</span> Approval Pending</div><p class="employee-profile-modal-intro">'+(p?'Submitted on '+esc(displayValue(p.submittedAt)):'There are no pending profile changes.')+'</p>'+(p&&p.photoDataUrl?'<div class="employee-profile-pending-photo"><img src="'+p.photoDataUrl+'" alt="Pending profile photo"><span>Profile photo awaiting approval</span></div>':'')+(rows?'<div class="employee-profile-history-list">'+rows+'</div>':'')+'<footer><button type="button" class="btn primary" id="pendingUpdatesClose">Close</button></footer>');
+  modal.querySelector('#pendingUpdatesClose').addEventListener('click',closeModal);
+ }
+ async function openHistoryModal(){
+  const m=openModal('Update History','<div class="workspace-empty">Loading profile update history…</div>');
+  try{
+   profileHistory=await api('myEmployeeProfileHistory');
+   if(!profileHistory.length){m.querySelector('.employee-profile-modal-body').innerHTML='<div class="workspace-empty">No profile update history available.</div>';return;}
+   const rows=profileHistory.map(x=>'<article class="employee-profile-history-item"><div><strong>'+esc(x.status)+'</strong><small>Submitted: '+esc(displayValue(x.submittedAt))+'</small></div><span class="employee-profile-history-status '+esc(x.status.toLowerCase())+'">'+esc(x.status)+'</span><div class="employee-profile-history-changes">'+Object.entries(x.changes||{}).map(([k,v])=>'<div>'+esc(k.replace(/([A-Z])/g,' $1'))+': <strong>'+esc(v)+'</strong></div>').join('')+(x.hasPhoto?'<div>Profile Photo: <strong>Submitted</strong></div>':'')+'</div>'+(x.reviewedAt?'<small>Reviewed: '+esc(displayValue(x.reviewedAt))+'</small>':'')+(x.reviewNote?'<p>'+esc(x.reviewNote)+'</p>':'')+'</article>').join('');
+   m.querySelector('.employee-profile-modal-body').innerHTML='<div class="employee-profile-history-list">'+rows+'</div><footer><button type="button" class="btn primary" id="profileHistoryClose">Close</button></footer>';
+   m.querySelector('#profileHistoryClose').addEventListener('click',closeModal);
+  }catch(e){m.querySelector('.employee-profile-modal-body').innerHTML='<div class="workspace-empty">Could not load update history: '+esc(e.message)+'</div>';}
+ }
+ async function openDocumentsModal(){
+  const m=openModal('Other Documents','<div class="workspace-empty">Loading your documents…</div>',true);
+  try{
+   const result=await api('myEmployeeDocuments'),items=result.items||[];
+   m.querySelector('.employee-profile-modal-body').innerHTML=items.length?'<div class="employee-profile-documents-list">'+items.map(x=>'<div><span>▤</span><section><strong>'+esc(x.name)+'</strong><small>'+esc(x.mimeType)+' · '+esc(displayValue(x.updatedAt))+'</small></section><a class="employee-profile-mini-btn" href="'+esc(x.url)+'" target="_blank" rel="noopener">View</a><a class="employee-profile-mini-btn" href="'+esc(x.downloadUrl)+'" target="_blank" rel="noopener">Download</a></div>').join('')+'</div>':'<div class="workspace-empty">No other documents uploaded.</div>';
+  }catch(e){m.querySelector('.employee-profile-modal-body').innerHTML='<div class="workspace-empty">Could not load documents: '+esc(e.message)+'</div>';}
+ }
+
  function openEditModal(){
   const inputs=editable.map(([k,label,type,opts])=>{let input='';if(type==='select')input='<select data-edit-field="'+k+'">'+opts.map(v=>'<option value="'+esc(v)+'" '+(String(profile[k]||'')===String(v)?'selected':'')+'>'+esc(v||'Select')+'</option>').join('')+'</select>';else if(type==='textarea')input='<textarea data-edit-field="'+k+'" rows="2">'+esc(profile[k]||'')+'</textarea>';else input='<input data-edit-field="'+k+'" type="'+type+'" value="'+esc(profile[k]||'')+'">';return '<label class="employee-profile-modal-field"><span>'+label+'</span>'+input+'</label>';}).join('');
   const m=openModal('Edit Employee Profile','<p class="employee-profile-modal-intro">Update your details. Changes will be sent to Admin for approval and will not change your active profile immediately.</p><form id="employeeProfileEditForm"><div class="employee-profile-modal-fields">'+inputs+'</div><footer><button type="button" class="btn" id="profileEditCancel">Cancel</button><button type="submit" class="btn primary">Review Changes</button></footer></form>',true);
@@ -969,18 +1013,22 @@ async function renderEmployeeProfile(){
    const rows=Object.entries(changes).map(([k,v])=>'<tr><th>'+esc(labels[k]||k)+'</th><td>'+esc(displayValue(profile[k]))+'</td><td>'+esc(displayValue(v))+'</td></tr>').join('');
    const review=openModal('Review Profile Changes','<p class="employee-profile-modal-intro">Confirm the details you want to submit for Admin approval.</p><div class="employee-profile-review-table-wrap"><table class="employee-profile-review-table"><thead><tr><th>Field</th><th>Current</th><th>Proposed</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="employee-profile-modal-note">Your current employee details remain active until the Admin approves this request.</div><footer><button type="button" class="btn" id="profileReviewBack">Back</button><button type="button" class="btn primary" id="profileReviewSubmit">Submit for Approval</button></footer>',true);
    review.querySelector('#profileReviewBack').addEventListener('click',()=>openEditModal());
-   review.querySelector('#profileReviewSubmit').addEventListener('click',async ev=>{const btn=ev.currentTarget;btn.disabled=true;btn.textContent='Submitting…';try{const result=await api('updateMyEmployeeProfile',{record:changes});profile=result.profile||profile;closeModal();showNotice('Profile changes submitted successfully for Admin approval.','success');render();}catch(e){showNotice('Could not submit profile changes: '+e.message,'error');btn.disabled=false;btn.textContent='Submit for Approval';}});
+   review.querySelector('#profileReviewSubmit').addEventListener('click',async ev=>{const btn=ev.currentTarget;btn.disabled=true;btn.textContent='Submitting…';try{const result=await api('updateMyEmployeeProfile',{record:changes});profile=result.profile||profile;closeModal();showNotice('Profile changes submitted successfully for Admin approval.','success');render();}catch(e){showNotice('Could not submit profile changes: '+e.mess
+age,'error');btn.disabled=false;btn.textContent='Submit for Approval';}});
   });
  }
  function openPhotoModal(){
-  const m=openModal(profile.profilePhotoFileId?'Change Profile Photo':'Upload Profile Photo','<p class="employee-profile-modal-intro">Choose a photo, crop it to a circle and submit it for Admin approval.</p><div class="employee-photo-modal-select"><label class="btn" for="profilePhotoFile">Choose Photo</label><input id="profilePhotoFile" type="file" accept="image/jpeg,image/png,image/webp" hidden><span id="profilePhotoFileName">JPG, PNG or WebP · maximum 10 MB</span></div><div id="profilePhotoCropArea" class="employee-photo-modal-crop hidden"><div class="employee-photo-modal-preview"><img id="profileCropPreview" alt="Circular profile crop preview"></div><div class="employee-photo-modal-controls"><label>Zoom <input id="profileCropZoom" type="range" min="1" max="3" step=".05" value="1"></label><label>Horizontal position <input id="profileCropX" type="range" min="0" max="100" value="50"></label><label>Vertical position <input id="profileCropY" type="range" min="0" max="100" value="50"></label></div></div><div id="profilePhotoUploadState" class="employee-profile-upload-state hidden"><span id="profilePhotoUploadLabel">Uploading securely…</span><div class="employee-profile-upload-track"><i></i></div></div><footer><button type="button" class="btn" id="profilePhotoCancel">Cancel</button><button type="button" class="btn primary" id="profilePhotoSubmit" disabled>Submit for Approval</button></footer>',false);
+  const m=openModal('Change Profile Photo','<p class="employee-profile-modal-intro">Adjust your profile photo before submitting it to Admin for approval.</p><div class="employee-photo-modal-select"><label class="btn" for="profilePhotoFile">Choose Photo</label><input id="profilePhotoFile" type="file" accept="image/jpeg,image/png,image/webp" hidden><span id="profilePhotoFileName">JPG, PNG or WebP · maximum 10 MB</span></div><div id="profilePhotoCropArea" class="employee-photo-modal-crop hidden"><div class="employee-photo-modal-preview"><img id="profileCropPreview" alt="Circular profile crop preview"></div><div class="employee-photo-modal-controls"><label>Zoom <span id="profileCropZoomValue">1.0x</span><input id="profileCropZoom" type="range" min="1" max="3" step=".05" value="1"></label><label>Rotate <span id="profileCropRotateValue">0°</span><input id="profileCropRotate" type="range" min="-180" max="180" step="1" value="0"></label><button type="button" class="btn" id="profileCropReset">↻ Reset</button></div></div><div id="profilePhotoUploadState" class="employee-profile-upload-state hidden"><span id="profilePhotoUploadLabel">Uploading…</span><div class="employee-profile-upload-track"><i></i></div></div><footer><button type="button" class="btn" id="profilePhotoCancel">Cancel</button><button type="button" class="btn primary" id="profilePhotoSubmit" disabled>Submit for Approval</button></footer>',false);
   m.querySelector('#profilePhotoCancel').addEventListener('click',closeModal);
   const fileInput=m.querySelector('#profilePhotoFile'),cropArea=m.querySelector('#profilePhotoCropArea'),preview=m.querySelector('#profileCropPreview'),submit=m.querySelector('#profilePhotoSubmit');
-  const draw=()=>{if(!cropImage||!cropCanvas)return;const side=Math.min(cropImage.naturalWidth,cropImage.naturalHeight)/cropZoom,sx=(cropImage.naturalWidth-side)*cropX/100,sy=(cropImage.naturalHeight-side)*cropY/100;cropCanvas.width=512;cropCanvas.height=512;cropCanvas.getContext('2d').drawImage(cropImage,sx,sy,side,side,0,0,512,512);preview.src=cropCanvas.toDataURL('image/jpeg',.9);};
-  fileInput.addEventListener('change',ev=>{const file=ev.target.files?.[0];if(!file)return;if(file.size>10*1024*1024||!['image/jpeg','image/png','image/webp'].includes(file.type)){showNotice('Choose a JPG, PNG or WebP image smaller than 10 MB.','error');fileInput.value='';return;}m.querySelector('#profilePhotoFileName').textContent=file.name;const reader=new FileReader();reader.onload=()=>{cropImage=new Image();cropImage.onload=()=>{cropCanvas=document.createElement('canvas');cropZoom=1;cropX=50;cropY=50;cropArea.classList.remove('hidden');submit.disabled=false;draw();};cropImage.onerror=()=>showNotice('Could not open this image.','error');cropImage.src=String(reader.result||'');};reader.onerror=()=>showNotice('Could not read this image.','error');reader.readAsDataURL(file);});
+  const draw=()=>{if(!cropImage||!cropCanvas)return;const side=Math.min(cropImage.naturalWidth,cropImage.naturalHeight)/cropZoom,sx=(cropImage.naturalWidth-side)*cropX/100,sy=(cropImage.naturalHeight-side)*cropY/100;cropCanvas.width=512;cropCanvas.height=512;const ctx=cropCanvas.getContext('2d');ctx.translate(256,256);ctx.rotate(cropRotate*Math.PI/180);ctx.drawImage(cropImage,sx,sy,side,side,-256,-256,512,512);preview.src=cropCanvas.toDataURL('image/jpeg',.9);};
+  fileInput.addEventListener('change',ev=>{const file=ev.target.files?.[0];if(!file)return;if(file.size>10*1024*1024||!['image/jpeg','image/png','image/webp'].includes(file.type)){showNotice('Choose a JPG, PNG or WebP image smaller than 10 MB.','error');fileInput.value='';return;}m.querySelector('#profilePhotoFileName').textContent=file.name;const reader=new FileReader();reader.onload=()=>{cropImage=new Image();cropImage.onload=()=>{cropCanvas=document.createElement('canvas');cropZoom=1;cropX=50;cropY=50;cropRotate=0;cropArea.classList.remove('hidden');submit.disabled=false;m.querySelector('#profileCropZoom').value='1';m.querySelector('#profileCropRotate').value='0';m.querySelector('#profileCropZoomValue').textContent='1.0x';m.querySelector('#profileCropRotateValue').textContent='0°';draw();};cropImage.onerror=()=>showNotice('Could not open this image.','error');cropImage.src=String(reader.result||'');};reader.onerror=()=>showNotice('Could not read this image.','error');reader.readAsDataURL(file);});
   m.querySelector('#profileCropZoom').addEventListener('input',ev=>{cropZoom=Number(ev.target.value)||1;draw();});
   m.querySelector('#profileCropX').addEventListener('input',ev=>{cropX=Number(ev.target.value)||50;draw();});
   m.querySelector('#profileCropY').addEventListener('input',ev=>{cropY=Number(ev.target.value)||50;draw();});
+  m.querySelector('#profileCropRotate').addEventListener('input',ev=>{cropRotate=Number(ev.target.value)||0;m.querySelector('#profileCropRotateValue').textContent=cropRotate+'°';draw();});
+  m.querySelector('#profileCropZoom').addEventListener('input',ev=>{cropZoom=Number(ev.target.value)||1;m.querySelector('#profileCropZoomValue').textContent=cropZoom.toFixed(1)+'x';draw();});
+  m.querySelector('#profileCropReset').addEventListener('click',()=>{cropZoom=1;cropX=50;cropY=50;cropRotate=0;m.querySelector('#profileCropZoom').value='1';m.querySelector('#profileCropX').value='50';m.querySelector('#profileCropY').value='50';m.querySelector('#profileCropRotate').value='0';m.querySelector('#profileCropZoomValue').textContent='1.0x';m.querySelector('#profileCropRotateValue').textContent='0°';draw();});
   submit.addEventListener('click',async()=>{if(!cropCanvas)return;submit.disabled=true;const state=m.querySelector('#profilePhotoUploadState');state.classList.remove('hidden');m.querySelector('#profilePhotoUploadLabel').textContent='Preparing cropped image…';try{const blob=await new Promise((resolve,reject)=>cropCanvas.toBlob(b=>b?resolve(b):reject(new Error('Could not crop this image.')),'image/jpeg',.88));const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||'').split(',')[1]||'');r.onerror=()=>reject(new Error('Could not prepare photo.'));r.readAsDataURL(blob);});if(base64.length>1800000)throw new Error('Cropped image is too large. Please reduce zoom or choose a smaller image.');m.querySelector('#profilePhotoUploadLabel').textContent='Sending photo to secure storage…';await apiUploadWithProgress('uploadMyProfilePhoto',{name:'Employee-profile.jpg',mimeType:'image/jpeg',base64Data:base64},()=>{});profile=await api('myEmployeeProfile');closeModal();showNotice('Profile photo submitted successfully for Admin approval.','success');render();}catch(e){showNotice('Could not submit profile photo: '+e.message,'error');submit.disabled=false;m.querySelector('#profilePhotoUploadLabel').textContent='Upload failed. You can retry.';}});
  }
  function openResumeModal(){
@@ -990,7 +1038,7 @@ async function renderEmployeeProfile(){
   const input=m.querySelector('#employeeResumeFile'),btn=m.querySelector('#resumeUpload');input.addEventListener('change',()=>{const file=input.files?.[0];btn.disabled=!file;if(file&&file.size>8*1024*1024){showNotice('Resume must be smaller than 8 MB.','error');input.value='';btn.disabled=true;}});
   btn.addEventListener('click',async()=>{const file=input.files?.[0];if(!file)return;btn.disabled=true;const state=m.querySelector('#employeeResumeState');state.classList.remove('hidden');try{const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||'').split(',')[1]||'');r.onerror=()=>reject(new Error('Could not read resume file.'));r.readAsDataURL(file);});await api('uploadMyResume',{name:file.name,mimeType:file.type||({'pdf':'application/pdf','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}[file.name.split('.').pop().toLowerCase()]||''),base64Data:base64});profile=await api('myEmployeeProfile');closeModal();showNotice('Resume uploaded successfully.','success');render();}catch(e){showNotice('Could not upload resume: '+e.message,'error');btn.disabled=false;state.querySelector('span').textContent='Upload failed. Please retry.';}});
  }
- try{profile=await api('myEmployeeProfile');render();}
+ try{const results=await Promise.all([api('myEmployeeProfile'),api('myEmployeeDocuments').catch(()=>({items:[]}))]);profile=results[0];employeeDocuments=results[1].items||[];render();}
  catch(e){host.innerHTML='<div class="workspace-empty">Could not load your profile: '+esc(e.message)+'</div>';}
 }
 async function apiUploadWithProgress(action,extra,onProgress){
@@ -2087,5 +2135,89 @@ body[data-active-module="leave"] #moduleView>.panel>.panel-body,
 .profile-approval-head strong{font-size:13px}
 .profile-approval-card>label{margin-top:8px}
 @media(max-width:760px){.employee-profile-summary{align-items:flex-start;flex-wrap:wrap}.employee-profile-summary-photo{width:68px;height:68px;flex-basis:68px}.employee-profile-summary-main{flex-basis:calc(100% - 90px)}.employee-profile-details-grid{grid-template-columns:1fr}.employee-profile-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.employee-profile-modal-fields{grid-template-columns:1fr}.employee-photo-modal-crop{grid-template-columns:1fr;justify-items:center}.employee-photo-modal-controls{width:100%}.employee-profile-pending-list{grid-template-columns:1fr}.employee-admin-approval-toolbar{align-items:flex-start;flex-direction:column}}
+</style><style id="kmmc-profile-reference-image2">
+.employee-profile-reference{display:grid;gap:14px;padding:4px 0 8px}
+.employee-profile-reference-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:2px 0 10px}
+.employee-profile-heading-title{display:flex;align-items:center;gap:20px;min-width:280px;flex:1}
+.employee-profile-heading-title h2{margin:0;color:#123b63;font-size:19px;font-weight:800;white-space:nowrap}
+.employee-profile-heading-title h2 span{font-size:16px}
+.employee-profile-heading-progress{height:9px;max-width:460px;flex:1;overflow:hidden;border-radius:20px;background:#e2eaf1}
+.employee-profile-heading-progress i{display:block;height:100%;border-radius:20px;background:#16a05b}
+.employee-profile-heading-actions{display:flex;align-items:center;gap:9px}
+.employee-profile-outline-btn,.employee-profile-primary-btn,.employee-profile-mini-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:0 14px;border:1px solid #cbdced;border-radius:7px;background:#fff;color:#174b7a;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;white-space:nowrap}
+.employee-profile-outline-btn:hover,.employee-profile-mini-btn:hover{background:#f2f7fc}
+.employee-profile-primary-btn{border-color:#104b7b;background:#104b7b;color:#fff}
+.employee-profile-pending-button{position:relative}
+.employee-profile-pending-button b{position:absolute;top:-7px;right:-6px;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#e53935;color:#fff;font-size:10px}
+.employee-profile-reference-hero{display:grid;grid-template-columns:minmax(310px,1.5fr) minmax(190px,.9fr) minmax(250px,1.05fr) minmax(185px,1fr);align-items:center;gap:16px;padding:15px 17px;border:1px solid #bfd2e7;border-radius:10px;background:#fff;box-shadow:0 2px 5px #1d4d7510}
+.employee-profile-hero-person{display:flex;align-items:center;gap:15px;min-width:0}
+.employee-profile-reference-avatar{width:112px;height:112px;flex:0 0 112px;display:grid;place-items:center;overflow:hidden;border:3px solid #d9e7f2;border-radius:50%;background:#1686d0;color:#fff;font-size:30px;font-weight:800}
+.employee-profile-reference-avatar img{width:100%;height:100%;object-fit:cover}
+.employee-profile-reference-name{min-width:0}
+.employee-profile-reference-name h2{margin:0 0 5px;color:#0b2f54;font-size:22px;font-weight:800}
+.employee-profile-reference-name p{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0;color:#263c53;font-size:12px}
+.employee-profile-reference-name p i{width:1px;height:14px;background:#b7c9d8}
+.employee-profile-hero-status{display:flex;align-items:center;gap:14px;margin-top:10px;color:#29435c;font-size:11px}
+.employee-profile-active-pill{padding:5px 14px;border:1px solid #83d99f;border-radius:20px;background:#e9fff0;color:#13823b;font-weight:800}
+.employee-profile-hero-contact{display:grid;gap:11px;min-width:0;min-height:80px;align-content:center;padding:2px 15px;border-left:1px solid #cbd9e5;border-right:1px solid #cbd9e5}
+.employee-profile-hero-contact>div{display:flex;align-items:flex-start;gap:11px;color:#243c55;font-size:12px;overflow-wrap:anywhere}
+.employee-profile-hero-contact>div span{width:17px;flex:0 0 17px;color:#164e80;font-size:16px;text-align:center}
+.employee-profile-hero-actions{display:grid;gap:13px;min-width:0;padding:2px 10px}
+.employee-profile-hero-actions>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#263e58;font-size:12px}
+.employee-profile-hero-actions strong{font-weight:700}
+.employee-profile-action-icon{width:18px;color:#174d7e;font-size:16px}
+.employee-profile-mini-btn{min-height:31px;padding:0 10px;border-radius:6px;font-size:11px}
+.employee-profile-hero-updated{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;min-height:80px;padding-left:12px;border-left:1px solid #cbd9e5;color:#354b62;font-size:11px;text-align:center}
+.employee-profile-approval-pending{padding:8px 16px;border:1px solid #f0ca78;border-radius:9px;background:#fff2d6;color:#985700;font-size:12px}
+.employee-profile-reference-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.employee-profile-reference-card{min-width:0;overflow:hidden;border:1px solid #c5d8e9;border-radius:9px;background:#fff;box-shadow:0 1px 3px #1a4d7510}
+.employee-profile-reference-card h3{display:flex;align-items:center;gap:10px;min-height:37px;margin:0;padding:7px 13px;border-bottom:1px solid #dce7f0;background:linear-gradient(90deg,#f1f7fc,#fff);color:#103e6c;font-size:14px;font-weight:800}
+.employee-profile-reference-icon{width:19px;color:#07518b;font-size:19px;text-align:center}
+.employee-profile-reference-body{display:grid;gap:7px;padding:10px 13px 12px}
+.employee-profile-detail-row{display:grid;grid-template-columns:minmax(90px,.9fr) 12px minmax(0,1.1fr);gap:5px;align-items:start;min-width:0}
+.employee-profile-detail-row>span{color:#253b53;font-size:11px}
+.employee-profile-detail-row>span:after{content:":";float:right;margin-right:-2px}
+.employee-profile-detail-row>strong{grid-column:3;color:#122e4e;font-size:11px;font-weight:600;overflow-wrap:anywhere;white-space:pre-wrap}
+.employee-profile-education-table{overflow:hidden;border:1px solid #d5e0e9;border-radius:5px}
+.employee-profile-education-table>div{display:grid;grid-template-columns:1fr 1.6fr}
+.employee-profile-education-table strong,.employee-profile-education-table span{padding:7px 8px;border-right:1px solid #d5e0e9;color:#263f59;font-size:10px}
+.employee-profile-education-table strong{background:#f1f6fa}
+.employee-profile-document-row{display:flex;align-items:center;justify-content:space-between;gap:7px;min-height:34px;color:#263e58;font-size:11px}
+.employee-profile-document-row>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.employee-profile-doc-count{color:#244b70;font-size:11px}
+.employee-profile-doc-none,.employee-profile-empty{color:#81909c;font-size:10px}
+.employee-profile-document-row .employee-profile-mini-btn{min-height:29px}
+.employee-profile-history-list{display:grid;gap:10px}
+.employee-profile-history-item{display:grid;grid-template-columns:1fr auto;gap:8px;padding:11px;border:1px solid #e0e8ef;border-radius:8px;background:#fff}
+.employee-profile-history-item>div:first-child{display:grid;gap:4px}
+.employee-profile-history-item>div:first-child strong{color:#1c4568;font-size:12px}
+.employee-profile-history-item small{color:#7a8b99;font-size:10px}
+.employee-profile-history-status{align-self:start;padding:4px 9px;border-radius:20px;background:#eef3f7;color:#526b7d;font-size:9px;font-weight:800}
+.employee-profile-history-status.approved{background:#e6f7ed;color:#148047}
+.employee-profile-history-status.pending{background:#fff2d6;color:#985700}
+.employee-profile-history-status.rejected{background:#ffebeb;color:#b53636}
+.employee-profile-history-changes{grid-column:1/-1;display:grid;gap:5px;color:#62798b;font-size:10px}
+.employee-profile-history-changes strong{color:#24415c}
+.employee-profile-pending-modal-status{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:20px;background:#fff2d6;color:#985700;font-size:11px;font-weight:800}
+.employee-profile-pending-photo{display:flex;align-items:center;gap:10px;margin:10px 0;padding:9px;border:1px solid #e0e8ef;border-radius:7px;color:#536d81;font-size:11px}
+.employee-profile-pending-photo img{width:54px;height:54px;object-fit:cover;border-radius:50%}
+.employee-profile-documents-list{display:grid;gap:8px}
+.employee-profile-documents-list>div{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #e0e8ef;border-radius:7px}
+.employee-profile-documents-list>div>span{color:#175486;font-size:18px}
+.employee-profile-documents-list section{display:grid;gap:3px;min-width:0;flex:1}
+.employee-profile-documents-list section strong{overflow-wrap:anywhere;color:#29445d;font-size:11px}
+.employee-profile-documents-list section small{color:#81909c;font-size:9px}
+.employee-photo-modal-crop{grid-template-columns:190px minmax(0,1fr);gap:26px;padding:18px}
+.employee-photo-modal-preview{width:158px;height:158px;box-sizing:border-box;border:5px solid #e4edf4;outline:1px solid #c8d8e5;background-color:#e8edf1;background-image:linear-gradient(45deg,#cbd3da 25%,transparent 25%),linear-gradient(-45deg,#cbd3da 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#cbd3da 75%),linear-gradient(-45deg,transparent 75%,#cbd3da 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+.employee-photo-modal-preview img{border-radius:50%;border:3px dashed #fff;box-sizing:border-box}
+.employee-photo-modal-controls{gap:17px}
+.employee-photo-modal-controls label{font-size:12px;font-weight:650;color:#233e58}
+.employee-photo-modal-controls label span{float:right;color:#5d7285;font-weight:700}
+.employee-photo-modal-controls input{height:6px}
+.employee-profile-upload-track{height:9px}
+.employee-profile-upload-track i{width:34%}
+@media(max-width:1250px){.employee-profile-reference-hero{grid-template-columns:minmax(260px,1.4fr) minmax(170px,1fr) minmax(230px,1fr)}.employee-profile-hero-updated{grid-column:1/-1;min-height:0;flex-direction:row;justify-content:flex-end;border-left:0;border-top:1px solid #e4ebf0;padding:10px 0 0}.employee-profile-reference-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.employee-profile-reference-heading{align-items:flex-start}.employee-profile-heading-title{width:100%;min-width:0;flex-wrap:wrap}.employee-profile-heading-progress{flex-basis:100%;max-width:none}.employee-profile-heading-actions{width:100%;flex-wrap:wrap}.employee-profile-outline-btn,.employee-profile-primary-btn{flex:1}.employee-profile-reference-hero{grid-template-columns:1fr;gap:12px}.employee-profile-hero-contact,.employee-profile-hero-updated{border:0;border-top:1px solid #e4ebf0;padding:12px 0 0;align-items:flex-start}.employee-profile-hero-actions{border-top:1px solid #e4ebf0;padding:12px 0}.employee-profile-reference-grid{grid-template-columns:1fr}.employee-photo-modal-crop{grid-template-columns:1fr;justify-items:center}.employee-photo-modal-controls{width:100%}.employee-profile-documents-list>div{flex-wrap:wrap}}
 </style>
+
 </body></html>
