@@ -164,6 +164,8 @@ Leave requests continue to use setLeaveStatus with APPROVED or REJECTED. All app
 - `myEmployeeProfile` returns the signed-in employee's active profile and, where present, the latest pending profile request.
 - `updateMyEmployeeProfile` accepts a `record` object containing only employee-editable personal, contact, education, identity-last-four and banking fields. It creates or merges a pending profile-change request; it does not update the employee master or linked login until Admin approval.
 - `uploadMyProfilePhoto` accepts `name`, `mimeType` (`image/jpeg`, `image/png`, or `image/webp`) and `base64Data`. The cropped photo is stored as a pending file and becomes the active profile photo only after Admin approval.
+- `uploadMyResume` is available to the signed-in employee. Pass `name`, `mimeType` (`application/pdf`, `application/msword`, or `application/vnd.openxmlformats-officedocument.wordprocessingml.document`) and `base64Data`. Maximum file size is 8 MB. The latest resume is stored in the employee's private Drive folder and the employee record's `resumeFileId` and `resumeUrl` are updated immediately; replacing a resume moves the previous file to Trash.
+- `listPendingProfileChanges` now also returns `employeeDetails`, containing the employee's current non-salary profile details for the Admin review popup.
 - `listPendingProfileChanges` is Admin-only and returns pending changes plus a preview of any proposed photo.
 - `reviewProfileChange` is Admin-only. Pass `id`, `decision` (`APPROVE` or `REJECT`) and optional `note`.
 
