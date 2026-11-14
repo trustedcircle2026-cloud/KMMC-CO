@@ -14,7 +14,7 @@ const KMMC = {
     employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt','approvalStatus','approvalNote','approvedAt','approvedBy'],r:['ADMIN']},
 
 
-    tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','verificationStatus','submittedForVerificationAt','verifiedAt','verifiedBy','verificationNote','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','seconds','description','calls','source','isManual','status','publicationStatus','revisionGroupId','logTime','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     workdone:{s:'DB_WORKDONE',h:['id','employeeId','workDate','jobNumber','taskId','clientId','summary','minutes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     attendance:{s:'DB_ATTENDANCE',h:['id','employeeId','workDate','checkIn','checkOut','minutes','status','note','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
@@ -87,7 +87,7 @@ function route_(a,q){
   if(action==='publicEnquiry')return publicEnquiry_(q);
   if(action==='getEmployeeInvite')return getEmployeeInvite_(q);
   if(action==='submitEmployeeRegistration')return submitEmployeeRegistration_(q);
-  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','submitManualWorkdoneForApproval','reviewManualWorkdoneRevision','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
+  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','submitManualWorkdoneForApproval','reviewManualWorkdoneRevision','reviewTaskVerification','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
   if(restrictedWrites.includes(action)){const actor=auth_(q);if(actor.role==='EMPLOYEE'&&employeeApprovalStatus_(actor)!=='APPROVED')throw Error('Your account is awaiting administrator approval. This action is unavailable until approval.');}
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
@@ -136,6 +136,8 @@ function route_(a,q){
     case 'reviewManualWorkdoneRevision':return reviewManualWorkdoneRevision_(auth_(q),q);
     case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
     case 'submitTaskForVerification':return submitTaskForVerification_(auth_(q),q);
+    case 'adminApprovals':return adminApprovals_(auth_(q));
+    case 'reviewTaskVerification':return reviewTaskVerification_(auth_(q),q);
     case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
     case 'completeTask':return taskStatus_(auth_(q),q,'COMPLETED');
     case 'uploadDocument':return uploadDoc_(auth_(q),q);
@@ -519,11 +521,51 @@ function submitTaskForVerification_(u,q){
     if(!['IN_PROGRESS','PAUSED','WORK_PAUSED'].includes(current))throw Error('Only an assignment that has been started can be submitted for verification.');
     const now=new Date(),day=localDay_(now),open=openTimerSegment_(u.employeeId,day);
     if(open&&String(open.taskId||'')===String(task.id))closeTimerSegment_(open,now);
-    task.status='SUBMITTED_FOR_VERIFICATION';task.submittedForVerificationAt=iso_();task.updatedAt=iso_();
+    task.status='SUBMITTED_FOR_VERIFICATION';task.verificationStatus='PENDING';task.submittedForVerificationAt=iso_();task.verificationNote='';task.updatedAt=iso_();
     write_('tasks',task.id,task);activity_(u,'TASK_SUBMITTED_FOR_VERIFICATION','tasks',task.id,task.jobNumber||task.title);
     return {task:task,timer:timerStatus_(u)};
   }finally{lock.releaseLock();}
 }
+
+function reviewTaskVerification_(admin,q){
+  needAdmin_(admin);
+  const id=String(q.id||''),decision=String(q.decision||'').toUpperCase(),note=String(q.reason||'').trim().slice(0,500);
+  if(!id||!['APPROVE','REJECT'].includes(decision))throw Error('Select a task and a valid approval decision.');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    const task=rows_('tasks').find(x=>String(x.id)===id);
+    if(!task)throw Error('Task was not found.');
+    if(String(task.status||'').toUpperCase()!=='SUBMITTED_FOR_VERIFICATION'||String(task.verificationStatus||'PENDING').toUpperCase()!=='PENDING')throw Error('This task is no longer awaiting verification.');
+    const now=iso_();
+    task.verificationStatus=decision==='APPROVE'?'APPROVED':'REJECTED';
+    task.verificationNote=note;
+    task.verifiedAt=now;
+    task.verifiedBy=admin.id;
+    task.status=decision==='APPROVE'?'COMPLETED':'IN_PROGRESS';
+    if(decision==='APPROVE')task.completedAt=now;
+    else task.completedAt='';
+    task.updatedAt=now;write_('tasks',task.id,task);
+    activity_(admin,decision+'_TASK_VERIFICATION','tasks',task.id,task.jobNumber||task.title);
+    const employee=rows_('users').find(x=>String(x.role)==='EMPLOYEE'&&String(x.employeeId)===String(task.employeeId));
+    if(employee)try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:employee.id,title:'Task verification '+(decision==='APPROVE'?'approved':'returned'),message:'Your task '+String(task.jobNumber||task.title||'')+' was '+(decision==='APPROVE'?'verified and completed':'returned for further work')+'.'+(note?' Admin note: '+note:''),type:'TASK_VERIFICATION',relatedId:task.id,readAt:'',createdAt:now});}catch(e){logError_(e);}
+    return {task:publicRec_('tasks',task),decision};
+  }finally{lock.releaseLock();}
+}
+function adminApprovals_(admin){
+  needAdmin_(admin);
+  const employees=rows_('employees'),users=rows_('users'),tasks=rows_('tasks'),leave=rows_('leave'),time=rows_('time');
+  const employeeName=id=>{const e=employees.find(x=>String(x.id)===String(id));return e?String(e.name||e.employeeCode||id):String(id||'Unknown employee');};
+  const pendingWorkdone=new Map();
+  time.filter(x=>String(x.publicationStatus||'').toUpperCase()==='PENDING_APPROVAL'&&String(x.revisionGroupId||'')).forEach(x=>{
+    const key=String(x.revisionGroupId),g=pendingWorkdone.get(key)||{revisionGroupId:key,employeeId:String(x.employeeId||''),employeeName:employeeName(x.employeeId),workDate:String(x.workDate||''),count:0,submittedAt:String(x.logTime||x.updatedAt||x.createdAt||'')};
+    g.count++;if(String(x.logTime||x.updatedAt||x.createdAt||'')>g.submittedAt)g.submittedAt=String(x.logTime||x.updatedAt||x.createdAt||'');pendingWorkdone.set(key,g);
+  });
+  const pendingEmployees=employees.filter(x=>String(x.approvalStatus||'APPROVED').toUpperCase()==='PENDING_APPROVAL').map(x=>publicRec_('employees',x));
+  const pendingTasks=tasks.filter(x=>String(x.status||'').toUpperCase()==='SUBMITTED_FOR_VERIFICATION'&&String(x.verificationStatus||'PENDING').toUpperCase()==='PENDING').map(x=>Object.assign(publicRec_('tasks',x),{employeeName:employeeName(x.employeeId)}));
+  const pendingLeave=leave.filter(x=>String(x.status||'PENDING').toUpperCase()==='PENDING').map(x=>Object.assign(publicRec_('leave',x),{employeeName:employeeName(x.employeeId)}));
+  return {employees:pendingEmployees,workdone:Array.from(pendingWorkdone.values()),tasks:pendingTasks,leave:pendingLeave,counts:{employees:pendingEmployees.length,workdone:pendingWorkdone.size,tasks:pendingTasks.length,leave:pendingLeave.length,total:pendingEmployees.length+pendingWorkdone.size+pendingTasks.length+pendingLeave.length}};
+}
+
 function taskStatus_(u,q,status){
   const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
   if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
