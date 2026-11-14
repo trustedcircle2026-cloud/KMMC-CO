@@ -634,6 +634,106 @@ body.drive-view .drive-sidebar .drive-side-link{min-height:40px}
 
 /* Hide the central blocking spinner; sync continues through the header sync indicator. */
 .busy-layer,.busy-layer.active{display:none!important;}
+
+
+/* KMMC Employee Portal — unified flat corporate theme */
+:root{
+  --ink:#172b3d;
+  --muted:#647586;
+  --line:#d9e1e8;
+  --paper:#ffffff;
+  --soft:#f4f7fa;
+  --blue:#17466f;
+  --blue-dark:#103653;
+  --danger:#b33b36;
+  --good:#198754;
+}
+body{background:#f5f7fa;color:#172b3d;}
+body *{background-image:none!important;}
+.topbar{background:#fff;border-bottom:1px solid #d9e1e8;box-shadow:0 1px 4px rgba(16,43,64,.05);}
+.brand strong{color:#123a5b;font-weight:700;}
+.brand small{color:#63778a;}
+.portal-menubar{background:#153f63!important;border-bottom:1px solid #0d304d!important;box-shadow:0 2px 6px rgba(16,43,64,.12)!important;}
+.portal-menubar .nav-link{color:#f7fbff!important;}
+.portal-menubar .nav-link:hover,.portal-menubar .nav-parent:hover>.nav-link{background:#205477!important;color:#fff!important;}
+.portal-menubar .nav-link.active{background:#0d304d!important;border-bottom:3px solid #69b88b!important;color:#fff!important;}
+.portal-menubar .nav-emoji,.portal-menubar .nav-link.active .nav-emoji,.portal-menubar .nav-link:hover .nav-emoji{background:#ffffff1c!important;color:#fff!important;box-shadow:none!important;}
+main{background:#f5f7fa;}
+.page-head h1{color:#153b59;}
+.page-head p,.eyebrow{color:#6c7e8d;}
+.btn{border:1px solid #cbd6df;border-radius:7px;background:#fff;color:#263f54;transition:background .15s,border-color .15s,box-shadow .15s;}
+.btn:hover{background:#edf3f7;border-color:#aebfcd;}
+.btn.primary{background:#17466f;border-color:#17466f;color:#fff;}
+.btn.primary:hover{background:#103653;border-color:#103653;}
+.btn.danger{color:#a73530;border-color:#e1c1bd;background:#fff;}
+.clock-in-btn{background:#198754!important;border-color:#198754!important;color:#fff!important;}
+.clock-in-btn:hover{background:#157347!important;}
+.clock-out-btn,.break-btn{background:#fff!important;border-color:#d8aaa5!important;color:#a73530!important;}
+.active-work-timer{background:#edf3f7;color:#17466f;border:1px solid #dbe5ec;border-radius:7px;}
+.active-break-timer{background:#fff1ef;color:#a73530;border:1px solid #efd0cc;}
+.profile-button{background:#f3f6f8;border-color:#cbd6df;color:#17466f;}
+.profile-menu,.employee-more-menu,.task-manage-menu{border-radius:9px!important;box-shadow:0 10px 28px rgba(16,43,64,.14)!important;}
+.stat,.panel,.quick-card{border-color:#d9e1e8;border-radius:10px;box-shadow:0 2px 7px rgba(16,43,64,.045);}
+.panel-head{background:#eef3f7!important;border-bottom:1px solid #dce4eb;}
+.panel-head h2{color:#173d5a;}
+.panel-body{background:#fff;}
+.table-wrap{border-color:#d9e1e8;border-radius:8px;}
+th{background:#edf2f6!important;color:#3b5367!important;}
+td{color:#31485a;}
+tbody tr:hover{background:#f5f9fc;}
+input,select,textarea{border-color:#cbd6df!important;border-radius:7px!important;background:#fff!important;color:#20384d!important;}
+input:focus,select:focus,textarea:focus{outline:2px solid #b9d3e5;outline-offset:1px;border-color:#5685a8!important;}
+.notice{border-radius:8px;border-color:#d9e1e8;background:#fff;}
+.notice.success{background:#edf7f1;border-left-color:#198754;color:#17643d;}
+.notice.error{background:#fff3f1;border-left-color:#bd5148;color:#963b34;}
+
+/* Dashboard cards: flat surfaces, clear hierarchy, restrained status colours */
+body[data-active-module="dashboard"]{background:#f5f7fa;}
+.employee-dashboard-shell{color:#172b3d;}
+.employee-dash-heading{background:#fff!important;border:1px solid #d9e1e8;border-radius:10px;box-shadow:0 2px 7px rgba(16,43,64,.04);}
+.employee-dash-heading h2{color:#153b59;}
+.employee-dash-heading p{color:#718294;}
+.employee-dash-tools .btn{border-radius:7px;}
+.employee-overview-card{background:#fff!important;border:1px solid #d9e1e8;border-radius:10px;box-shadow:0 2px 7px rgba(16,43,64,.045);}
+.employee-overview-card:before{display:block!important;width:4px;background:#17466f!important;}
+.employee-overview-card.pending:before{background:#d69a31!important;}
+.employee-overview-card.completed:before{background:#198754!important;}
+.employee-overview-card.overdue:before{background:#bd5148!important;}
+.employee-overview-card>span{color:#52697d!important;}
+.employee-overview-card>strong{color:#142f46!important;font-weight:750;}
+.employee-overview-card>small{color:#758697!important;}
+.employee-overview-card.total>span,.employee-overview-card.overdue>span{padding:0;background:transparent!important;color:#52697d!important;}
+.employee-work-stats article{background:#fff!important;border:1px solid #d9e1e8;border-radius:9px;box-shadow:0 2px 6px rgba(16,43,64,.035);}
+.employee-work-stats article>span{color:#718294;}
+.employee-work-stats article>strong{color:#173d5a;}
+.employee-dash-task-columns{gap:12px;}
+.employee-dash-task-columns .employee-dash-list-panel{background:#fff!important;border:1px solid #d9e1e8;border-radius:10px;box-shadow:0 2px 7px rgba(16,43,64,.045);}
+.employee-dash-task-columns .employee-dash-list-head{background:#edf3f7!important;border-bottom:1px solid #dce5ec;}
+.employee-dash-task-columns .employee-dash-list-head h3{color:#173d5a;}
+.employee-dash-task-columns .employee-dash-list-head p{color:#748697;}
+.employee-dash-task-columns .employee-list-count{background:#e3ebf1!important;color:#17466f!important;border-radius:8px;}
+.employee-dash-task-columns .employee-status{background:#eef2f5!important;color:#43596b!important;border:1px solid #d8e1e8!important;border-radius:20px;}
+.employee-dash-task-columns .employee-status.is-active{background:#e7f4ec!important;color:#176b42!important;border-color:#c4e2d0!important;}
+.employee-compact-task{border-bottom-color:#edf1f4;}
+.employee-compact-task-main strong{color:#203c54;}
+.employee-compact-task-main small,.employee-compact-task-meta>small{color:#7b8b99;}
+.employee-compact-empty{color:#788998;}
+.employee-list-footer{background:#f7f9fb!important;border-top-color:#e4eaf0;}
+.employee-list-footer button{color:#174f7b;}
+.employee-dash-list-panel.is-drop-ready{background:#f0f8f3!important;outline-color:#198754;}
+.employee-dash-list-panel.is-drop-ready .employee-dash-list-head{background:#e6f3eb!important;}
+@media(max-width:900px){
+  .employee-dash-task-columns{grid-template-columns:1fr!important;}
+  .employee-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:600px){
+  .topbar{padding:0 12px;}
+  .brand strong{font-size:12px;}
+  .brand small{font-size:8px;}
+  .employee-overview-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .employee-overview-card{padding:11px;min-height:88px;}
+}
+
 </style>
   <link rel="stylesheet" href="theme.css"><style id="kmmc-cormorant-global">html,body,body *{font-family:"Cormorant Garamond",Georgia,serif!important;font-style:normal!important}em,i{font-style:normal!important}
 .manual-workdone-sheet{table-layout:fixed;width:100%;border-collapse:collapse;min-width:1180px}.manual-workdone-sheet .manual-date-cell{vertical-align:middle;text-align:center;font-weight:700;min-width:95px;line-height:1.55}.manual-workdone-sheet .manual-weekday{font-size:11px;font-weight:500;color:#536779}.manual-workdone-sheet input[type=time]{min-width:108px;width:100%}.manual-workdone-sheet td{vertical-align:middle}.manual-workdone-sheet .manual-editor{display:none}.manual-workdone-capture.manual-editing .manual-editor{display:block}.manual-workdone-capture.manual-editing .manual-view{display:none}.manual-workdone-sheet .manual-editor input,.manual-workdone-sheet .manual-editor select{width:100%;min-width:80px;box-sizing:border-box}.manual-workdone-toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.manual-workdone-sheet .manual-in-row td,.manual-workdone-sheet .manual-out-row td{font-weight:600}.manual-workdone-overlay{display:none;position:fixed;inset:0;z-index:10050;background:rgba(13,31,48,.48);align-items:center;justify-content:center;padding:20px;}
