@@ -121,3 +121,33 @@ Request:
 ```
 
 The sheet is initialized automatically on the first submission. Review and restrict access to the database spreadsheet to authorized firm staff only.
+
+
+## Admin Approval Centre (v1.3)
+The Admin portal includes a unified Approval Centre. It requires an authenticated Admin session.
+
+Get all pending approval queues:
+```json
+{"action":"adminApprovals","token":"SESSION_TOKEN"}
+```
+The response contains pending employee registrations, grouped manual Workdone revisions, tasks submitted for verification, pending leave requests, and counts for each queue.
+
+Approve or reject an employee registration:
+```json
+{"action":"approveEmployee","token":"SESSION_TOKEN","id":"EMPLOYEE_ID"}
+{"action":"rejectEmployee","token":"SESSION_TOKEN","id":"EMPLOYEE_ID","reason":"Reason (optional)"}
+```
+
+Review a manual Workdone revision:
+```json
+{"action":"reviewManualWorkdoneRevision","token":"SESSION_TOKEN","revisionGroupId":"REVISION_GROUP_ID","decision":"APPROVE"}
+```
+Use decision REJECT to reject. Approval publishes the revision and supersedes the previous published manual lines for that employee and work date.
+
+Review a task submitted by an employee:
+```json
+{"action":"reviewTaskVerification","token":"SESSION_TOKEN","id":"TASK_ID","decision":"APPROVE"}
+```
+Use decision REJECT and optional reason to return the task to IN_PROGRESS. Approval changes the task to COMPLETED, records the verifier and timestamp, and notifies the employee. The task schema adds verificationStatus, submittedForVerificationAt, verifiedAt, verifiedBy, and verificationNote; run setupKmmcBackend() after deploying the updated Apps Script to add missing columns without clearing existing data.
+
+Leave requests continue to use setLeaveStatus with APPROVED or REJECTED. All approval actions require Admin authorization and are written to the activity log.
