@@ -1269,7 +1269,7 @@ async function renderWorkdoneReportMode(host){
   }else if(type.value==='DATE'){
    title='Date & Day Wise Workdone';headers=['Date','Day','Work Lines','Total Time','Minutes (MM)','Productive Time','Unallotted Work','Break Time'];
    rows=days.map(d=>{const x=dayTotals(byDay[d]);return [fmtDate(d),new Intl.DateTimeFormat('en-IN',{weekday:'long',timeZone:'Asia/Kolkata'}).format(dateObj(d)),byDay[d].length,duration(x.total),minutes(x.total),duration(x.Productive),duration(x['Unallotted Work']),duration(x.Break)];});
-   const t=rows.reduce((a,row)=>({lines:a.lines+Number(row[2]||0),total:a.total+dayTotals(byDay[days[rows.indexOf(row)]]).total,productive:a.productive+dayTotals(byDay[days[rows.indexOf(row)]]).Productive,unallotted:a.unallotted+dayTotals(byDay[days[rows.indexOf(row)]] )['Unallotted Work'],breaks:a.breaks+dayTotals(byDay[days[rows.indexOf(row)]]).Break}),{lines:0,total:0,productive:0,unallotted:0,breaks:0});
+   const t=days.reduce((a,d)=>{const x=dayTotals(byDay[d]);a.lines+=byDay[d].length;a.total+=x.total;a.productive+=x.Productive;a.unallotted+=x['Unallotted Work'];a.breaks+=x.Break;return a;},{lines:0,total:0,productive:0,unallotted:0,breaks:0});
    if(rows.length)rows.push(['TOTAL','',t.lines,duration(t.total),minutes(t.total),duration(t.productive),duration(t.unallotted),duration(t.breaks)]);
   }else if(type.value==='STATUS'){
    title='Status Wise Workdone';headers=['Status','Work Lines','Total Time','Minutes (MM)'];const map=new Map();
