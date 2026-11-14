@@ -918,7 +918,7 @@ function myEmployeeProfilePhotos_(u){
     if(!id)return '';
     try{
       const file=DriveApp.getFileById(String(id)),blob=file.getBlob(),mime=blob.getContentType();
-      if(!/^image\\/(png|jpeg|webp)$/.test(mime))return '';
+      if(['image/png','image/jpeg','image/webp'].indexOf(mime)<0)return '';
       return 'data:'+mime+';base64,'+Utilities.base64Encode(blob.getBytes());
     }catch(err){logError_(err);return '';}
   };
