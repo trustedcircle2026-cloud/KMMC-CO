@@ -1272,15 +1272,20 @@ const dateText=t=>t?dateForLog(t):'';
   const taskPanel=(title,subtitle,list,kind)=>'<section class="employee-dash-list-panel" data-dashboard-panel="'+kind+'" '+(kind==='completed'?'data-dashboard-drop-target="completed"':'')+'><div class="employee-dash-list-head"><div><h3>'+title+'</h3><p>'+subtitle+'</p></div><strong class="employee-list-count">'+list.length+'</strong></div><div class="employee-compact-list">'+(list.length?list.slice(0,3).map(t=>taskItem(t,kind)).join(''):'<div class="employee-compact-empty">No '+(kind==='pending'?'pending':'recent')+' assignments to show.</div>')+'</div>'+(list.length>3?'<div class="employee-list-footer"><button type="button" data-employee-go="task">More assignments <span>→</span></button></div>':'')+'</section>';
   if(!root.isConnected||activeModule!=='dashboard')return;
   const workSeconds=todayLogs.filter(r=>String(r.entryType||'WORK').toUpperCase()==='WORK').reduce((n,r)=>n+logSeconds(r),0);
-  root.innerHTML='<div class="employee-dashboard-shell">'+
-   '<section class="employee-dash-heading"><div><h2>Welcome, '+esc(String(user.name||user.employeeName||user.fullName||'there').split(' ')[0])+'</h2><p>'+esc(new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(new Date()))+'</p></div><div class="employee-dash-tools"><button class="btn" id="employeeDashRefresh">↻ Refresh</button><button type="button" class="btn employee-export" id="showDailyWork">Daily Work</button><button type="button" class="btn employee-export" id="showAttendance">Attendance</button><button type="button" class="btn employee-export" id="showAssignments">Assignments</button></div></section>'+
+  const dashIcon=(name)=>({total:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5-8 4.5L4 7.5Z"/><path d="m4 12 8 4.5 8-4.5M4 16.5 12 21l8-4.5"/></svg>',pending:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',completed:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16.5 9"/></svg>',review:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6-8-2Z"/><path d="m12 14 4-5"/></svg>'}[name]||''); 
+  const workHours=Math.floor(workSeconds/3600),workMins=Math.floor((workSeconds%3600)/60);
+  const taskPanel=(title,subtitle,list,kind)=>'<section class="employee-dash-list-panel dash-panel-'+kind+'" data-dashboard-panel="'+kind+'" '+(kind==='completed'?'data-dashboard-drop-target="completed"':'')+'><div class="employee-dash-list-head"><div class="dash-panel-title"><span class="dash-panel-icon">'+dashIcon(kind==='review'?'review':kind)+'</span><div><h3>'+title+'</h3><p>'+subtitle+'</p></div></div><strong class="employee-list-count">'+list.length+'</strong></div><div class="employee-compact-list">'+(list.length?list.slice(0,3).map(t=>taskItem(t,kind)).join(''):'<div class="employee-compact-empty"><span class="dash-empty-icon">'+dashIcon(kind==='completed'?'completed':kind)+'</span><strong>No '+(kind==='pending'?'pending':kind==='review'?'submitted':'completed')+' assignments</strong><small>Nothing to display right now</small></div>')+'</div>'+(list.length>3?'<div class="employee-list-footer"><button type="button" data-employee-go="task">View all assignments <span>→</span></button></div>':'')+'</section>';
+  root.innerHTML='<div class="employee-dashboard-shell employee-dashboard-v2">'+
+   '<section class="employee-dash-heading"><div class="dash-welcome-copy"><span class="dash-welcome-kicker">EMPLOYEE WORKSPACE</span><h2>Welcome back, '+esc(String(user.name||user.employeeName||user.fullName||'there').split(' ')[0])+'</h2><p>'+esc(new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(new Date()))+' <span class="dash-welcome-dot">•</span> Here is your work overview for today</p></div><div class="employee-dash-tools"><button class="btn dash-refresh-btn" id="employeeDashRefresh"><span>↻</span> Refresh</button><button type="button" class="btn employee-export" id="showDailyWork">Daily Work</button><button type="button" class="btn employee-export" id="showAttendance">Attendance</button><button type="button" class="btn dash-primary-action employee-export" id="showAssignments">View Assignments</button></div></section>'+
    '<section class="employee-overview-grid">'+
-    '<article class="employee-overview-card total" role="button" tabindex="0" data-dashboard-detail="total"><span>Total Tasks</span><strong>'+tasks.length+'</strong><small>All assigned tasks · View details ↗</small></article>'+
-    '<article class="employee-overview-card pending" role="button" tabindex="0" data-dashboard-detail="pending"><span>Pending Tasks</span><strong>'+pendingTasks.length+'</strong><small>Awaiting your action · View details ↗</small></article>'+
-    '<article class="employee-overview-card completed" role="button" tabindex="0" data-dashboard-detail="completed"><span>Completed Tasks</span><strong>'+completedTasks.length+'</strong><small>Successfully finished · View details ↗</small></article>'+
-    '<article class="employee-overview-card review" role="button" tabindex="0" data-dashboard-detail="review"><span>Submitted for Review</span><strong>'+submittedTasks.length+'</strong><small>Awaiting verification · View details ↗</small></article>'+
+    '<article class="employee-overview-card total" role="button" tabindex="0" data-dashboard-detail="total"><span class="dash-kpi-icon">'+dashIcon('total')+'</span><div class="dash-kpi-content"><span>Total Tasks</span><strong>'+tasks.length+'</strong><small>All assigned tasks <b>→</b></small></div></article>'+
+    '<article class="employee-overview-card pending" role="button" tabindex="0" data-dashboard-detail="pending"><span class="dash-kpi-icon">'+dashIcon('pending')+'</span><div class="dash-kpi-content"><span>Pending Tasks</span><strong>'+pendingTasks.length+'</strong><small>Awaiting your action <b>→</b></small></div></article>'+
+    '<article class="employee-overview-card completed" role="button" tabindex="0" data-dashboard-detail="completed"><span class="dash-kpi-icon">'+dashIcon('completed')+'</span><div class="dash-kpi-content"><span>Completed Tasks</span><strong>'+completedTasks.length+'</strong><small>Successfully finished <b>→</b></small></div></article>'+
+    '<article class="employee-overview-card review" role="button" tabindex="0" data-dashboard-detail="review"><span class="dash-kpi-icon">'+dashIcon('review')+'</span><div class="dash-kpi-content"><span>Submitted for Review</span><strong>'+submittedTasks.length+'</strong><small>Awaiting verification <b>→</b></small></div></article>'+
    '</section>'+
-   '<section class="employee-dash-lists employee-dash-task-columns">'+taskPanel('Pending Tasks','Tasks waiting for action',dueSorted,'pending')+taskPanel('Completed Tasks','Successfully completed assignments',completedSorted,'completed')+taskPanel('Submitted for Review','Assignments awaiting verification',reviewSorted,'review')+'</section>'+
+   '<section class="dash-today-strip"><div class="dash-today-label"><span class="dash-today-mark"></span><div><strong>Today at a glance</strong><small>Your daily activity summary</small></div></div><div class="dash-today-metric"><span>Work logged</span><strong>'+workHours+'h '+String(workMins).padStart(2,'0')+'m</strong></div><div class="dash-today-metric"><span>Attendance</span><strong>'+(firstAttendance?fmt(firstAttendance.checkIn):'Not clocked in')+'</strong></div><div class="dash-today-metric"><span>Overdue tasks</span><strong class="'+(overdueTasks.length?'dash-overdue-value':'')+'">'+overdueTasks.length+'</strong></div></section>'+
+   '<div class="dash-section-heading"><div><h3>My assignments</h3><p>Track your work by current status</p></div><span>'+tasks.length+' total</span></div>'+
+   '<section class="employee-dash-lists employee-dash-task-columns">'+taskPanel('Pending Tasks','Tasks waiting for your action',dueSorted,'pending')+taskPanel('Completed Tasks','Successfully completed assignments',completedSorted,'completed')+taskPanel('Submitted for Review','Assignments awaiting verification',reviewSorted,'review')+'</section>'+
   '</div>';
   root.querySelectorAll('[data-employee-go]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.employeeGo)));
   root.querySelector('#employeeDashRefresh')?.addEventListener('click',()=>{cacheClear('dashboard');loadDashboard();});
@@ -1425,4 +1430,96 @@ const fullscreenButton=el('fullscreenButton');function syncFullscreenButton(){co
   refresh();window.setInterval(refresh,30000);
 })();
 </script>
+
+<style id="employee-dashboard-v2-styles">
+/* Employee dashboard v2 — refined enterprise workspace */
+body[data-active-module="dashboard"] .app-layout>main{padding:16px 22px 22px!important;overflow:auto!important;}
+body[data-active-module="dashboard"] #dashboardView{height:auto!important;min-height:100%!important;overflow:visible!important;}
+.employee-dashboard-v2{height:auto!important;min-height:100%;grid-template-rows:auto auto auto auto minmax(270px,1fr)!important;gap:14px!important;color:#18334b!important;}
+.employee-dashboard-v2 .employee-dash-heading{min-height:86px!important;padding:17px 20px!important;background:#fff!important;border:1px solid #dce5ed!important;border-radius:12px!important;box-shadow:0 3px 12px rgba(19,48,72,.045)!important;}
+.dash-welcome-kicker{display:block;color:#668095;font-size:9px;font-weight:800;letter-spacing:.15em;margin-bottom:5px;}
+.employee-dashboard-v2 .employee-dash-heading h2{font-family:inherit!important;font-size:23px!important;font-weight:750!important;letter-spacing:-.35px;color:#153a58!important;margin:0 0 4px!important;}
+.employee-dashboard-v2 .employee-dash-heading p{font-size:11px!important;color:#748697!important;}
+.dash-welcome-dot{padding:0 5px;color:#b4c0c9;}
+.employee-dashboard-v2 .employee-dash-tools{gap:8px!important;}
+.employee-dashboard-v2 .employee-dash-tools .btn{min-height:36px!important;padding:7px 12px!important;border-radius:7px!important;font-size:11px!important;font-weight:650!important;}
+.employee-dashboard-v2 .employee-dash-tools .dash-primary-action{background:#17466f!important;color:#fff!important;border-color:#17466f!important;}
+.employee-dashboard-v2 .employee-dash-tools .dash-primary-action:hover{background:#103653!important;}
+.employee-dashboard-v2 .dash-refresh-btn span{font-size:15px;margin-right:3px;}
+.employee-dashboard-v2 .employee-overview-grid{gap:12px!important;}
+.employee-dashboard-v2 .employee-overview-card{display:flex!important;align-items:center!important;gap:14px!important;min-height:112px!important;padding:16px!important;border:1px solid #dce5ed!important;border-radius:11px!important;background:#fff!important;box-shadow:0 3px 11px rgba(19,48,72,.045)!important;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease!important;}
+.employee-dashboard-v2 .employee-overview-card:hover,.employee-dashboard-v2 .employee-overview-card:focus-visible{transform:translateY(-2px)!important;border-color:#a9bdcc!important;box-shadow:0 7px 18px rgba(19,48,72,.09)!important;}
+.employee-dashboard-v2 .employee-overview-card:before{display:none!important;}
+.dash-kpi-icon{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:12px;background:#eaf1f7;color:#1d5b88;}
+.dash-kpi-icon svg,.dash-panel-icon svg,.dash-empty-icon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.employee-dashboard-v2 .pending .dash-kpi-icon{background:#fff3df;color:#b77916;}
+.employee-dashboard-v2 .completed .dash-kpi-icon{background:#e6f5ec;color:#218452;}
+.employee-dashboard-v2 .review .dash-kpi-icon{background:#eaf1fb;color:#356da5;}
+.dash-kpi-content{min-width:0;display:flex;flex-direction:column;align-items:flex-start;}
+.employee-dashboard-v2 .dash-kpi-content>span{color:#526a7d!important;font-size:11px!important;font-weight:700!important;white-space:nowrap;}
+.employee-dashboard-v2 .dash-kpi-content>strong{margin-top:3px!important;color:#15344e!important;font-size:29px!important;line-height:1.05!important;font-weight:800!important;}
+.employee-dashboard-v2 .dash-kpi-content>small{margin-top:5px!important;color:#7b8c9a!important;font-size:9px!important;}
+.employee-dashboard-v2 .dash-kpi-content>small b{color:#28658e;margin-left:3px;}
+.dash-today-strip{display:flex;align-items:center;gap:0;min-height:70px;padding:10px 17px;background:#fff;border:1px solid #dce5ed;border-radius:11px;box-shadow:0 2px 8px rgba(19,48,72,.035);}
+.dash-today-label{display:flex;align-items:center;gap:10px;min-width:235px;margin-right:auto;}
+.dash-today-mark{width:4px;height:34px;border-radius:5px;background:#27845a;}
+.dash-today-label strong,.dash-today-label small{display:block;}
+.dash-today-label strong{font-size:12px;color:#183b57;}
+.dash-today-label small{font-size:9px;color:#8493a0;margin-top:3px;}
+.dash-today-metric{min-width:145px;padding:2px 18px;border-left:1px solid #e7edf1;}
+.dash-today-metric span{display:block;color:#7b8c9a;font-size:9px;}
+.dash-today-metric strong{display:block;margin-top:4px;color:#1a405e;font-size:14px;font-weight:750;}
+.dash-today-metric .dash-overdue-value{color:#b54743;}
+.dash-section-heading{display:flex;align-items:center;justify-content:space-between;padding:1px 2px 0;}
+.dash-section-heading h3{margin:0;color:#193c58;font-size:14px;font-weight:800;}
+.dash-section-heading p{margin:3px 0 0;color:#82919e;font-size:10px;}
+.dash-section-heading>span{padding:5px 10px;border-radius:20px;background:#eaf0f5;color:#526d82;font-size:9px;font-weight:700;}
+.employee-dashboard-v2 .employee-dash-lists{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;min-height:270px!important;}
+.employee-dashboard-v2 .employee-dash-list-panel{border:1px solid #dce5ed!important;border-radius:11px!important;background:#fff!important;box-shadow:0 3px 10px rgba(19,48,72,.04)!important;}
+.employee-dashboard-v2 .employee-dash-list-head{min-height:65px;padding:11px 13px!important;background:#f0f4f7!important;border-bottom:1px solid #e0e8ee!important;}
+.employee-dashboard-v2 .dash-panel-title{display:flex;align-items:center;gap:10px;min-width:0;}
+.dash-panel-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:9px;background:#dce9f3;color:#1c5a86;}
+.employee-dashboard-v2 .dash-panel-completed .dash-panel-icon{background:#dff1e6;color:#218452;}
+.employee-dashboard-v2 .dash-panel-review .dash-panel-icon{background:#e2ebf8;color:#356da5;}
+.employee-dashboard-v2 .dash-panel-title h3{margin:0!important;color:#1b405d!important;font-size:12px!important;font-weight:800!important;}
+.employee-dashboard-v2 .dash-panel-title p{margin:3px 0 0!important;color:#7c8d9b!important;font-size:9px!important;}
+.employee-dashboard-v2 .employee-list-count{min-width:27px!important;height:27px!important;border-radius:8px!important;background:#e1eaf1!important;color:#1d5279!important;font-weight:800!important;}
+.employee-dashboard-v2 .employee-compact-list{overflow:auto!important;}
+.employee-dashboard-v2 .employee-compact-task{min-height:66px!important;padding:10px 13px!important;border-bottom:1px solid #edf1f4!important;}
+.employee-dashboard-v2 .employee-compact-task-main strong{font-size:11px!important;color:#203e56!important;}
+.employee-dashboard-v2 .employee-compact-task-main small{font-size:9px!important;color:#81909d!important;}
+.employee-dashboard-v2 .employee-compact-task-meta>small{font-size:9px!important;color:#81909d!important;}
+.employee-dashboard-v2 .employee-status{padding:4px 8px!important;border-radius:20px!important;background:#f0f3f5!important;color:#53697a!important;border:1px solid #e1e7eb!important;font-size:8px!important;font-weight:800!important;}
+.employee-dashboard-v2 .employee-status.is-active{background:#fff3df!important;color:#9b6815!important;border-color:#f1dfbd!important;}
+.employee-dashboard-v2 .dash-panel-completed .employee-status{background:#e9f5ed!important;color:#207747!important;border-color:#d1e9d9!important;}
+.employee-dashboard-v2 .dash-panel-review .employee-status{background:#eaf1fb!important;color:#356da5!important;border-color:#d8e4f4!important;}
+.employee-dashboard-v2 .employee-compact-empty{min-height:160px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;color:#6e8190!important;}
+.dash-empty-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#f0f4f7;color:#8ba0af;}
+.dash-empty-icon svg{width:22px;height:22px;}
+.employee-dashboard-v2 .employee-compact-empty strong{font-size:11px;color:#50687b;}
+.employee-dashboard-v2 .employee-compact-empty small{font-size:9px;color:#91a0ab;}
+.employee-dashboard-v2 .employee-list-footer{background:#f8fafb!important;border-top:1px solid #edf1f4!important;}
+.employee-dashboard-v2 .employee-list-footer button{font-size:10px!important;color:#1b5b87!important;}
+@media(max-width:1000px){
+ .employee-dashboard-v2 .employee-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+ .employee-dashboard-v2 .employee-dash-lists{grid-template-columns:1fr!important;}
+ .employee-dashboard-v2 .employee-dash-list-panel{min-height:190px!important;}
+}
+@media(max-width:760px){
+ body[data-active-module="dashboard"] .app-layout>main{padding:12px!important;}
+ .employee-dashboard-v2 .employee-dash-heading{align-items:flex-start!important;flex-direction:column!important;}
+ .employee-dashboard-v2 .employee-dash-tools{justify-content:flex-start!important;}
+ .dash-today-strip{align-items:stretch;flex-wrap:wrap;gap:12px;}
+ .dash-today-label{min-width:100%;margin:0;}
+ .dash-today-metric{flex:1;min-width:100px;padding:0 8px;border-left:0;border-top:1px solid #e7edf1;padding-top:9px;}
+}
+@media(max-width:430px){
+ .employee-dashboard-v2 .employee-overview-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;}
+ .employee-dashboard-v2 .employee-overview-card{gap:9px!important;padding:11px!important;min-height:92px!important;}
+ .dash-kpi-icon{width:36px;height:36px;flex-basis:36px;}
+ .dash-kpi-icon svg{width:19px;height:19px;}
+ .employee-dashboard-v2 .dash-kpi-content>span{font-size:9px!important;white-space:normal;}
+ .employee-dashboard-v2 .dash-kpi-content>strong{font-size:24px!important;}
+}
+</style>
 </body></html>
