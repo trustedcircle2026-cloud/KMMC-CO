@@ -157,3 +157,23 @@ Leave requests continue to use setLeaveStatus with APPROVED or REJECTED. All app
 - `myEmployeeProfile` returns the authenticated employee's profile and private profile photo data URL.
 - `updateMyEmployeeProfile` accepts a `record` object containing only employee-editable personal, contact, education, PAN/Aadhaar-last-four and bank-detail fields. The API synchronizes name, email and phone to the linked login account.
 - `uploadMyProfilePhoto` accepts `name`, `mimeType` (`image/jpeg`, `image/png`, or `image/webp`) and `base64Data`; maximum encoded size is about 1.4 MB. The image is stored in the employee's private Google Drive folder. These write actions require an approved employee session.
+
+
+## Employee profile approval workflow
+
+- `myEmployeeProfile` returns the signed-in employee's active profile and, where present, the latest pending profile request.
+- `updateMyEmployeeProfile` accepts a `record` object containing only employee-editable personal, contact, education, identity-last-four and banking fields. It creates or merges a pending profile-change request; it does not update the employee master or linked login until Admin approval.
+- `uploadMyProfilePhoto` accepts `name`, `mimeType` (`image/jpeg`, `image/png`, or `image/webp`) and `base64Data`. The cropped photo is stored as a pending file and becomes the active profile photo only after Admin approval.
+- `listPendingProfileChanges` is Admin-only and returns pending changes plus a preview of any proposed photo.
+- `reviewProfileChange` is Admin-only. Pass `id`, `decision` (`APPROVE` or `REJECT`) and optional `note`.
+
+## Support tickets
+
+- `createSupportTicket` is available to signed-in Admin, Employee and Client users. Pass `record` with `subject`, `description`, `category` and `priority`. Optional image attachment fields are `base64Data`, `mimeType` and `fileName` (JPG, PNG or WebP, maximum 5 MB).
+- `list` with `module: "supportTickets"` returns all tickets to Admin and only the current user's tickets to other roles.
+- `updateSupportTicket` is Admin-only. Pass `id`, `status`, optional `adminResponse` and optional `assignedTo`.
+- Ticket statuses: `OPEN`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`.
+
+## Database setup
+
+After deploying this backend version, run `setupKmmcBackend()` once from the Apps Script editor. It creates the `DB_PROFILE_CHANGES` and `DB_SUPPORT_TICKETS` tabs if they do not already exist and adds missing schema columns without clearing existing records.
