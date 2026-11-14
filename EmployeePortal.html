@@ -929,7 +929,7 @@ async function renderEmployeeProfile(){
  const editable=[
   ['name','Full Name','text'],['dob','Date of Birth','date'],['gender','Gender','select',['','Male','Female','Other']],['maritalStatus','Marital Status','select',['','Single','Married','Other']],['bloodGroup','Blood Group','text'],
   ['email','Email Address','email'],['phone','Mobile Number','tel'],['alternatePhone','Alternate Phone','tel'],['address','Residential Address','textarea'],['city','City','text'],['state','State','text'],['pincode','PIN Code','text'],
-  ['emergencyContactName','Emergency Contact Name','text'],['emergencyContactPhone','Emergency Contact Number','tel'],['education','Education / Qualification','textarea'],['pan','PAN','text'],['aadhaarLast4','Aadhaar Last 4 Digits','text'],['bankName','Bank Name','text'],['bankAccountLast4','Bank Account Last 4 Digits','text'],['ifsc','IFSC','text']
+  ['emergencyContactName','Emergency Contact Name','text'],['emergencyContactPhone','Emergency Contact Number','tel'],['education','Education / Qualification','text'],['educationInstitution','Institution','text'],['educationYear','Passing Year','number'],['pan','PAN','text'],['aadhaarLast4','Aadhaar Last 4 Digits','text'],['bankName','Bank Name','text'],['bankAccountLast4','Bank Account Last 4 Digits','text'],['ifsc','IFSC','text']
  ];
  let profile=null,modal=null,cropImage=null,cropCanvas=null,cropZoom=1,cropX=50,cropY=50,cropRotate=0,employeeDocuments=[],profileHistory=[];
  const displayValue=v=>{if(v===null||v===undefined||String(v).trim()==='')return '—';if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(v)){const d=new Date(v);if(!Number.isNaN(d.getTime()))return d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});}return String(v);};
@@ -951,7 +951,7 @@ async function renderEmployeeProfile(){
  const value=(key)=>displayValue(profile[key]);
  const field=(key,label)=>'<div class="employee-profile-detail-row"><span>'+label+'</span><strong>'+esc(value(key))+'</strong></div>';
  const card=(title,icon,body)=>'<section class="employee-profile-reference-card"><h3><span class="employee-profile-reference-icon">'+icon+'</span>'+title+'</h3><div class="employee-profile-reference-body">'+body+'</div></section>';
- const educationBody=profile.education?'<div class="employee-profile-education-table"><div class="employee-profile-education-head"><strong>Qualification</strong><strong>Institution</strong><strong>Year</strong></div><div><span>'+esc(profile.education)+'</span><span>—</span><span>—</span></div></div>':'<div class="employee-profile-empty">No education details added</div>';
+ const educationBody=(profile.education||profile.educationInstitution||profile.educationYear)?'<div class="employee-profile-education-table"><div class="employee-profile-education-head"><strong>Qualification</strong><strong>Institution</strong><strong>Year</strong></div><div><span>'+esc(profile.education||'—')+'</span><span>'+esc(profile.educationInstitution||'—')+'</span><span>'+esc(profile.educationYear||'—')+'</span></div></div>':'<div class="employee-profile-empty">No education details added</div>';
  const docsBody=()=>{
   const resume=profile.resumeFileId||profile.resumeUrl;
   const others=employeeDocuments.length;
