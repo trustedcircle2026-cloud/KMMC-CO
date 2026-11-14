@@ -1040,8 +1040,25 @@ async function renderEmployeeProfile(){
   const input=m.querySelector('#employeeResumeFile'),btn=m.querySelector('#resumeUpload');input.addEventListener('change',()=>{const file=input.files?.[0];btn.disabled=!file;if(file&&file.size>8*1024*1024){showNotice('Resume must be smaller than 8 MB.','error');input.value='';btn.disabled=true;}});
   btn.addEventListener('click',async()=>{const file=input.files?.[0];if(!file)return;btn.disabled=true;const state=m.querySelector('#employeeResumeState');state.classList.remove('hidden');try{const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||'').split(',')[1]||'');r.onerror=()=>reject(new Error('Could not read resume file.'));r.readAsDataURL(file);});await api('uploadMyResume',{name:file.name,mimeType:file.type||({'pdf':'application/pdf','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}[file.name.split('.').pop().toLowerCase()]||''),base64Data:base64});profile=await api('myEmployeeProfile');closeModal();showNotice('Resume uploaded successfully.','success');render();}catch(e){showNotice('Could not upload resume: '+e.message,'error');btn.disabled=false;state.querySelector('span').textContent='Upload failed. Please retry.';}});
  }
- try{const results=await Promise.all([api('myEmployeeProfile'),api('myEmployeeDocuments').catch(()=>({items:[]}))]);profile=results[0];employeeDocuments=results[1].items||[];render();}
- catch(e){host.innerHTML='<div class="workspace-empty">Could not load your profile: '+esc(e.message)+'</div>';}
+ const showLoadError=message=>{
+  host.innerHTML='<div class="workspace-empty employee-profile-load-error"><strong>Unable to load your employee profile</strong><p>'+esc(message)+'</p><button type="button" class="btn primary" id="retryEmployeeProfile">Retry</button></div>';
+  host.querySelector('#retryEmployeeProfile')?.addEventListener('click',()=>renderEmployeeProfile());
+ };
+ try{
+  const loadProfile=api('myEmployeeProfile');
+  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('The profile request is taking longer than 20 seconds. Please retry.')),20000));
+  profile=await Promise.race([loadProfile,timeout]);
+  render();
+  // Documents are optional and must never block the profile screen.
+  api('myEmployeeDocuments').then(result=>{
+   employeeDocuments=result.items||[];
+   if(host.querySelector('.employee-profile-reference'))render();
+  }).catch(error=>{
+   console.warn('Employee documents could not be loaded:',error);
+  });
+ }catch(e){
+  showLoadError(e.message||'Unknown error');
+ }
 }
 async function apiUploadWithProgress(action,extra,onProgress){
  if(typeof onProgress==='function')onProgress(15);
@@ -2234,4 +2251,11 @@ body[data-active-module="leave"] #moduleView>.panel>.panel-body,
 .employee-photo-modal-controls input{accent-color:#0e5b91}
 .employee-profile-upload-track{height:9px;overflow:hidden;border-radius:10px;background:#dce5ef}
 .employee-profile-upload-track i{display:block;width:0;height:100%;border-radius:10px;background:#12629a;animation:none}
+</style>
+
+<style id="kmmc-profile-load-recovery">
+.employee-profile-load-error{display:grid;justify-items:center;gap:9px;padding:30px 18px;text-align:center;color:#173b59}
+.employee-profile-load-error strong{font-size:15px}
+.employee-profile-load-error p{margin:0;color:#64788a;font-size:12px}
+.employee-profile-load-error .btn{min-height:36px;padding:0 20px}
 </style>
