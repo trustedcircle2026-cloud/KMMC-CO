@@ -1052,7 +1052,7 @@ async function renderEmployeeProfile(){
   // Documents are optional and must never block the profile screen.
   api('myEmployeeDocuments').then(result=>{
    employeeDocuments=result.items||[];
-   if(host.querySelector('.employee-profile-reference'))render();
+   if(host.querySelector('.employee-profile-reference')&&!modal)render();
   }).catch(error=>{
    console.warn('Employee documents could not be loaded:',error);
   });
