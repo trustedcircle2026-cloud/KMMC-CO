@@ -11,7 +11,7 @@ const KMMC = {
   M:{
     users:{s:'DB_USERS',h:['id','username','passwordHash','salt','role','name','email','phone','clientId','employeeId','status','mustChangePassword','createdAt','updatedAt','lastLoginAt'],r:['ADMIN']},
     clients:{s:'DB_CLIENTS',h:['id','clientCode','name','pan','email','phone','gstin','address','city','state','pincode','majorHeads','otherWork','referenceName','assignedEmployeeId','openingBalance','status','portalUsername','notes','driveFolderId','driveFolderUrl','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
-    employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','profilePhotoFileId','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt','approvalStatus','approvalNote','approvedAt','approvedBy'],r:['ADMIN']},
+    employees:{s:'DB_EMPLOYEES',h:['id','employeeCode','name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','educationInstitution','educationYear','department','designation','joiningDate','employmentType','reportingTo','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc','salary','profilePhotoFileId','resumeFileId','resumeUrl','status','notes','createdAt','updatedAt','approvalStatus','approvalNote','approvedAt','approvedBy'],r:['ADMIN']},
 
 
     tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','verificationStatus','submittedForVerificationAt','verifiedAt','verifiedBy','verificationNote','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
@@ -915,7 +915,7 @@ function updateMyEmployeeProfile_(u,q){
   try{
     ensureHeaders_(sheet_(KMMC.M.employees.s),KMMC.M.employees.h);ensureHeaders_(sheet_(KMMC.M.profileChanges.s),KMMC.M.profileChanges.h);
     const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));if(!e)throw Error('Employee profile not found.');
-    const p=q.record||{},allowed=['name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc'];
+    const p=q.record||{},allowed=['name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','educationInstitution','educationYear','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc'];
     const changes={};allowed.forEach(k=>{if(p[k]!==undefined&&String(p[k]??'').trim()!==String(e[k]??'').trim())changes[k]=String(p[k]??'').trim();});
     if(!Object.keys(changes).length)return {saved:false,unchanged:true,profile:myEmployeeProfile_(u)};
     if(changes.name!==undefined&&!String(changes.name).trim())throw Error('Name is required.');
@@ -991,7 +991,7 @@ function reviewProfileChange_(admin,q){
     const request=rows_('profileChanges').find(x=>String(x.id)===id&&String(x.status).toUpperCase()==='PENDING');if(!request)throw Error('Pending profile request not found.');
     const employee=rows_('employees').find(x=>String(x.id)===String(request.employeeId));if(!employee)throw Error('Employee not found.');
     if(decision==='APPROVE'){
-      const changes=JSON.parse(request.changesJson||'{}'),allowed=['name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc'];
+      const changes=JSON.parse(request.changesJson||'{}'),allowed=['name','email','phone','alternatePhone','dob','gender','maritalStatus','bloodGroup','address','city','state','pincode','emergencyContactName','emergencyContactPhone','education','educationInstitution','educationYear','pan','aadhaarLast4','bankName','bankAccountLast4','ifsc'];
       allowed.forEach(k=>{if(Object.prototype.hasOwnProperty.call(changes,k))employee[k]=String(changes[k]??'').trim();});
       if(!String(employee.name||'').trim())throw Error('Employee name cannot be blank.');
       const email=String(employee.email||'').trim().toLowerCase();if(email&&rows_('employees').some(x=>String(x.id)!==String(employee.id)&&String(x.email||'').trim().toLowerCase()===email))throw Error('This email address is already used by another employee.');
