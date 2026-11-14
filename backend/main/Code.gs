@@ -89,7 +89,7 @@ function route_(a,q){
   if(action==='publicEnquiry')return publicEnquiry_(q);
   if(action==='getEmployeeInvite')return getEmployeeInvite_(q);
   if(action==='submitEmployeeRegistration')return submitEmployeeRegistration_(q);
-  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','updateMyEmployeeProfile','uploadMyProfilePhoto','reviewProfileChange','updateSupportTicket','submitManualWorkdoneForApproval','reviewManualWorkdoneRevision','reviewTaskVerification','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
+  const restrictedWrites=['create','update','delete','createUser','createClient','quickCreateClient','updateClient','deleteClient','bulkImportClients','bulkImportEmployees','createEmployee','updateEmployee','deleteEmployee','setUserStatus','clockIn','clockOut','startTaskTimer','taskTransition','driveCreate','driveUpload','driveSave','driveRename','driveDelete','startBreak','stopBreak','updateMyEmployeeProfile','uploadMyProfilePhoto','uploadMyResume','reviewProfileChange','updateSupportTicket','submitManualWorkdoneForApproval','reviewManualWorkdoneRevision','reviewTaskVerification','setTaskStatus','submitTaskForVerification','startTask','completeTask','uploadDocument','sendMessage','markMessagesRead','setLeaveStatus','createInvoice','recordCollection','postReceipt','postVoucher','postPayment','cancelAccountingVoucher'];
   if(restrictedWrites.includes(action)){const actor=auth_(q);if(actor.role==='EMPLOYEE'&&employeeApprovalStatus_(actor)!=='APPROVED')throw Error('Your account is awaiting administrator approval. This action is unavailable until approval.');}
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
@@ -99,6 +99,7 @@ function route_(a,q){
     case 'myEmployeeProfile':return myEmployeeProfile_(auth_(q));
     case 'updateMyEmployeeProfile':return updateMyEmployeeProfile_(auth_(q),q);
     case 'uploadMyProfilePhoto':return uploadMyProfilePhoto_(auth_(q),q);
+    case 'uploadMyResume':return uploadMyResume_(auth_(q),q);
     case 'listPendingProfileChanges':return listPendingProfileChanges_(auth_(q));
     case 'reviewProfileChange':return reviewProfileChange_(auth_(q),q);
     case 'createSupportTicket':return createSupportTicket_(auth_(q),q);
@@ -896,10 +897,37 @@ function uploadMyProfilePhoto_(u,q){
     return {submitted:true,status:'PENDING',requestId:pending.id,profile:myEmployeeProfile_(u)};
   }finally{lock.releaseLock();}
 }
+function uploadMyResume_(u,q){
+  if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const mime=String(q.mimeType||'').toLowerCase(),name=String(q.name||'Resume').trim().slice(0,180),b64=String(q.base64Data||'').replace(/^data:[^,]*,/,'');
+  const allowed={'application/pdf':'.pdf','application/msword':'.doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'.docx'};
+  if(!allowed[mime])throw Error('Upload your resume as PDF, DOC or DOCX.');
+  if(!b64||b64.length>11000000)throw Error('Resume file is required and must be smaller than 8 MB.');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));if(!e)throw Error('Employee profile not found.');
+    const root=employeeDriveRoot_(u),it=root.getFoldersByName('Resume'),folder=it.hasNext()?it.next():root.createFolder('Resume');
+    const file=folder.createFile(Utilities.newBlob(Utilities.base64Decode(b64),mime,name));
+    const old=String(e.resumeFileId||'');e.resumeFileId=file.getId();e.resumeUrl=file.getUrl();e.updatedAt=iso_();write_('employees',e.id,e);
+    if(old&&old!==file.getId()){try{DriveApp.getFileById(old).setTrashed(true);}catch(ignore){}}
+    activity_(u,'UPLOAD_EMPLOYEE_RESUME','employees',e.id,name);
+    return {uploaded:true,resumeFileId:e.resumeFileId,resumeUrl:e.resumeUrl,resumeName:file.getName(),profile:myEmployeeProfile_(u)};
+  }finally{lock.releaseLock();}
+}
 function listPendingProfileChanges_(admin){
   needAdmin_(admin);ensureHeaders_(sheet_(KMMC.M.profileChanges.s),KMMC.M.profileChanges.h);
-  return rows_('profileChanges').filter(x=>String(x.status).toUpperCase()==='PENDING').sort((a,b)=>String(b.submittedAt).localeCompare(String(a.submittedAt))).map(x=>{let changes={};try{changes=JSON.parse(x.changesJson||'{}');}catch(ignore){}let photoPreview='';if(x.photoFileId){try{const f=DriveApp.getFileById(String(x.photoFileId)),blob=f.getBlob(),mime=blob.getContentType();if(/^image\/(png|jpeg|webp)$/.test(mime))photoPreview='data:'+mime+';base64,'+Utilities.base64Encode(blob.getBytes());}catch(ignore){}}return {id:x.id,employeeId:x.employeeId,employeeName:x.employeeName,changes,hasPhoto:!!x.photoFileId,photoPreview,submittedAt:x.submittedAt};});
+  const employees=rows_('employees');
+  return rows_('profileChanges').filter(x=>String(x.status).toUpperCase()==='PENDING').sort((a,b)=>String(b.submittedAt).localeCompare(String(a.submittedAt))).map(x=>{
+    let changes={};try{changes=JSON.parse(x.changesJson||'{}');}catch(ignore){}
+    let photoPreview='';if(x.photoFileId){try{const f=DriveApp.getFileById(String(x.photoFileId)),blob=f.getBlob(),mime=blob.getContentType();if(/^image\/(png|jpeg|webp)$/.test(mime))photoPreview='data:'+mime+';base64,'+Utilities.base64Encode(blob.getBytes());}catch(ignore){}}
+    const e=employees.find(v=>String(v.id)===String(x.employeeId))||{};
+    const employeeDetails={};KMMC.M.employees.h.forEach(k=>{if(!['salary','approvalNote','approvedBy','profilePhotoFileId','resumeFileId'].includes(k))employeeDetails[k]=e[k]??'';});
+    employeeDetails.employeeId=String(e.id||x.employeeId||'');employeeDetails.name=String(e.name||x.employeeName||'');
+    employeeDetails.hasResume=!!e.resumeFileId;employeeDetails.resumeUrl=String(e.resumeUrl||'');
+    return {id:x.id,employeeId:x.employeeId,employeeName:x.employeeName,changes,hasPhoto:!!x.photoFileId,photoPreview,submittedAt:x.submittedAt,employeeDetails};
+  });
 }
+
 function reviewProfileChange_(admin,q){
   needAdmin_(admin);const id=String(q.id||''),decision=String(q.decision||'').toUpperCase(),note=String(q.note||'').trim().slice(0,1000);
   if(!['APPROVE','REJECT'].includes(decision))throw Error('Choose Approve or Reject.');
