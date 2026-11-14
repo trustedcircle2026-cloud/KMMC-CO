@@ -97,6 +97,7 @@ function route_(a,q){
     case 'logout':return logout_(q);
     case 'validateSession':case 'myProfile':return {user:pubUser_(auth_(q))};
     case 'myEmployeeProfile':return myEmployeeProfile_(auth_(q));
+    case 'myEmployeeProfilePhotos':return myEmployeeProfilePhotos_(auth_(q));
     case 'myEmployeeProfileHistory':return myEmployeeProfileHistory_(auth_(q));
     case 'myEmployeeDocuments':return myEmployeeDocuments_(auth_(q));
     case 'updateMyEmployeeProfile':return updateMyEmployeeProfile_(auth_(q),q);
@@ -904,9 +905,26 @@ function myEmployeeProfile_(u){
   if(!e)return {employeeId:String(u.employeeId),name:String(u.name||''),joiningDate:''};
   const out={};KMMC.M.employees.h.forEach(k=>{if(k!=='salary'&&k!=='approvalNote'&&k!=='approvedBy')out[k]=e[k]??'';});
   out.employeeId=String(e.id);out.name=String(e.name||u.name||'');
-  if(e.profilePhotoFileId){try{const file=DriveApp.getFileById(String(e.profilePhotoFileId)),blob=file.getBlob(),mime=blob.getContentType();if(/^image\/(png|jpeg|webp)$/.test(mime))out.profilePhotoDataUrl='data:'+mime+';base64,'+Utilities.base64Encode(blob.getBytes());}catch(err){logError_(err);}}
   const pending=rows_('profileChanges').filter(x=>String(x.employeeId)===String(e.id)&&String(x.status).toUpperCase()==='PENDING').sort((a,b)=>String(b.submittedAt).localeCompare(String(a.submittedAt)))[0];
-  if(pending){out.pendingProfileChange={id:pending.id,status:'PENDING',submittedAt:pending.submittedAt,changes:JSON.parse(pending.changesJson||'{}')};if(pending.photoFileId){try{const f=DriveApp.getFileById(String(pending.photoFileId)),blob=f.getBlob(),mime=blob.getContentType();if(/^image\/(png|jpeg|webp)$/.test(mime))out.pendingProfileChange.photoDataUrl='data:'+mime+';base64,'+Utilities.base64Encode(blob.getBytes());}catch(ignore){}}}
+  if(pending)out.pendingProfileChange={id:pending.id,status:'PENDING',submittedAt:pending.submittedAt,changes:JSON.parse(pending.changesJson||'{}')};
+  return out;
+}
+function myEmployeeProfilePhotos_(u){
+  if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));
+  if(!e)throw Error('Employee profile not found.');
+  const out={profilePhotoDataUrl:'',pendingPhotoDataUrl:''};
+  const readImage=id=>{
+    if(!id)return '';
+    try{
+      const file=DriveApp.getFileById(String(id)),blob=file.getBlob(),mime=blob.getContentType();
+      if(!/^image\\/(png|jpeg|webp)$/.test(mime))return '';
+      return 'data:'+mime+';base64,'+Utilities.base64Encode(blob.getBytes());
+    }catch(err){logError_(err);return '';}
+  };
+  out.profilePhotoDataUrl=readImage(e.profilePhotoFileId);
+  const pending=rows_('profileChanges').filter(x=>String(x.employeeId)===String(e.id)&&String(x.status).toUpperCase()==='PENDING').sort((a,b)=>String(b.submittedAt).localeCompare(String(a.submittedAt)))[0];
+  if(pending)out.pendingPhotoDataUrl=readImage(pending.photoFileId);
   return out;
 }
 function updateMyEmployeeProfile_(u,q){
