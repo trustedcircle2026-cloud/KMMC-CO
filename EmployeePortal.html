@@ -923,8 +923,8 @@ async function renderEmployeeProfile(){
  ];
  const completionFields=groups.flatMap(g=>g.fields.map(f=>f[0]));
  let profile=null,editing=false,cropImage=null,cropCanvas=null,cropZoom=1,cropX=50,cropY=50;
- const countFilled=()=>completionFields.filter(k=>String(profile&&profile[k]||'').trim()!=='').length;
- const completion=()=>Math.round(countFilled()/completionFields.length*100);
+ const countFilled=()=>completionFields.filter(k=>String(profile&&profile[k]||'').trim()!=='').length+((profile&&(profile.profilePhotoFileId||profile.pendingProfileChange&&profile.pendingProfileChange.photoDataUrl))?1:0);
+ const completion=()=>Math.round(countFilled()/(completionFields.length+1)*100);
  const render=()=>{
   const pending=profile.pendingProfileChange||null,photo=pending&&pending.photoDataUrl?pending.photoDataUrl:(profile.profilePhotoDataUrl||'');
   const initial=(profile.name||user.name||'E').trim().charAt(0).toUpperCase();
