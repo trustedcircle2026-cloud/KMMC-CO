@@ -951,7 +951,7 @@ async function renderEmployeeProfile(){
  const value=(key)=>displayValue(profile[key]);
  const field=(key,label)=>'<div class="employee-profile-detail-row"><span>'+label+'</span><strong>'+esc(value(key))+'</strong></div>';
  const card=(title,icon,body)=>'<section class="employee-profile-reference-card"><h3><span class="employee-profile-reference-icon">'+icon+'</span>'+title+'</h3><div class="employee-profile-reference-body">'+body+'</div></section>';
- const educationBody=profile.education?'<div class="employee-profile-education-table"><div><strong>Qualification</strong><span>'+esc(profile.education)+'</span></div></div>':'<div class="employee-profile-empty">No education details added</div>';
+ const educationBody=profile.education?'<div class="employee-profile-education-table"><div class="employee-profile-education-head"><strong>Qualification</strong><strong>Institution</strong><strong>Year</strong></div><div><span>'+esc(profile.education)+'</span><span>—</span><span>—</span></div></div>':'<div class="employee-profile-empty">No education details added</div>';
  const docsBody=()=>{
   const resume=profile.resumeFileId||profile.resumeUrl;
   const others=employeeDocuments.length;
@@ -2218,6 +2218,8 @@ body[data-active-module="leave"] #moduleView>.panel>.panel-body,
 .employee-profile-upload-track i{width:34%}
 @media(max-width:1250px){.employee-profile-reference-hero{grid-template-columns:minmax(260px,1.4fr) minmax(170px,1fr) minmax(230px,1fr)}.employee-profile-hero-updated{grid-column:1/-1;min-height:0;flex-direction:row;justify-content:flex-end;border-left:0;border-top:1px solid #e4ebf0;padding:10px 0 0}.employee-profile-reference-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.employee-profile-reference-heading{align-items:flex-start}.employee-profile-heading-title{width:100%;min-width:0;flex-wrap:wrap}.employee-profile-heading-progress{flex-basis:100%;max-width:none}.employee-profile-heading-actions{width:100%;flex-wrap:wrap}.employee-profile-outline-btn,.employee-profile-primary-btn{flex:1}.employee-profile-reference-hero{grid-template-columns:1fr;gap:12px}.employee-profile-hero-contact,.employee-profile-hero-updated{border:0;border-top:1px solid #e4ebf0;padding:12px 0 0;align-items:flex-start}.employee-profile-hero-actions{border-top:1px solid #e4ebf0;padding:12px 0}.employee-profile-reference-grid{grid-template-columns:1fr}.employee-photo-modal-crop{grid-template-columns:1fr;justify-items:center}.employee-photo-modal-controls{width:100%}.employee-profile-documents-list>div{flex-wrap:wrap}}
+.employee-profile-education-table>div{display:grid;grid-template-columns:1.2fr 1.5fr .55fr}
+.employee-profile-education-table .employee-profile-education-head strong{background:#f1f6fa;font-weight:750}
 </style>
 
 </body></html>
