@@ -148,6 +148,7 @@ function route_(a,q){
     case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
     case 'submitTaskForVerification':return submitTaskForVerification_(auth_(q),q);
     case 'adminApprovals':return adminApprovals_(auth_(q));
+    case 'serviceRequestHistory':return serviceRequestHistory_(auth_(q));
     case 'reviewTaskVerification':return reviewTaskVerification_(auth_(q),q);
     case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
     case 'completeTask':return taskStatus_(auth_(q),q,'COMPLETED');
@@ -418,6 +419,8 @@ function visible_(u,k,r){
     return false;
   }
   if(k==='users')return String(r.id)===String(u.id);
+  if(k==='profileChanges')return String(r.employeeId)===String(u.employeeId);
+  if(k==='supportTickets')return String(r.requesterUserId)===String(u.id);
   if(k==='employees')return false;
   if(k==='messages')return String(r.fromUserId)===String(u.id)||String(r.toUserId)===String(u.id);
   if(k==='notifications')return String(r.userId)===String(u.id);
@@ -579,6 +582,29 @@ function adminApprovals_(admin){
   return {employees:pendingEmployees,workdone:Array.from(pendingWorkdone.values()),tasks:pendingTasks,leave:pendingLeave,counts:{employees:pendingEmployees.length,workdone:pendingWorkdone.size,tasks:pendingTasks.length,leave:pendingLeave.length,total:pendingEmployees.length+pendingWorkdone.size+pendingTasks.length+pendingLeave.length}};
 }
 
+function serviceRequestHistory_(u){
+  if(!u||!['ADMIN','EMPLOYEE','CLIENT'].includes(String(u.role||'')))throw Error('Access denied.');
+  const allowed=(module,row)=>{
+    if(u.role==='ADMIN')return true;
+    if(module==='supportTickets')return String(row.requesterUserId||'')===String(u.id);
+    if(module==='profileChanges')return u.role==='EMPLOYEE'&&String(row.employeeId||'')===String(u.employeeId);
+    if(u.role==='EMPLOYEE')return ['tasks','time','leave'].includes(module)&&String(row.employeeId||'')===String(u.employeeId);
+    if(u.role==='CLIENT')return module==='tasks'&&String(row.clientId||'')===String(u.clientId);
+    return false;
+  };
+  const employees=rows_('employees');
+  const employeeName=id=>{const e=employees.find(x=>String(x.id)===String(id));return String(e&&e.name||id||'Unknown');};
+  const tickets=rows_('supportTickets').filter(x=>allowed('supportTickets',x)).map(x=>({id:x.id,requestNo:x.ticketNo||'',service:'Support',subject:x.subject||'',requesterName:x.requesterName||'',employeeId:x.employeeId||'',status:String(x.status||'OPEN').toUpperCase(),submittedAt:x.createdAt||'',reviewedAt:x.updatedAt||'',reviewer:x.assignedTo||'',remarks:x.adminResponse||'',priority:x.priority||'NORMAL',category:x.category||'',description:x.description||'',attachmentUrl:x.attachmentUrl||''}));
+  const profiles=rows_('profileChanges').filter(x=>allowed('profileChanges',x)).map(x=>{let changes={};try{changes=JSON.parse(x.changesJson||'{}');}catch(ignore){}return {id:x.id,requestNo:x.id,service:'Profile',subject:'Profile details / photo update',requesterName:x.employeeName||employeeName(x.employeeId),employeeId:x.employeeId||'',status:String(x.status||'PENDING').toUpperCase(),submittedAt:x.submittedAt||'',reviewedAt:x.reviewedAt||'',reviewer:x.reviewedBy||'',remarks:x.reviewNote||'',details:changes,hasPhoto:!!x.photoFileId};});
+  const tasks=rows_('tasks').filter(x=>allowed('tasks',x)).map(x=>({id:x.id,requestNo:x.jobNumber||x.id,service:'Task / Work Assignment',subject:x.title||x.description||'Task assignment',requesterName:employeeName(x.employeeId),employeeId:x.employeeId||'',status:String(x.verificationStatus||'').toUpperCase()==='PENDING'&&String(x.status||'').toUpperCase()==='SUBMITTED_FOR_VERIFICATION'?'PENDING_APPROVAL':String(x.verificationStatus||x.status||'OPEN').toUpperCase(),submittedAt:x.submittedForVerificationAt||x.createdAt||'',reviewedAt:x.verifiedAt||'',reviewer:x.verifiedBy||'',remarks:x.verificationNote||'',taskStatus:x.status||'',dueDate:x.dueDate||''}));
+  const workdone=rows_('time').filter(x=>allowed('time',x)&&String(x.revisionGroupId||'')).reduce((out,x)=>{
+    const id=String(x.revisionGroupId),item=out[id]||{id,requestNo:id,service:'Workdone',subject:'Workdone revision · '+String(x.workDate||''),requesterName:employeeName(x.employeeId),employeeId:x.employeeId||'',status:String(x.publicationStatus||'PENDING_APPROVAL').toUpperCase(),submittedAt:x.logTime||x.createdAt||'',reviewedAt:'',reviewer:'',remarks:'',workDate:x.workDate||'',lineCount:0};
+    item.lineCount++;if(String(x.updatedAt||'')>String(item.reviewedAt||''))item.reviewedAt=x.updatedAt||'';if(String(x.publicationStatus||'').toUpperCase()==='PENDING_APPROVAL')item.status='PENDING_APPROVAL';else if(item.status!=='PENDING_APPROVAL')item.status=String(x.publicationStatus||item.status).toUpperCase();out[id]=item;return out;
+  },{});
+  const leave=rows_('leave').filter(x=>allowed('leave',x)).map(x=>({id:x.id,requestNo:x.id,service:'Leave',subject:String(x.leaveType||'Leave')+' · '+String(x.fromDate||'')+' to '+String(x.toDate||''),requesterName:employeeName(x.employeeId),employeeId:x.employeeId||'',status:String(x.status||'PENDING').toUpperCase(),submittedAt:x.createdAt||'',reviewedAt:x.updatedAt||'',reviewer:x.approvedBy||'',remarks:x.reason||''}));
+  const all=[...tickets,...profiles,...tasks,...Object.values(workdone),...leave].sort((a,b)=>String(b.submittedAt||'').localeCompare(String(a.submittedAt||'')));
+  return {items:all,tickets,profiles,tasks,workdone:Object.values(workdone),leave,counts:{total:all.length,pending:all.filter(x=>['PENDING','PENDING_APPROVAL','OPEN','IN_PROGRESS','WAITING_FOR_USER'].includes(x.status)).length}};
+}
 function taskStatus_(u,q,status){
   const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
   if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
@@ -838,7 +864,7 @@ function accountingReports_(u,q){
  ledger.forEach(e=>{const name=String(e.accountName||'').toLowerCase(),k=name.includes('cgst')?'cgst':name.includes('sgst')?'sgst':name.includes('igst')?'igst':'';if(k){gstByType[k].debit=round_(gstByType[k].debit+num_(e.debit));gstByType[k].credit=round_(gstByType[k].credit+num_(e.credit));}});
  return {fromDate:from,toDate:to,ledger:list,trialBalance:list.map(a=>({accountCode:a.accountCode,accountName:a.accountName,group:a.group,debit:a.debit,credit:a.credit,net:a.net})),profitLoss:{income,expenses,totalIncome,totalExpenses,netProfit:round_(totalIncome-totalExpenses)},balanceSheet:{assets,liabilities,totalAssets:round_(assets.reduce((s,a)=>s+a.debitBalance-a.creditBalance,0)),totalLiabilitiesAndEquity:round_(liabilities.reduce((s,a)=>s+a.creditBalance-a.debitBalance,0))},gst:{accounts:gstAccounts,byType:gstByType,netOutputTax:round_(Object.values(gstByType).reduce((s,a)=>s+a.credit-a.debit,0))},summary:[{label:'Total Debit',net:totalDebit,debit:totalDebit,credit:0},{label:'Total Credit',net:totalCredit,debit:0,credit:totalCredit},{label:'Debit less Credit',net:round_(totalDebit-totalCredit),debit:totalDebit,credit:totalCredit}],ledgerEntries:ledger.length};
 }
-function module_(k){k=String(k||'').toLowerCase();if(!KMMC.M[k])throw Error('Unknown module: '+k);return k;}
+function module_(k){const raw=String(k||'').trim();const key=Object.keys(KMMC.M).find(x=>x.toLowerCase()===raw.toLowerCase());if(!key)throw Error('Unknown module: '+raw.toLowerCase());return key;}
 function sanitize_(k,input){
   const out={},h=KMMC.M[k].h;
   h.forEach(key=>{if(['id','createdAt','updatedAt','passwordHash','salt','lastLoginAt','createdBy','receivedBy','uploadedBy'].includes(key))return;if(Object.prototype.hasOwnProperty.call(input,key)){const v=input[key];if(typeof v==='string'&&v.length>20000)throw Error('Field too long: '+key);out[key]=v==null?'':v;}});
