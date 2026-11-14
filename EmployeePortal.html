@@ -1049,6 +1049,14 @@ async function renderEmployeeProfile(){
   const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('The profile request is taking longer than 20 seconds. Please retry.')),20000));
   profile=await Promise.race([loadProfile,timeout]);
   render();
+  // Profile photos are loaded separately: Google Drive blob reads must never delay profile details.
+  const photoLoad=api('myEmployeeProfilePhotos');
+  const photoTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('Profile photo preview timed out.')),12000));
+  Promise.race([photoLoad,photoTimeout]).then(images=>{
+   if(images&&images.profilePhotoDataUrl)profile.profilePhotoDataUrl=images.profilePhotoDataUrl;
+   if(profile.pendingProfileChange&&images&&images.pendingPhotoDataUrl)profile.pendingProfileChange.photoDataUrl=images.pendingPhotoDataUrl;
+   if(host.querySelector('.employee-profile-reference')&&!modal)render();
+  }).catch(error=>console.warn('Optional employee profile photo could not be loaded:',error));
   // Documents are optional and must never block the profile screen.
   api('myEmployeeDocuments').then(result=>{
    employeeDocuments=result.items||[];
