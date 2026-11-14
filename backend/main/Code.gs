@@ -908,6 +908,7 @@ function uploadMyResume_(u,q){
     const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));if(!e)throw Error('Employee profile not found.');
     const root=employeeDriveRoot_(u),it=root.getFoldersByName('Resume'),folder=it.hasNext()?it.next():root.createFolder('Resume');
     const file=folder.createFile(Utilities.newBlob(Utilities.base64Decode(b64),mime,name));
+    if(e.email){try{file.addViewer(String(e.email).trim());}catch(ignore){}}
     const old=String(e.resumeFileId||'');e.resumeFileId=file.getId();e.resumeUrl=file.getUrl();e.updatedAt=iso_();write_('employees',e.id,e);
     if(old&&old!==file.getId()){try{DriveApp.getFileById(old).setTrashed(true);}catch(ignore){}}
     activity_(u,'UPLOAD_EMPLOYEE_RESUME','employees',e.id,name);
