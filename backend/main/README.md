@@ -162,3 +162,16 @@ The employee onboarding flow now supports secure, one-time invitations:
 6. Test with a dummy employee email: invite → open link → submit → sign in before approval → verify write actions are blocked → approve → verify the existing session receives full access without signing in again. Also test expired and reused links, duplicate email addresses, and rejected accounts.
 
 The invitation lifetime is enforced by the backend, not by the browser. A frontend-only GitHub commit does not update the Apps Script deployment. Do not use real employee identifiers or payroll data for the first test.
+
+
+## Admin Approval Centre (added 14-Nov-2026)
+The Admin portal now has a unified Approvals workspace for:
+- Employee self-registration approvals. Approving activates the employee login and unlocks full access; rejecting locks the account.
+- Manual Workdone revision approvals. Approval publishes the submitted revision; rejection leaves the currently published version intact.
+- Task verification. Approval marks a submitted task as completed; rejection returns it to IN_PROGRESS with an optional admin note.
+- Leave request approvals and rejections.
+
+The queue is loaded from the authenticated adminApprovals API. All review actions are Admin-only, notify the affected employee where applicable, and create activity-log entries.
+
+### Backend schema migration
+After deploying the updated Code.gs, run setupKmmcBackend() once to add the task verification columns to the existing DB_TASKS sheet. This migration appends missing headers and preserves existing rows. Then deploy a new Apps Script Web App version so the Admin portal can call adminApprovals and reviewTaskVerification.
