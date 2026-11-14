@@ -97,6 +97,8 @@ function route_(a,q){
     case 'logout':return logout_(q);
     case 'validateSession':case 'myProfile':return {user:pubUser_(auth_(q))};
     case 'myEmployeeProfile':return myEmployeeProfile_(auth_(q));
+    case 'myEmployeeProfileHistory':return myEmployeeProfileHistory_(auth_(q));
+    case 'myEmployeeDocuments':return myEmployeeDocuments_(auth_(q));
     case 'updateMyEmployeeProfile':return updateMyEmployeeProfile_(auth_(q),q);
     case 'uploadMyProfilePhoto':return uploadMyProfilePhoto_(auth_(q),q);
     case 'uploadMyResume':return uploadMyResume_(auth_(q),q);
@@ -843,6 +845,28 @@ function sanitize_(k,input){
   return out;
 }
 function employeeApprovalStatus_(u){if(!u||String(u.role||'').toUpperCase()!=='EMPLOYEE'||!u.employeeId)return 'APPROVED';const e=rows_('employees').find(x=>String(x.id)===String(u.employeeId));return String(e&&e.approvalStatus||'APPROVED').toUpperCase();}
+function myEmployeeProfileHistory_(u){
+  if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  ensureHeaders_(sheet_(KMMC.M.profileChanges.s),KMMC.M.profileChanges.h);
+  return rows_('profileChanges').filter(x=>String(x.employeeId)===String(u.employeeId)).sort((a,b)=>String(b.submittedAt).localeCompare(String(a.submittedAt))).slice(0,50).map(x=>{
+    let changes={};try{changes=JSON.parse(x.changesJson||'{}');}catch(ignore){}
+    return {id:x.id,status:String(x.status||'PENDING').toUpperCase(),changes,hasPhoto:!!x.photoFileId,submittedAt:x.submittedAt||'',reviewedAt:x.reviewedAt||'',reviewNote:x.reviewNote||''};
+  });
+}
+function myEmployeeDocuments_(u){
+  if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const root=employeeDriveRoot_(u),items=[];
+  const addFiles=(folder,depth)=>{
+    const files=folder.getFiles();
+    while(files.hasNext()){
+      const f=files.next(),mime=f.getMimeType();
+      items.push({id:f.getId(),name:f.getName(),mimeType:mime,url:f.getUrl(),downloadUrl:'https://drive.google.com/uc?export=download&id='+f.getId(),updatedAt:f.getLastUpdated()?f.getLastUpdated().toISOString():'',size:f.getSize()});
+    }
+    if(depth>0){const folders=folder.getFolders();while(folders.hasNext()){const sub=folders.next(),n=sub.getName().toLowerCase();if(n==='resume'||n==='profile - pending')continue;addFiles(sub,depth-1);}}
+  };
+  addFiles(root,1);
+  return {items:items.sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,100),count:items.length};
+}
 function myEmployeeProfile_(u){
   if(!u||u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
   ensureHeaders_(sheet_(KMMC.M.employees.s),KMMC.M.employees.h);
