@@ -1009,7 +1009,7 @@ async function renderEmployeeProfile(){
   // FRONT — KMMC branding with the supplied horizontal firm logo.
   rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
   pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');
-  drawLogo(5,2.6,47,7.8);
+  drawLogo(5,2.8,24,6.4);
   pdf.setFillColor(...green);pdf.rect(0.8,12.2,W-1.6,1.2,'F');
   if(photo){try{pdf.addImage(photo,'JPEG',5,18,20,23,undefined,'FAST');pdf.setDrawColor(207,220,232);pdf.roundedRect(5,18,20,23,1,1,'S');}catch(e){}}
   text(name,29,21,10,blue,'bold');text(designation,29,26,6.5,muted);pdf.setDrawColor(205,218,229);pdf.line(29,29,W-5,29);
@@ -1018,13 +1018,12 @@ async function renderEmployeeProfile(){
   text('EMPLOYEE IDENTITY CARD',5,52,4.2,muted,'bold');
   // BACK — repeat the same KMMC logo and keep employee contact details.
   pdf.addPage([85.6,54],'landscape');rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
-  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');drawLogo(5,2.6,47,7.8);
+  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');drawLogo(5,2.8,24,6.4);
   pdf.setFillColor(...green);pdf.rect(0.8,12.2,W-1.6,1.2,'F');
   text('EMPLOYEE DETAILS',5,19,6.2,green,'bold');pdf.setDrawColor(210,222,232);pdf.line(5,21,W-5,21);
   text('Mobile',5,26,5,muted,'bold');text(profile.phone||'—',24,26,6,ink);text('Email',5,31,5,muted,'bold');text(profile.email||'—',24,31,5.5,ink);
   text('Emergency',5,36,5,muted,'bold');text(profile.emergencyContactName||'—',24,36,5.7,ink);text('Contact No.',5,41,5,muted,'bold');text(profile.emergencyContactPhone||'—',24,41,5.7,ink);
-  pdf.setDrawColor(210,222,232);pdf.line(5,44,W-5,44);text('This card remains the property of K Mahesh Manickham & Co.',5,48,4.2,muted);text('If found, please return it to the issuing office.',5,51,4.2,muted);
-  text('AUTHORISED SIGNATORY',W-37,52,4.2,blue,'bold');
+  pdf.setDrawColor(210,222,232);pdf.line(5,44,W-5,44);
   pdf.save('KMMC-Employee-ID-'+empId.replace(/[^a-zA-Z0-9-]/g,'')+'.pdf');
  }
  function openPendingModal(){
