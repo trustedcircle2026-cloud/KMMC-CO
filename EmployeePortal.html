@@ -991,28 +991,39 @@ async function renderEmployeeProfile(){
   el('profilePendingButton')?.addEventListener('click',openPendingModal);
   el('profileHistoryButton')?.addEventListener('click',openHistoryModal);
  };
- function downloadEmployeeIdCard(){
+ async function downloadEmployeeIdCard(){
   const JsPDF=window.jspdf&&window.jspdf.jsPDF;if(!JsPDF){showNotice('ID card PDF library is still loading. Please try again.','error');return;}
   const pdf=new JsPDF({orientation:'landscape',unit:'mm',format:[85.6,54]});
   const W=85.6,H=54,blue=[21,67,105],green=[25,145,98],ink=[28,48,67],muted=[91,111,130];
   const name=String(profile.name||user.name||'Employee'),empId=String(profile.employeeCode||profile.employeeId||'—'),designation=String(profile.designation||'Employee'),photo=profile.profilePhotoDataUrl||(profile.pendingProfileChange&&profile.pendingProfileChange.photoDataUrl)||'';
   const text=(v,x,y,size=7,color=ink,style='normal')=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(v||'—'),x,y,{maxWidth:W-x-4});};
   const rounded=(x,y,w,h,r,color)=>{pdf.setFillColor(...color);pdf.roundedRect(x,y,w,h,r,r,'F');};
-  // FRONT — compact CR80 employee ID card
-  rounded(0.8,0.8,W-1.6,H-1.6,2,[249,252,254]);rounded(0.8,0.8,W-1.6,12,2,blue);pdf.setFillColor(...green);pdf.rect(0.8,11.5,W-1.6,1.3,'F');
-  pdf.setFillColor(255,255,255);pdf.circle(7.2,6.2,3.8,'F');text('CA',4.7,7.2,8,blue,'bold');
-  text('K MAHESH MANICKHAM & CO.',13,5.4,8,[255,255,255],'bold');text('CHARTERED ACCOUNTANTS',13,9,5.1,[226,237,246],'bold');
+  let logoData='';
+  try{
+   const response=await fetch(new URL('assets/images/CA%20Logo.png',document.baseURI).href,{cache:'force-cache'});
+   if(!response.ok)throw new Error('Firm logo could not be loaded');
+   const blob=await response.blob();
+   logoData=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
+  }catch(e){console.warn('KMMC logo unavailable for ID card:',e);}
+  const drawLogo=(x,y,w,h)=>{if(logoData){try{pdf.addImage(logoData,'PNG',x,y,w,h,undefined,'FAST');return;}catch(e){}}text('K MAHESH MANICKHAM & CO.',x,y+h*.65,7,blue,'bold');text('CHARTERED ACCOUNTANTS',x,y+h*.65+3.3,4.5,muted,'bold');};
+  // FRONT — KMMC branding with the supplied horizontal firm logo.
+  rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
+  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');
+  drawLogo(5,2.6,47,7.8);
+  pdf.setFillColor(...green);pdf.rect(0.8,12.2,W-1.6,1.2,'F');
   if(photo){try{pdf.addImage(photo,'JPEG',5,18,20,23,undefined,'FAST');pdf.setDrawColor(207,220,232);pdf.roundedRect(5,18,20,23,1,1,'S');}catch(e){}}
   text(name,29,21,10,blue,'bold');text(designation,29,26,6.5,muted);pdf.setDrawColor(205,218,229);pdf.line(29,29,W-5,29);
   text('EMPLOYEE ID',29,34,5,muted,'bold');text(empId,29,39,8,ink,'bold');text('JOINING DATE',29,44,5,muted,'bold');text(displayValue(profile.joiningDate),29,48,6.2,ink);
   pdf.setFillColor(...green);pdf.roundedRect(5,45,18,5,2,2,'F');text(String(profile.status||'ACTIVE').toUpperCase(),7,48.4,5,[255,255,255],'bold');
   text('EMPLOYEE IDENTITY CARD',5,52,4.2,muted,'bold');
-  // BACK — contact, emergency and verification details
-  pdf.addPage([85.6,54],'landscape');rounded(0.8,0.8,W-1.6,H-1.6,2,[249,252,254]);rounded(0.8,0.8,W-1.6,9,2,blue);text('K MAHESH MANICKHAM & CO.',5,6.5,7.2,[255,255,255],'bold');
-  text('EMPLOYEE DETAILS',5,15,6.2,green,'bold');pdf.setDrawColor(210,222,232);pdf.line(5,17,W-5,17);
-  text('Mobile',5,22,5,muted,'bold');text(profile.phone||'—',24,22,6,ink);text('Email',5,27,5,muted,'bold');text(profile.email||'—',24,27,5.5,ink);
-  text('Emergency',5,32,5,muted,'bold');text(profile.emergencyContactName||'—',24,32,5.7,ink);text('Contact No.',5,37,5,muted,'bold');text(profile.emergencyContactPhone||'—',24,37,5.7,ink);
-  pdf.setDrawColor(210,222,232);pdf.line(5,40,W-5,40);text('This card remains the property of K Mahesh Manickham & Co.',5,44,4.5,muted);text('If found, please return it to the issuing office.',5,48,4.5,muted);
+  // BACK — repeat the same KMMC logo and keep employee contact details.
+  pdf.addPage([85.6,54],'landscape');rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
+  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');drawLogo(5,2.6,47,7.8);
+  pdf.setFillColor(...green);pdf.rect(0.8,12.2,W-1.6,1.2,'F');
+  text('EMPLOYEE DETAILS',5,19,6.2,green,'bold');pdf.setDrawColor(210,222,232);pdf.line(5,21,W-5,21);
+  text('Mobile',5,26,5,muted,'bold');text(profile.phone||'—',24,26,6,ink);text('Email',5,31,5,muted,'bold');text(profile.email||'—',24,31,5.5,ink);
+  text('Emergency',5,36,5,muted,'bold');text(profile.emergencyContactName||'—',24,36,5.7,ink);text('Contact No.',5,41,5,muted,'bold');text(profile.emergencyContactPhone||'—',24,41,5.7,ink);
+  pdf.setDrawColor(210,222,232);pdf.line(5,44,W-5,44);text('This card remains the property of K Mahesh Manickham & Co.',5,48,4.2,muted);text('If found, please return it to the issuing office.',5,51,4.2,muted);
   text('AUTHORISED SIGNATORY',W-37,52,4.2,blue,'bold');
   pdf.save('KMMC-Employee-ID-'+empId.replace(/[^a-zA-Z0-9-]/g,'')+'.pdf');
  }
