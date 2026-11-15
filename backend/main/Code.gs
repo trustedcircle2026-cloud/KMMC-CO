@@ -337,7 +337,7 @@ function submitManualWorkdoneForApproval_(u,q){
   const group=uid_(),now=iso_(),created=[];
   records.forEach(x=>{
     if(String(x.employeeId||'')!==String(u.employeeId))throw Error('Employee mismatch in revised work line.');
-    if(String(x.source||'').toUpperCase()!=='MANUAL'||x.isManual!==true)throw Error('Only manual workdone lines can be submitted for approval.');
+    if(!['WORK','BREAK'].includes(String(x.entryType||'').toUpperCase()))throw Error('Only workdone time lines can be submitted for approval.');
     const r=sanitize_('time',Object.assign({},x,{publicationStatus:'PENDING_APPROVAL',revisionGroupId:group,logTime:now}));
     ownership_(u,'time',r,false);r.id=uid_();r.createdAt=now;r.updatedAt=now;append_('time',r);created.push(r);
   });
@@ -354,7 +354,7 @@ function reviewManualWorkdoneRevision_(admin,q){
   const now=iso_();
   if(decision==='APPROVE'){
     const employeeId=String(pending[0].employeeId),day=String(pending[0].workDate);
-    rows_('time').filter(x=>String(x.employeeId)===employeeId&&String(x.workDate)===day&&String(x.source||'').toUpperCase()==='MANUAL'&&x.isManual===true&&String(x.publicationStatus||'PUBLISHED')==='PUBLISHED').forEach(old=>{old.publicationStatus='SUPERSEDED';old.updatedAt=now;write_('time',old.id,old);});
+    rows_('time').filter(x=>String(x.employeeId)===employeeId&&String(x.workDate)===day&&['WORK','BREAK'].includes(String(x.entryType||'').toUpperCase())&&String(x.publicationStatus||'PUBLISHED')==='PUBLISHED').forEach(old=>{old.publicationStatus='SUPERSEDED';old.updatedAt=now;write_('time',old.id,old);});
     pending.forEach(r=>{r.publicationStatus='PUBLISHED';r.logTime=now;r.updatedAt=now;write_('time',r.id,r);});
   }else pending.forEach(r=>{r.publicationStatus='REJECTED';r.updatedAt=now;write_('time',r.id,r);});
   activity_(admin,decision+'_WORKDONE_REVISION','time',group,String(pending.length)+' line(s)');
