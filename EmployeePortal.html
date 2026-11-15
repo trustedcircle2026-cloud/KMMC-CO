@@ -1014,7 +1014,7 @@ async function renderEmployeeProfile(){
   pdf.setFillColor(...green);pdf.rect(0.8,10.8,W-1.6,1.2,'F');
   if(photo){try{pdf.addImage(photo,'JPEG',5,14.5,20,23,undefined,'FAST');pdf.setDrawColor(207,220,232);pdf.roundedRect(5,14.5,20,23,1,1,'S');}catch(e){}}
   // Employee ID alone sits below the photo; the four personal fields form a 2×2 grid.
-  pdf.setFillColor(22,145,94);pdf.roundedRect(5,39,20,7,1.2,1.2,'F');text(empId,15,43.6,5, [255,255,255],'bold','center');
+  pdf.setFillColor(22,145,94);pdf.roundedRect(5,39,20,7,1.2,1.2,'F');pdf.setFont('helvetica','bold');pdf.setFontSize(6.2);pdf.setTextColor(255,255,255);pdf.text(empId,15,43.6,{align:'center'});
   text(name,29,18,10,blue,'bold');text(designation,29,22.5,6.5,muted);pdf.setDrawColor(205,218,229);pdf.line(29,25,W-5,25);
   text('DATE OF JOINING',29,31,4.2,muted,'bold');text(idDate(profile.joiningDate),29,35,5.2,ink);
   text('DATE OF BIRTH',54,31,4.2,muted,'bold');text(idDate(profile.dob),54,35,5.2,ink);
