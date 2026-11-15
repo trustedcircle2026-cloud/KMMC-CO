@@ -350,6 +350,7 @@ function setUserStatus_(admin,q){
   needAdmin_(admin);const u=rows_('users').find(x=>x.id===String(q.id));if(!u)throw Error('User not found.');
   if(isAdminRole_(u.role)){
     if(isDeveloper_(u))throw Error('Developer accounts are protected from ordinary user management.');
+    if(u.role==='ADMIN'&&!isDeveloper_(admin))throw Error('Legacy ADMIN accounts can only be managed by Developer.');
     if(u.role==='SUPER_ADMIN'&&!isDeveloper_(admin))throw Error('Only Developer can modify a Super Admin.');
     if(u.role==='OFFICE_ADMIN'&&!isSuperAdmin_(admin))throw Error('Only Super Admin or Developer can modify an Office Admin.');
   }
