@@ -116,6 +116,7 @@ function route_(a,q){
     case 'update':return update_(auth_(q),q);
     case 'delete':return delete_(auth_(q),q);
     case 'createUser':return createUser_(auth_(q),q);
+    case 'listAdministrators':{const u=auth_(q);needSuperAdmin_(u);return rows_('users').filter(x=>isAdminRole_(x.role)).map(pubUser_);}
     case 'createClient':return createClient_(auth_(q),q);
     case 'quickCreateClient':return quickCreateClient_(auth_(q),q);
     case 'updateClient':return updateClient_(auth_(q),q);
@@ -163,13 +164,13 @@ function route_(a,q){
     case 'recordCollection':return recordCollection_(auth_(q),q);
     case 'clientOutstanding':return outstanding_(auth_(q),q);
     case 'outstandingSummary':return outstandingSummary_(auth_(q));
-    case 'accountingReports':return accountingReports_(auth_(q),q);
-    case 'accountingLedger':return accountingLedger_(auth_(q),q);
-    case 'pendingVoucherReferences':return pendingVoucherReferences_(auth_(q),q);
-    case 'postReceipt':return postAccountingReceipt_(auth_(q),q);
-    case 'postVoucher':return postAccountingVoucher_(auth_(q),q);
-    case 'postPayment':return postAccountingPayment_(auth_(q),q);
-    case 'cancelAccountingVoucher':return cancelAccountingVoucher_(auth_(q),q);
+    case 'accountingReports':{const u=auth_(q);needSuperAdmin_(u);return accountingReports_(u,q);}
+    case 'accountingLedger':{const u=auth_(q);needSuperAdmin_(u);return accountingLedger_(u,q);}
+    case 'pendingVoucherReferences':{const u=auth_(q);needSuperAdmin_(u);return pendingVoucherReferences_(u,q);}
+    case 'postReceipt':{const u=auth_(q);needSuperAdmin_(u);return postAccountingReceipt_(u,q);}
+    case 'postVoucher':{const u=auth_(q);needSuperAdmin_(u);return postAccountingVoucher_(u,q);}
+    case 'postPayment':{const u=auth_(q);needSuperAdmin_(u);return postAccountingPayment_(u,q);}
+    case 'cancelAccountingVoucher':{const u=auth_(q);needSuperAdmin_(u);return cancelAccountingVoucher_(u,q);}
     default:throw Error('Unknown action: '+a);
   }
 }
@@ -328,9 +329,14 @@ function changePassword_(u,q){
 }
 function createUser_(admin,q){
   needAdmin_(admin);const x=q.record||{},username=String(x.username||'').trim().toLowerCase(),pass=String(x.password||''),role=String(x.role||'').toUpperCase();
+  if(['OFFICE_ADMIN','SUPER_ADMIN','DEVELOPER'].includes(role)){
+    if(role==='OFFICE_ADMIN'&&!isSuperAdmin_(admin))throw Error('Only Super Admin or Developer can create an Office Admin.');
+    if(role==='SUPER_ADMIN'&&!isDeveloper_(admin))throw Error('Only Developer can create a Super Admin.');
+    if(role==='DEVELOPER'&&!isDeveloper_(admin))throw Error('Only Developer can create another Developer.');
+  }else if(!['EMPLOYEE','CLIENT'].includes(role))throw Error('Unsupported account role.');
   if(!/^[a-z0-9._-]{3,60}$/.test(username))throw Error('Username must be 3–60 letters/numbers/dot/underscore/hyphen.');
   if(!pass)throw Error('Initial password is required.');
-  if(['ADMIN','EMPLOYEE','CLIENT'].indexOf(role)<0)throw Error('Role must be ADMIN, EMPLOYEE or CLIENT.');
+
   if(rows_('users').some(u=>String(u.username).toLowerCase()===username))throw Error('Username already exists.');
   if(role==='CLIENT'&&!x.clientId)throw Error('Client login requires clientId.');
   if(role==='EMPLOYEE'&&!x.employeeId)throw Error('Employee login requires employeeId.');
@@ -339,12 +345,17 @@ function createUser_(admin,q){
 }
 function setUserStatus_(admin,q){
   needAdmin_(admin);const u=rows_('users').find(x=>x.id===String(q.id));if(!u)throw Error('User not found.');
+  if(isAdminRole_(u.role)){
+    if(isDeveloper_(u))throw Error('Developer accounts are protected from ordinary user management.');
+    if(u.role==='SUPER_ADMIN'&&!isDeveloper_(admin))throw Error('Only Developer can modify a Super Admin.');
+    if(u.role==='OFFICE_ADMIN'&&!isSuperAdmin_(admin))throw Error('Only Super Admin or Developer can modify an Office Admin.');
+  }
   const st=String(q.status||'').toUpperCase();if(['ACTIVE','INACTIVE','LOCKED'].indexOf(st)<0)throw Error('Invalid status.');
   if(u.id===admin.id&&st!=='ACTIVE')throw Error('Cannot deactivate own account.');
   u.status=st;u.updatedAt=iso_();write_('users',u.id,u);return pubUser_(u);
 }
 function dashboard_(u){
-  const role=u.role, keys=role==='ADMIN'?Object.keys(KMMC.M):role==='CLIENT'?['tasks','documents','invoices','collections','messages','notifications']:['clients','tasks','time','workdone','attendance','leave','documents','invoices','collections','expenses','messages','notifications'];
+  const role=u.role, keys=isSuperAdmin_(u)?Object.keys(KMMC.M):isAdmin_(u)?Object.keys(KMMC.M).filter(k=>!['accounts','receipts','payments','vouchers','reports'].includes(k)):role==='CLIENT'?['tasks','documents','invoices','collections','messages','notifications']:['clients','tasks','time','workdone','attendance','leave','documents','invoices','collections','expenses','messages','notifications'];
   const counts={};keys.forEach(k=>counts[k]=rows_(k).filter(r=>visible_(u,k,r)).length);
   return {user:pubUser_(u),counts,outstanding:outstandingSummary_(u)};
 }
@@ -367,7 +378,7 @@ function submitManualWorkdoneForApproval_(u,q){
     const r=sanitize_('time',Object.assign({},x,{publicationStatus:'PENDING_APPROVAL',revisionGroupId:group,logTime:now}));
     ownership_(u,'time',r,false);r.id=uid_();r.createdAt=now;r.updatedAt=now;append_('time',r);created.push(r);
   });
-  const admins=rows_('users').filter(x=>String(x.role)==='ADMIN'&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE');
+  const admins=rows_('users').filter(x=>isAdmin_(x)&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE');
   admins.forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Workdone revision approval required',message:String(u.name||u.username)+' submitted '+created.length+' revised work line(s) for '+String(created[0].workDate||'')+'. Revision: '+group,type:'WORKDONE_APPROVAL',relatedId:group,readAt:'',createdAt:now});}catch(e){logError_(e);}});
   activity_(u,'SUBMIT_WORKDONE_REVISION','time',group,String(created.length)+' line(s)');
   return {submitted:true,publicationStatus:'PENDING_APPROVAL',revisionGroupId:group,count:created.length,logTime:now};
@@ -429,14 +440,14 @@ function delete_(u,q){
 }
 function authorize_(u,k,op){
   const d=KMMC.M[k],role=u.role;if(!d)throw Error('Unknown module.');
-  if(!d.r.includes(role))throw Error('Role cannot access '+k+'.');
+  if(isAdminRole_(role)){if(role==='OFFICE_ADMIN'&&['accounts','receipts','payments','vouchers','reports','accounting'].includes(k))throw Error('Accountant access is restricted to Super Admin and Developer.');}else if(!d.r.includes(role))throw Error('Role cannot access '+k+'.');
   if(d.ro&&op!=='read')throw Error('Read-only module.');
   if(role==='CLIENT'&&['update','delete'].includes(op))throw Error('Client edits are not allowed.');
   if(role==='CLIENT'&&['create'].includes(op)&&!['messages','documents'].includes(k))throw Error('Client cannot create this record.');
   if(role==='EMPLOYEE'&&k==='clients'&&op!=='read')throw Error('Only Admin can change client master.');
 }
 function visible_(u,k,r){
-  if(u.role==='ADMIN')return true;
+  if(isAdmin_(u))return true;
   if(u.role==='CLIENT'){
     if(k==='clients')return String(r.id)===String(u.clientId);
     if(k==='users')return String(r.id)===String(u.id);
@@ -459,7 +470,7 @@ function visible_(u,k,r){
   return true;
 }
 function ownership_(u,k,r,isUpdate){
-  if(u.role==='ADMIN')return;
+  if(isAdmin_(u))return;
   if(u.role==='CLIENT'){
     if(r.clientId&&String(r.clientId)!==String(u.clientId))throw Error('Cannot access another client.');
     if(['messages','documents'].includes(k))r.clientId=u.clientId;
@@ -483,7 +494,7 @@ function closeTimerSegment_(r,now,recordWorkdone=true){if(!r||r.endTime)return r
 function addTimerEvent_(u,type,now,previous){const r={id:uid_(),employeeId:u.employeeId,taskId:String(previous&&previous.taskId||''),clientId:String(previous&&previous.clientId||''),workDate:localDay_(now),entryType:type,jobNumber:String(previous&&previous.jobNumber||''),startTime:localIso_(now),endTime:localIso_(now),minutes:0,seconds:0,description:type.replaceAll('_',' ').toLowerCase(),createdAt:iso_(),updatedAt:iso_()};append_('time',r);return r;}
 function closeAttendance_(att,now,auto){const day=dateKey_(att.workDate),open=openTimerSegments_(att.employeeId,day);if(open.length)closeTimerSegment_(open[0],now,true);open.slice(1).forEach(r=>closeTimerSegment_(r,now,false));const last=rows_('time').filter(x=>String(x.employeeId)===String(att.employeeId)&&dateKey_(x.workDate)===day&&['WORK','BREAK'].includes(String(x.entryType).toUpperCase())).sort((a,b)=>String(b.startTime).localeCompare(String(a.startTime)))[0]||null;addTimerEvent_({employeeId:att.employeeId},'CLOCK_OUT',now,last);att.checkOut=localIso_(now);att.minutes=Math.round(secondsBetween_(att.checkIn,att.checkOut)/60);att.status=auto?'AUTO_CLOCK_OUT':'PRESENT';att.note=auto?'Automatically clocked out at 9:00 PM IST':'';att.updatedAt=iso_();write_('attendance',att.id,att);}
 function reconcileAttendance_(eid,now){const day=localDay_(now);rows_('attendance').filter(x=>String(x.employeeId)===String(eid)&&!x.checkOut).forEach(att=>{const attDay=dateKey_(att.workDate);if(attDay<day)closeAttendance_(att,ninePm_(attDay),true);else if(attDay===day&&localClock_(now)>='21:00:00')closeAttendance_(att,ninePm_(day),true);});}
-function clockIn_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role)||!u.employeeId)throw Error('Employee access required.');const lock=LockService.getScriptLock();lock.waitLock(10000);try{const now=new Date(),day=localDay_(now);if(localClock_(now)>='21:00:00')throw Error('Clock-in is closed after 9:00 PM IST.');reconcileAttendance_(u.employeeId,now);if(rows_('attendance').some(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut))throw Error('Already clocked in.');const stale=openTimerSegments_(u.employeeId,day);if(stale.length)closeTimerSegment_(stale[0],now,true);stale.slice(1).forEach(x=>closeTimerSegment_(x,now,false));const r={id:uid_(),employeeId:u.employeeId,workDate:day,checkIn:localIso_(now),checkOut:'',minutes:0,status:'PRESENT',note:'',createdAt:iso_(),updatedAt:iso_()};append_('attendance',r);addTimerEvent_(u,'CLOCK_IN',now,null);addTimerSegment_(u,'WORK',now,null);activity_(u,'CLOCK_IN','attendance',r.id,r.checkIn);return r;}finally{lock.releaseLock();}}
+function clockIn_(u){if(!(isAdmin_(u)||u.role==='EMPLOYEE')||!u.employeeId)throw Error('Employee access required.');const lock=LockService.getScriptLock();lock.waitLock(10000);try{const now=new Date(),day=localDay_(now);if(localClock_(now)>='21:00:00')throw Error('Clock-in is closed after 9:00 PM IST.');reconcileAttendance_(u.employeeId,now);if(rows_('attendance').some(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut))throw Error('Already clocked in.');const stale=openTimerSegments_(u.employeeId,day);if(stale.length)closeTimerSegment_(stale[0],now,true);stale.slice(1).forEach(x=>closeTimerSegment_(x,now,false));const r={id:uid_(),employeeId:u.employeeId,workDate:day,checkIn:localIso_(now),checkOut:'',minutes:0,status:'PRESENT',note:'',createdAt:iso_(),updatedAt:iso_()};append_('attendance',r);addTimerEvent_(u,'CLOCK_IN',now,null);addTimerSegment_(u,'WORK',now,null);activity_(u,'CLOCK_IN','attendance',r.id,r.checkIn);return r;}finally{lock.releaseLock();}}
 function clockOut_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role)||!u.employeeId)throw Error('Employee access required.');const lock=LockService.getScriptLock();lock.waitLock(10000);try{const now=new Date();reconcileAttendance_(u.employeeId,now);const att=rows_('attendance').filter(x=>String(x.employeeId)===String(u.employeeId)&&!x.checkOut).sort((a,b)=>String(b.checkIn).localeCompare(String(a.checkIn)))[0];if(!att)throw Error('No open clock-in record.');closeAttendance_(att,now,false);activity_(u,'CLOCK_OUT','attendance',att.id,att.checkOut);return att;}finally{lock.releaseLock();}}
 function timerStatus_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role)||!u.employeeId)throw Error('Employee access required.');const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);const att=rows_('attendance').filter(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut).sort((a,b)=>String(b.checkIn).localeCompare(String(a.checkIn)))[0]||null;let active=att?openTimerSegment_(u.employeeId,day):null;if(att){active=enforceSingleOpenTimer_(u,day,now);if(!active)active=addTimerSegment_(u,'WORK',now,null);}const logs=rows_('time').filter(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day);let workSeconds=0,breakSeconds=0;logs.forEach(x=>{const typ=String(x.entryType).toUpperCase();if(!['WORK','BREAK'].includes(typ))return;if(!x.endTime)return;const sec=Number(x.seconds)||secondsBetween_(x.startTime,x.endTime);if(typ==='WORK')workSeconds+=sec;else breakSeconds+=sec;});return {workDate:day,attendance:att,activeSegment:active,mode:active?String(active.entryType).toUpperCase():'OFF',workSeconds,breakSeconds,activeSeconds:active?secondsBetween_(active.startTime,localIso_(now)):0};}
 function startBreak_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role)||!u.employeeId)throw Error('Employee access required.');const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);if(!rows_('attendance').some(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut))throw Error('Clock in before starting a break.');const open=openTimerSegment_(u.employeeId,day);if(!open||String(open.entryType).toUpperCase()!=='WORK')throw Error('Break can only start while work timer is running.');closeTimerSegment_(open,now);addTimerSegment_(u,'BREAK',now,open);addTimerEvent_(u,'BREAK_START',now,open);activity_(u,'BREAK_START','time',open.id,'');return timerStatus_(u);}
@@ -513,12 +524,12 @@ function employeeDriveRoot_(u){
 }
 function driveFolderForUser_(u,id){
   if(!id)return employeeDriveRoot_(u);
-  const folder=DriveApp.getFolderById(String(id));if(u.role==='ADMIN')return folder;
+  const folder=DriveApp.getFolderById(String(id));if(isAdmin_(u))return folder;
   const root=employeeDriveRoot_(u);let current=folder,depth=0;
   while(current&&depth++<30){if(current.getId()===root.getId())return folder;const parents=current.getParents();current=parents.hasNext()?parents.next():null;}
   throw Error('You can only access files and folders inside your My Files folder.');
 }
-function driveCanAccess_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Google Drive is available to Admin and Employee accounts only.');}
+function driveCanAccess_(u){if(!(isAdmin_(u)||u.role==='EMPLOYEE'))throw Error('Google Drive is available to Admin and Employee accounts only.');}
 function driveList_(u,q){
   driveCanAccess_(u);const id=String(q.folderId||'').trim(),folder=driveFolderForUser_(u,id),items=[],query=String(q.search||'').trim().toLowerCase();
   const folders=folder.getFolders();while(folders.hasNext()){const f=folders.next();if(!query||f.getName().toLowerCase().includes(query))items.push({id:f.getId(),name:f.getName(),type:'FOLDER',mimeType:'application/vnd.google-apps.folder',url:f.getUrl(),updatedAt:f.getLastUpdated()?f.getLastUpdated().toISOString():''});}
@@ -537,7 +548,7 @@ function driveUpload_(u,q){
   const bytes=Utilities.base64Decode(b64),blob=Utilities.newBlob(bytes,mime,name),file=parent.createFile(blob);activity_(u,'DRIVE_UPLOAD','drive-file',file.getId(),name);
   return {id:file.getId(),name:file.getName(),url:file.getUrl(),downloadUrl:'https://drive.google.com/uc?export=download&id='+file.getId(),mimeType:file.getMimeType()};
 }
-function driveFileForUser_(u,id){const file=DriveApp.getFileById(String(id||''));if(u.role==='ADMIN')return file;const root=employeeDriveRoot_(u),parents=file.getParents();let allowed=false;while(parents.hasNext()){const p=parents.next();let current=p,depth=0;while(current&&depth++<30){if(current.getId()===root.getId()){allowed=true;break;}const pp=current.getParents();current=pp.hasNext()?pp.next():null;}if(allowed)break;}if(!allowed)throw Error('You can only access files inside your My Files folder.');return file;}
+function driveFileForUser_(u,id){const file=DriveApp.getFileById(String(id||''));if(isAdmin_(u))return file;const root=employeeDriveRoot_(u),parents=file.getParents();let allowed=false;while(parents.hasNext()){const p=parents.next();let current=p,depth=0;while(current&&depth++<30){if(current.getId()===root.getId()){allowed=true;break;}const pp=current.getParents();current=pp.hasNext()?pp.next():null;}if(allowed)break;}if(!allowed)throw Error('You can only access files inside your My Files folder.');return file;}
 function driveRead_(u,q){
   driveCanAccess_(u);const file=driveFileForUser_(u,q.id),mime=file.getMimeType();
   if(!/^(text\/|application\/(json|xml|javascript|x-javascript))/.test(mime))return {id:file.getId(),name:file.getName(),mimeType:mime,url:file.getUrl(),editable:false,content:''};
@@ -610,9 +621,9 @@ function adminApprovals_(admin){
 }
 
 function serviceRequestHistory_(u){
-  if(!u||!['ADMIN','EMPLOYEE','CLIENT'].includes(String(u.role||'')))throw Error('Access denied.');
+  if(!u||!(isAdmin_(u)||['EMPLOYEE','CLIENT'].includes(String(u.role||''))))throw Error('Access denied.');
   const allowed=(module,row)=>{
-    if(u.role==='ADMIN')return true;
+    if(isAdmin_(u))return true;
     if(module==='supportTickets')return String(row.requesterUserId||'')===String(u.id);
     if(module==='profileChanges')return u.role==='EMPLOYEE'&&String(row.employeeId||'')===String(u.employeeId);
     if(u.role==='EMPLOYEE')return ['tasks','time','leave'].includes(module)&&String(row.employeeId||'')===String(u.employeeId);
@@ -663,8 +674,8 @@ function ensureClientDocumentationRoot_(){const parentId=PropertiesService.getSc
 function getOrCreateChildFolder_(parent,name){const clean=String(name||'').replace(/[\\/:*?"<>|]/g,'-').trim().slice(0,120)||'General';const it=parent.getFoldersByName(clean);return it.hasNext()?it.next():parent.createFolder(clean);}
 function ensureClientFolder_(clientId,u){const client=rows_('clients').find(x=>String(x.id)===String(clientId));if(!client)throw Error('Client not found.');const assigned=String(client.assignedEmployeeId||''),employeeUser=u&&u.role==='EMPLOYEE'?u:null;if(employeeUser&&assigned&&assigned!==String(employeeUser.employeeId))throw Error('Client is assigned to another employee.');const parent=employeeUser?employeeDriveRoot_(employeeUser):(assigned?employeeDriveRoot_({role:'EMPLOYEE',employeeId:assigned,name:''}):ensureClientDocumentationRoot_());if(client.driveFolderId){try{const existing=DriveApp.getFolderById(client.driveFolderId),parents=existing.getParents();while(parents.hasNext()){if(parents.next().getId()===parent.getId())return existing;}}catch(e){}}const folder=getOrCreateChildFolder_(parent,String(client.clientCode||client.id)+' - '+String(client.name||'Client'));client.driveFolderId=folder.getId();client.driveFolderUrl=folder.getUrl();client.updatedAt=iso_();write_('clients',client.id,client);activity_({id:'SYSTEM',username:'SYSTEM',role:'SYSTEM'},'CREATE_CLIENT_FOLDER','clients',client.id,folder.getName());return folder;}
 function chatContacts_(u){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');return rows_('users').filter(x=>['ADMIN','EMPLOYEE'].includes(String(x.role))&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE'&&String(x.id)!==String(u.id)).map(x=>({id:x.id,name:x.name||x.username,role:x.role,username:x.username}));}
-function getMessages_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');let a=rows_('messages').filter(x=>u.role==='ADMIN'||String(x.fromUserId)===String(u.id)||String(x.toUserId)===String(u.id));const peer=String(q.withUserId||'');if(peer)a=a.filter(x=>(String(x.fromUserId)===String(u.id)&&String(x.toUserId)===peer)||(String(x.toUserId)===String(u.id)&&String(x.fromUserId)===peer));a.sort((x,y)=>String(x.createdAt).localeCompare(String(y.createdAt)));const users=rows_('users'),name=id=>{const x=users.find(v=>String(v.id)===String(id));return x?(x.name||x.username):String(id);};return a.slice(-300).map(x=>{const out=publicRec_('messages',x);if(u.role==='ADMIN'&&q.all){out.fromName=name(x.fromUserId);out.toName=name(x.toUserId);}return out;});}
-function createClientMessage_(u,q){const x=q.record||{},to=String(x.toUserId||'');const recipient=rows_('users').find(v=>String(v.id)===to&&String(v.role)==='ADMIN'&&String(v.status||'ACTIVE').toUpperCase()==='ACTIVE');if(!recipient)throw Error('Select a valid admin recipient.');const message=String(x.message||'').trim();if(!message)throw Error('Message cannot be empty.');const r={id:uid_(),fromUserId:u.id,toUserId:to,clientId:u.clientId,subject:String(x.subject||'Client query').slice(0,180),message:message.slice(0,4000),status:'SENT',createdAt:iso_(),readAt:''};append_('messages',r);rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:to,title:'New client message from '+String(u.name||u.username),message:message.slice(0,500),type:'CLIENT_MESSAGE',relatedId:r.id,readAt:'',createdAt:iso_()});return publicRec_('messages',r);}
+function getMessages_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');let a=rows_('messages').filter(x=>isAdmin_(u)||String(x.fromUserId)===String(u.id)||String(x.toUserId)===String(u.id));const peer=String(q.withUserId||'');if(peer)a=a.filter(x=>(String(x.fromUserId)===String(u.id)&&String(x.toUserId)===peer)||(String(x.toUserId)===String(u.id)&&String(x.fromUserId)===peer));a.sort((x,y)=>String(x.createdAt).localeCompare(String(y.createdAt)));const users=rows_('users'),name=id=>{const x=users.find(v=>String(v.id)===String(id));return x?(x.name||x.username):String(id);};return a.slice(-300).map(x=>{const out=publicRec_('messages',x);if(isAdmin_(u)&&q.all){out.fromName=name(x.fromUserId);out.toName=name(x.toUserId);}return out;});}
+function createClientMessage_(u,q){const x=q.record||{},to=String(x.toUserId||'');const recipient=rows_('users').find(v=>String(v.id)===to&&isAdmin_(v)&&String(v.status||'ACTIVE').toUpperCase()==='ACTIVE');if(!recipient)throw Error('Select a valid admin recipient.');const message=String(x.message||'').trim();if(!message)throw Error('Message cannot be empty.');const r={id:uid_(),fromUserId:u.id,toUserId:to,clientId:u.clientId,subject:String(x.subject||'Client query').slice(0,180),message:message.slice(0,4000),status:'SENT',createdAt:iso_(),readAt:''};append_('messages',r);rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:to,title:'New client message from '+String(u.name||u.username),message:message.slice(0,500),type:'CLIENT_MESSAGE',relatedId:r.id,readAt:'',createdAt:iso_()});return publicRec_('messages',r);}
 function sendMessage_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');const to=String(q.toUserId||'');if(!to||to===String(u.id))throw Error('Select another employee or admin.');const recipient=rows_('users').find(x=>String(x.id)===to&&['ADMIN','EMPLOYEE'].includes(String(x.role))&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE');if(!recipient)throw Error('Recipient not found or inactive.');const message=String(q.message||'').trim();if(!message)throw Error('Message cannot be empty.');if(message.length>4000)throw Error('Message must be 4,000 characters or fewer.');const r={id:uid_(),fromUserId:u.id,toUserId:to,clientId:'',subject:'Chat',message,status:'SENT',createdAt:iso_(),readAt:''};append_('messages',r);rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:to,title:'New message from '+String(u.name||u.username),message:message.slice(0,500),type:'CHAT_MESSAGE',relatedId:r.id,readAt:'',createdAt:iso_()});activity_(u,'SEND_MESSAGE','messages',r.id,'to:'+to);return publicRec_('messages',r);}
 function markMessagesRead_(u,q){if(!['ADMIN','EMPLOYEE'].includes(u.role))throw Error('Employee/Admin access required.');const peer=String(q.withUserId||'');const ids=[];rows_('messages').forEach(r=>{if(String(r.toUserId)===String(u.id)&&(!peer||String(r.fromUserId)===peer)&&r.status!=='READ'){r.status='READ';r.readAt=iso_();write_('messages',r.id,r);ids.push(r.id);}});if(ids.length){const wanted={};ids.forEach(id=>wanted[id]=true);rows_('notifications').filter(n=>String(n.userId)===String(u.id)&&wanted[String(n.relatedId)]).forEach(n=>{n.readAt=iso_();write_('notifications',n.id,n);});}return {marked:ids.length};}
 function setLeaveStatus_(u,q){needAdmin_(u);const r=rows_('leave').find(x=>String(x.id)===String(q.id));if(!r)throw Error('Leave request not found.');const status=String(q.status||'').toUpperCase();if(!['APPROVED','REJECTED'].includes(status))throw Error('Status must be APPROVED or REJECTED.');r.status=status;r.approvedBy=u.id;r.updatedAt=iso_();write_('leave',r.id,r);const emp=rows_('employees').find(x=>String(x.id)===String(r.employeeId));const recipient=emp?rows_('users').find(x=>String(x.employeeId)===String(emp.id)):null;if(recipient)rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:recipient.id,title:'Leave request '+status.toLowerCase(),message:'Your leave request from '+r.fromDate+' to '+r.toDate+' was '+status.toLowerCase()+'.',type:'LEAVE_STATUS',relatedId:r.id,readAt:'',createdAt:iso_()});activity_(u,'LEAVE_STATUS','leave',r.id,status);return r;}
@@ -970,7 +981,7 @@ function updateMyEmployeeProfile_(u,q){
     const now=iso_();
     if(pending){const merged=Object.assign({},JSON.parse(pending.changesJson||'{}'),changes);pending.changesJson=JSON.stringify(merged);pending.submittedAt=now;write_('profileChanges',pending.id,pending);}
     else{pending={id:uid_(),employeeId:String(e.id),employeeName:String(e.name||u.name||''),changesJson:JSON.stringify(changes),photoFileId:'',status:'PENDING',submittedAt:now,reviewedAt:'',reviewedBy:'',reviewNote:''};append_('profileChanges',pending);}
-    rows_('users').filter(x=>x.role==='ADMIN'&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Employee profile update approval required',message:String(e.name||u.name)+' submitted profile changes for approval.',type:'PROFILE_APPROVAL',relatedId:pending.id,createdAt:now});}catch(ignore){}});
+    rows_('users').filter(x=>isAdmin_(x)&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Employee profile update approval required',message:String(e.name||u.name)+' submitted profile changes for approval.',type:'PROFILE_APPROVAL',relatedId:pending.id,createdAt:now});}catch(ignore){}});
     activity_(u,'SUBMIT_PROFILE_UPDATE','profileChanges',pending.id,'Awaiting Admin approval');
     return {submitted:true,status:'PENDING',requestId:pending.id,profile:myEmployeeProfile_(u)};
   }finally{lock.releaseLock();}
@@ -989,7 +1000,7 @@ function uploadMyProfilePhoto_(u,q){
     const now=iso_();let pending=rows_('profileChanges').find(x=>String(x.employeeId)===String(e.id)&&String(x.status).toUpperCase()==='PENDING');
     if(pending){if(pending.photoFileId){try{DriveApp.getFileById(String(pending.photoFileId)).setTrashed(true);}catch(ignore){}}pending.photoFileId=file.getId();pending.submittedAt=now;write_('profileChanges',pending.id,pending);}
     else{pending={id:uid_(),employeeId:String(e.id),employeeName:String(e.name||u.name||''),changesJson:'{}',photoFileId:file.getId(),status:'PENDING',submittedAt:now,reviewedAt:'',reviewedBy:'',reviewNote:''};append_('profileChanges',pending);}
-    rows_('users').filter(x=>x.role==='ADMIN'&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Employee profile photo approval required',message:String(e.name||u.name)+' submitted a profile photo for approval.',type:'PROFILE_APPROVAL',relatedId:pending.id,createdAt:now});}catch(ignore){}});
+    rows_('users').filter(x=>isAdmin_(x)&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Employee profile photo approval required',message:String(e.name||u.name)+' submitted a profile photo for approval.',type:'PROFILE_APPROVAL',relatedId:pending.id,createdAt:now});}catch(ignore){}});
     activity_(u,'SUBMIT_PROFILE_PHOTO','profileChanges',pending.id,name);
     return {submitted:true,status:'PENDING',requestId:pending.id,profile:myEmployeeProfile_(u)};
   }finally{lock.releaseLock();}
@@ -1065,7 +1076,7 @@ function createSupportTicket_(u,q){
   }
   const r={id,ticketNo,requesterUserId:String(u.id),requesterRole:String(u.role),requesterName:String(u.name||u.username||''),employeeId:String(u.employeeId||''),clientId:String(u.clientId||''),category,subject,description,priority,status:'OPEN',attachmentFileId,attachmentUrl,adminResponse:'',assignedTo:'',createdAt:now,updatedAt:now,closedAt:''};
   append_('supportTickets',r);
-  rows_('users').filter(a=>a.role==='ADMIN'&&String(a.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'New support ticket '+ticketNo,message:r.requesterName+' raised a support ticket: '+subject,type:'SUPPORT_TICKET',relatedId:id,createdAt:now});}catch(ignore){}});
+  rows_('users').filter(a=>isAdmin_(a)&&String(a.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'New support ticket '+ticketNo,message:r.requesterName+' raised a support ticket: '+subject,type:'SUPPORT_TICKET',relatedId:id,createdAt:now});}catch(ignore){}});
   activity_(u,'CREATE_SUPPORT_TICKET','supportTickets',id,ticketNo);
   return publicRec_('supportTickets',r);
 }
@@ -1078,7 +1089,14 @@ function updateSupportTicket_(admin,q){
 
 function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,approvalStatus:employeeApprovalStatus_(u),mustChangePassword:u.mustChangePassword===true||String(u.mustChangePassword).toUpperCase()==='TRUE',createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
 function publicRec_(k,r){if(k==='users')return pubUser_(r);const o={};Object.keys(r).forEach(x=>{if(!['passwordHash','salt'].includes(x))o[x]=r[x];});return o;}
-function needAdmin_(u){if(u.role!=='ADMIN')throw Error('Admin access required.');}
+function isAdminRole_(role){return ['ADMIN','OFFICE_ADMIN','SUPER_ADMIN','DEVELOPER'].includes(String(role||'').toUpperCase());}
+function isAdmin_(u){return !!u&&isAdminRole_(u.role);}
+function isSuperAdmin_(u){return !!u&&['SUPER_ADMIN','DEVELOPER'].includes(String(u.role||'').toUpperCase());}
+function isDeveloper_(u){return !!u&&String(u.role||'').toUpperCase()==='DEVELOPER';}
+function needAdmin_(u){if(!isAdmin_(u))throw Error('Administrator access required.');}
+function needSuperAdmin_(u){if(!isSuperAdmin_(u))throw Error('Super Admin or Developer access required.');}
+function needDeveloper_(u){if(!isDeveloper_(u))throw Error('Developer access required.');}
+
 function db_(){const id=PropertiesService.getScriptProperties().getProperty(KMMC.DB_PROP);if(!id)throw Error('Set '+KMMC.DB_PROP+' in Script Properties.');return SpreadsheetApp.openById(id);}
 function sheet_(name){const s=db_().getSheetByName(name);if(!s)throw Error('Missing '+name+'; run setupKmmcBackend().');return s;}
 function rows_(k){return rawRows_(KMMC.M[k].s);}
@@ -1162,7 +1180,7 @@ function submitEmployeeRegistration_(q){
     invite.status='REGISTERED';invite.registeredEmployeeId=id;invite.registeredAt=now;rawWrite_('DB_EMPLOYEE_INVITES',invite.id,invite);
     activity_(user,'EMPLOYEE_SELF_REGISTER','employees',id,code);
     let credentialsSent=true;try{MailApp.sendEmail({to:email,subject:'KMMC Employee Portal Login Credentials',name:'K MAHESH MANICKHAM AND CO.',htmlBody:'<div style="font-family:Arial,sans-serif;color:#20364b;max-width:600px;margin:auto;padding:24px;border:1px solid #dce6ee;border-radius:12px"><h2 style="color:#17466b">Registration Submitted Successfully</h2><p>Your employee account has been created and is awaiting administrator approval. You can log in immediately with the credentials below. Employee actions remain restricted until approval.</p><p><b>Employee ID / Username:</b> '+code+'<br><b>Temporary Password:</b> '+password+'</p><p>Please change your password after your first login.</p><p><b>Current status:</b> Pending Approval</p></div>',body:'Your KMMC employee registration was submitted. Employee ID / Username: '+code+'. Temporary password: '+password+'. Change your password after first login. Your account is Pending Approval.'});}catch(mailError){credentialsSent=false;logError_(mailError);}
-    const props=PropertiesService.getScriptProperties(),admins=rows_('users').filter(u=>u.role==='ADMIN'&&u.email),notify=String(props.getProperty('KMMC_ADMIN_NOTIFICATION_EMAIL')||admins[0]?.email||'').trim();
+    const props=PropertiesService.getScriptProperties(),admins=rows_('users').filter(u=>isAdmin_(u)&&u.email),notify=String(props.getProperty('KMMC_ADMIN_NOTIFICATION_EMAIL')||admins[0]?.email||'').trim();
     if(notify){try{MailApp.sendEmail({to:notify,subject:'KMMC: Employee registration pending approval',body:'A new employee registration is awaiting approval. Employee: '+name+' ('+code+'), Email: '+email+'. Sign in to the KMMC Admin Portal and review Employees.'});}catch(ignore){}}
     return {submitted:true,employeeId:code,username:code,initialPassword:password,credentialsSent,approvalStatus:'PENDING_APPROVAL',message:credentialsSent?'Registration submitted. Login credentials have been sent to your email.':'Registration submitted. Save the credentials shown on this page; email delivery failed.'};
   }finally{lock.releaseLock();}
