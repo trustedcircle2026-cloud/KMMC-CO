@@ -117,6 +117,8 @@ function route_(a,q){
     case 'delete':return delete_(auth_(q),q);
     case 'createUser':return createUser_(auth_(q),q);
     case 'listAdministrators':{const u=auth_(q);needSuperAdmin_(u);return rows_('users').filter(x=>isAdminRole_(x.role)).map(pubUser_);}
+    case 'adminActivityHistory':return adminActivityHistory_(auth_(q),q);
+    case 'developerDiagnostics':return developerDiagnostics_(auth_(q));
     case 'createClient':return createClient_(auth_(q),q);
     case 'quickCreateClient':return quickCreateClient_(auth_(q),q);
     case 'updateClient':return updateClient_(auth_(q),q);
@@ -353,7 +355,7 @@ function setUserStatus_(admin,q){
   }
   const st=String(q.status||'').toUpperCase();if(['ACTIVE','INACTIVE','LOCKED'].indexOf(st)<0)throw Error('Invalid status.');
   if(u.id===admin.id&&st!=='ACTIVE')throw Error('Cannot deactivate own account.');
-  u.status=st;u.updatedAt=iso_();write_('users',u.id,u);return pubUser_(u);
+  u.status=st;u.updatedAt=iso_();write_('users',u.id,u);activity_(admin,'SET_ADMIN_STATUS','users',u.id,st);return pubUser_(u);
 }
 function dashboard_(u){
   const role=u.role, keys=isSuperAdmin_(u)?Object.keys(KMMC.M):isAdmin_(u)?Object.keys(KMMC.M).filter(k=>!['accounts','receipts','payments','vouchers','reports','users','activity','loginlog'].includes(k)):role==='CLIENT'?['tasks','documents','invoices','collections','messages','notifications']:['clients','tasks','time','workdone','attendance','leave','documents','invoices','collections','expenses','messages','notifications'];
@@ -1086,6 +1088,30 @@ function updateSupportTicket_(admin,q){
   const status=String(q.status||r.status).toUpperCase();if(!['OPEN','IN_PROGRESS','WAITING_FOR_USER','RESOLVED','CLOSED'].includes(status))throw Error('Invalid ticket status.');
   r.status=status;r.adminResponse=String(q.adminResponse??r.adminResponse??'').trim().slice(0,5000);r.assignedTo=String(q.assignedTo??r.assignedTo??'').trim().slice(0,180);r.updatedAt=iso_();r.closedAt=['RESOLVED','CLOSED'].includes(status)?r.updatedAt:'';
   write_('supportTickets',r.id,r);activity_(admin,'UPDATE_SUPPORT_TICKET','supportTickets',id,status);return publicRec_('supportTickets',r);
+}
+
+
+function adminActivityHistory_(actor,q){
+  needSuperAdmin_(actor);
+  const limit=Math.min(Math.max(Number(q.limit||200),1),500);
+  const admins=rows_('users').filter(x=>isAdminRole_(x.role));
+  const adminIds=new Set(admins.map(x=>String(x.id)));
+  const byId=new Map(admins.map(x=>[String(x.id),x]));
+  const activity=rows_('activity').filter(x=>adminIds.has(String(x.userId||''))||isAdminRole_(x.role))
+    .map(x=>({id:x.id,createdAt:x.createdAt,username:x.username||byId.get(String(x.userId))?.username||'',name:byId.get(String(x.userId))?.name||x.username||'',role:x.role||byId.get(String(x.userId))?.role||'',action:x.action||'',module:x.module||'',recordId:x.recordId||'',details:x.details||'',eventType:'ACTIVITY'}));
+  const log=rawRows_('DB_LOGIN_LOG').filter(x=>adminIds.has(String(x.userId||'')))
+    .map(x=>({id:x.id,createdAt:x.createdAt,username:x.username||'',name:byId.get(String(x.userId))?.name||x.username||'',role:byId.get(String(x.userId))?.role||'',action:'LOGIN_'+String(x.result||'').toUpperCase(),module:'authentication',recordId:'',details:x.result||'',eventType:'LOGIN'}));
+  return activity.concat(log).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,limit);
+}
+function developerDiagnostics_(actor){
+  needDeveloper_(actor);
+  const ss=db_(),props=PropertiesService.getScriptProperties().getProperties();
+  const triggers=ScriptApp.getProjectTriggers().map(t=>({handler:t.getHandlerFunction(),eventType:String(t.getEventType()),source:String(t.getTriggerSource())}));
+  const errors=rawRows_('DB_ERROR_LOG').sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,50)
+    .map(x=>({id:x.id,action:x.action,message:x.message,createdAt:x.createdAt}));
+  const moduleCounts={};Object.keys(KMMC.M).forEach(k=>{try{moduleCounts[k]=rows_(k).length;}catch(e){moduleCounts[k]='UNAVAILABLE';}});
+  const configKeys=rawRows_('DB_SYSTEM_CONFIG').map(x=>({key:String(x.key||''),updatedAt:x.updatedAt||''}));
+  return {app:'KMMC ERP API',version:KMMC.VERSION,database:{configured:!!props[KMMC.DB_PROP],spreadsheetName:ss.getName(),moduleCount:Object.keys(KMMC.M).length,modules:moduleCounts},scriptProperties:Object.keys(props).filter(k=>!/(SECRET|PASSWORD|TOKEN|KEY|ID)$/i.test(k)).sort(),systemConfig:configKeys,triggers,errors,generatedAt:iso_()};
 }
 
 function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,approvalStatus:employeeApprovalStatus_(u),mustChangePassword:u.mustChangePassword===true||String(u.mustChangePassword).toUpperCase()==='TRUE',createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
