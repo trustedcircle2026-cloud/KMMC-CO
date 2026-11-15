@@ -1006,23 +1006,23 @@ async function renderEmployeeProfile(){
    const blob=await response.blob();
    logoData=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
   }catch(e){console.warn('KMMC logo unavailable for ID card:',e);}
-  const drawLogo=(x,y)=>{if(logoData){try{pdf.addImage(logoData,'PNG',x,y+3.5,8.5,4.25,undefined,'FAST');}catch(e){}}else{text('CA',x+1,y+5.7,4.5,blue,'bold');text('INDIA',x+0.8,y+7.3,2,muted,'bold');}text('K MAHESH MANICKHAM & CO.',x+10,y+4.5,8.2,blue,'bold');text('CHARTERED ACCOUNTANTS',x+10,y+7.5,4.3,muted,'bold');};
+  const drawLogo=(x,y)=>{if(logoData){try{pdf.addImage(logoData,'PNG',x,y+1.8,10,5,undefined,'FAST');}catch(e){}}else{text('CA',x+1,y+4.2,4.5,blue,'bold');text('INDIA',x+0.8,y+5.8,2,muted,'bold');}text('K MAHESH MANICKHAM & CO.',x+12,y+3.7,8.2,blue,'bold');text('CHARTERED ACCOUNTANTS',x+12,y+6.7,4.3,muted,'bold');};
   // FRONT — KMMC branding with the supplied horizontal firm logo.
   rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
-  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');
-  drawLogo(5,2.0);
-  pdf.setFillColor(...green);pdf.rect(0.8,12.2,W-1.6,1.2,'F');
-  if(photo){try{pdf.addImage(photo,'JPEG',5,18,20,23,undefined,'FAST');pdf.setDrawColor(207,220,232);pdf.roundedRect(5,18,20,23,1,1,'S');}catch(e){}}
-  text(name,29,21,10,blue,'bold');text(designation,29,26,6.5,muted);pdf.setDrawColor(205,218,229);pdf.line(29,29,W-5,29);
-  text('EMPLOYEE ID',29,35,4.2,muted,'bold');text(empId,29,39,5.6,ink,'bold');text('DATE OF JOINING',54,35,4.2,muted,'bold');text(idDate(profile.joiningDate),54,39,5.2,ink);text('DATE OF BIRTH',29,44.5,4.2,muted,'bold');text(idDate(profile.dob),29,48.5,5.2,ink);text('BLOOD GROUP',54,44.5,4.2,muted,'bold');text(profile.bloodGroup||'—',54,48.5,5.2,ink,'bold');
+  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,10,2,2,'F');
+  drawLogo(5,1.2);
+  pdf.setFillColor(...green);pdf.rect(0.8,10.8,W-1.6,1.2,'F');
+  if(photo){try{pdf.addImage(photo,'JPEG',5,14.5,20,23,undefined,'FAST');pdf.setDrawColor(207,220,232);pdf.roundedRect(5,14.5,20,23,1,1,'S');}catch(e){}}
+  text(name,29,18,10,blue,'bold');text(designation,29,22.5,6.5,muted);pdf.setDrawColor(205,218,229);pdf.line(29,25,W-5,25);
+  text('EMPLOYEE ID',29,30.5,4.2,muted,'bold');text(empId,29,34,5.6,ink,'bold');text('DATE OF JOINING',54,30.5,4.2,muted,'bold');text(idDate(profile.joiningDate),54,34,5.2,ink);text('DATE OF BIRTH',29,40,4.2,muted,'bold');text(idDate(profile.dob),29,43.5,5.2,ink);text('BLOOD GROUP',54,40,4.2,muted,'bold');text(profile.bloodGroup||'—',54,43.5,5.2,ink,'bold');
   // BACK — repeat the same KMMC logo and keep employee contact details.
   pdf.addPage([85.6,54],'landscape');rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
-  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');drawLogo(5,2.0);
-  pdf.setFillColor(...green);pdf.rect(0.8,12.2,W-1.6,1.2,'F');
-  text('EMPLOYEE DETAILS',5,19,6.2,green,'bold');pdf.setDrawColor(210,222,232);pdf.line(5,21,W-5,21);
-  text('Mobile',5,26,5,muted,'bold');text(profile.phone||'—',24,26,6,ink);text('Email',5,31,5,muted,'bold');text(profile.email||'—',24,31,5.5,ink);
-  text('Emergency',5,36,5,muted,'bold');text(profile.emergencyContactName||'—',24,36,5.7,ink);text('Contact No.',5,41,5,muted,'bold');text(profile.emergencyContactPhone||'—',24,41,5.7,ink);
-  pdf.setDrawColor(210,222,232);pdf.line(5,44,W-5,44);
+  pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,10,2,2,'F');drawLogo(5,1.2);
+  pdf.setFillColor(...green);pdf.rect(0.8,10.8,W-1.6,1.2,'F');
+  text('EMPLOYEE DETAILS',5,17,6.2,green,'bold');pdf.setDrawColor(210,222,232);pdf.line(5,19,W-5,19);
+  text('Mobile',5,25,5,muted,'bold');text(profile.phone||'—',24,25,6,ink);text('Email',5,30,5,muted,'bold');text(profile.email||'—',24,30,5.5,ink);
+  text('Emergency',5,35,5,muted,'bold');text(profile.emergencyContactName||'—',24,35,5.7,ink);text('Contact No.',5,40,5,muted,'bold');text(profile.emergencyContactPhone||'—',24,40,5.7,ink);
+  pdf.setDrawColor(210,222,232);pdf.line(5,43,W-5,43);
   pdf.save('KMMC-Employee-ID-'+empId.replace(/[^a-zA-Z0-9-]/g,'')+'.pdf');
  }
  function openPendingModal(){
