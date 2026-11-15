@@ -119,6 +119,9 @@ function route_(a,q){
     case 'listAdministrators':{const u=auth_(q);needSuperAdmin_(u);return rows_('users').filter(x=>isAdminRole_(x.role)).map(pubUser_);}
     case 'adminActivityHistory':return adminActivityHistory_(auth_(q),q);
     case 'developerDiagnostics':return developerDiagnostics_(auth_(q));
+    case 'developerDatabaseTest':return developerDatabaseTest_(auth_(q));
+    case 'developerCreateBackup':return developerCreateBackup_(auth_(q),q);
+    case 'developerRepairClockoutTrigger':return developerRepairClockoutTrigger_(auth_(q),q);
     case 'createClient':return createClient_(auth_(q),q);
     case 'quickCreateClient':return quickCreateClient_(auth_(q),q);
     case 'updateClient':return updateClient_(auth_(q),q);
@@ -1113,6 +1116,36 @@ function developerDiagnostics_(actor){
   const moduleCounts={};Object.keys(KMMC.M).forEach(k=>{try{moduleCounts[k]=rows_(k).length;}catch(e){moduleCounts[k]='UNAVAILABLE';}});
   const configKeys=rawRows_('DB_SYSTEM_CONFIG').map(x=>({key:String(x.key||''),updatedAt:x.updatedAt||''}));
   return {app:'KMMC ERP API',version:KMMC.VERSION,database:{configured:!!props[KMMC.DB_PROP],spreadsheetName:ss.getName(),moduleCount:Object.keys(KMMC.M).length,modules:moduleCounts},scriptProperties:Object.keys(props).filter(k=>!/(SECRET|PASSWORD|TOKEN|KEY|ID)$/i.test(k)).sort(),systemConfig:configKeys,triggers,errors,generatedAt:iso_()};
+}
+
+function developerDatabaseTest_(actor){
+  needDeveloper_(actor);
+  const ss=db_(),result={connected:true,spreadsheetName:ss.getName(),spreadsheetIdSuffix:ss.getId().slice(-6),checkedAt:iso_(),requiredSheets:[],missingSheets:[]};
+  const required=Object.keys(KMMC.M).map(k=>KMMC.M[k].s).concat(['DB_SESSIONS','DB_SYSTEM_CONFIG','DB_ERROR_LOG','DB_EMPLOYEE_INVITES','DB_ACTIVITY_LOG','DB_LOGIN_LOG','DB_NOTIFICATIONS']);
+  required.forEach(name=>{if(ss.getSheetByName(name))result.requiredSheets.push(name);else result.missingSheets.push(name);});
+  result.healthy=result.missingSheets.length===0;
+  activity_(actor,'DEVELOPER_DATABASE_TEST','system','database',result.healthy?'HEALTHY':'MISSING:'+result.missingSheets.join(','));
+  return result;
+}
+function developerCreateBackup_(actor,q){
+  needDeveloper_(actor);
+  if(String(q.confirmation||'')!=='BACKUP KMMC DATABASE')throw Error('Type BACKUP KMMC DATABASE to confirm this operation.');
+  const id=PropertiesService.getScriptProperties().getProperty(KMMC.DB_PROP);
+  if(!id)throw Error('Database spreadsheet is not configured.');
+  const source=DriveApp.getFileById(id),stamp=Utilities.formatDate(new Date(),'Asia/Kolkata','yyyyMMdd-HHmmss');
+  const copy=source.makeCopy('KMMC_DATABASE_BACKUP_'+stamp);
+  if(!copy||!copy.getId())throw Error('Backup creation failed.');
+  activity_(actor,'DEVELOPER_DATABASE_BACKUP','system',copy.getId(),'Created '+copy.getName());
+  return {created:true,name:copy.getName(),fileId:copy.getId(),url:copy.getUrl(),createdAt:iso_()};
+}
+function developerRepairClockoutTrigger_(actor,q){
+  needDeveloper_(actor);
+  if(String(q.confirmation||'')!=='REPAIR CLOCKOUT TRIGGER')throw Error('Type REPAIR CLOCKOUT TRIGGER to confirm this operation.');
+  installAutoClockOutTrigger_();
+  const matches=ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='autoCloseSessionsAtNinePm');
+  if(matches.length!==1)throw Error('Trigger repair verification failed. Found '+matches.length+' matching triggers.');
+  activity_(actor,'DEVELOPER_REPAIR_TRIGGER','system','autoCloseSessionsAtNinePm','Verified one 5-minute clock-out trigger');
+  return {repaired:true,handler:'autoCloseSessionsAtNinePm',triggerCount:matches.length,verifiedAt:iso_()};
 }
 
 function pubUser_(u){return {id:u.id,username:u.username,role:u.role,name:u.name,email:u.email,phone:u.phone,clientId:u.clientId,employeeId:u.employeeId,status:u.status,approvalStatus:employeeApprovalStatus_(u),mustChangePassword:u.mustChangePassword===true||String(u.mustChangePassword).toUpperCase()==='TRUE',createdAt:u.createdAt,lastLoginAt:u.lastLoginAt};}
