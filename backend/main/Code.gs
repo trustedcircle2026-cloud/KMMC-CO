@@ -15,7 +15,7 @@ const KMMC = {
 
 
     tasks:{s:'DB_TASKS',h:['id','jobNumber','title','description','clientId','employeeId','priority','status','startDate','dueDate','completedAt','verificationStatus','submittedForVerificationAt','verifiedAt','verifiedBy','verificationNote','createdBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
-    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','seconds','description','calls','source','isManual','status','publicationStatus','revisionGroupId','logTime','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
+    time:{s:'DB_TIME_LOGS',h:['id','employeeId','taskId','clientId','workDate','entryType','jobNumber','startTime','endTime','minutes','seconds','description','calls','source','isManual','status','publicationStatus','revisionGroupId','revisionScope','logTime','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     workdone:{s:'DB_WORKDONE',h:['id','employeeId','workDate','jobNumber','taskId','clientId','summary','minutes','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     attendance:{s:'DB_ATTENDANCE',h:['id','employeeId','workDate','checkIn','checkOut','minutes','status','note','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
     leave:{s:'DB_LEAVE',h:['id','employeeId','fromDate','toDate','leaveType','reason','status','approvedBy','createdAt','updatedAt'],r:['ADMIN','EMPLOYEE']},
@@ -354,7 +354,7 @@ function reviewManualWorkdoneRevision_(admin,q){
   const now=iso_();
   if(decision==='APPROVE'){
     const employeeId=String(pending[0].employeeId),day=String(pending[0].workDate);
-    rows_('time').filter(x=>String(x.employeeId)===employeeId&&String(x.workDate)===day&&['WORK','BREAK'].includes(String(x.entryType||'').toUpperCase())&&String(x.publicationStatus||'PUBLISHED')==='PUBLISHED').forEach(old=>{old.publicationStatus='SUPERSEDED';old.updatedAt=now;write_('time',old.id,old);});
+    const fullDay=pending.some(x=>String(x.revisionScope||'')==='FULL_DAY');rows_('time').filter(x=>String(x.employeeId)===employeeId&&String(x.workDate)===day&&['WORK','BREAK'].includes(String(x.entryType||'').toUpperCase())&&String(x.publicationStatus||'PUBLISHED')==='PUBLISHED'&&(fullDay||(String(x.source||'').toUpperCase()==='MANUAL'&&x.isManual===true))).forEach(old=>{old.publicationStatus='SUPERSEDED';old.updatedAt=now;write_('time',old.id,old);});
     pending.forEach(r=>{r.publicationStatus='PUBLISHED';r.logTime=now;r.updatedAt=now;write_('time',r.id,r);});
   }else pending.forEach(r=>{r.publicationStatus='REJECTED';r.updatedAt=now;write_('time',r.id,r);});
   activity_(admin,decision+'_WORKDONE_REVISION','time',group,String(pending.length)+' line(s)');
