@@ -342,7 +342,7 @@ function submitManualWorkdoneForApproval_(u,q){
     ownership_(u,'time',r,false);r.id=uid_();r.createdAt=now;r.updatedAt=now;append_('time',r);created.push(r);
   });
   const admins=rows_('users').filter(x=>String(x.role)==='ADMIN'&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE');
-  admins.forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Manual Workdone revision approval required',message:String(u.name||u.username)+' submitted '+created.length+' revised work line(s) for '+String(created[0].workDate||'')+'. Revision: '+group,type:'WORKDONE_APPROVAL',relatedId:group,readAt:'',createdAt:now});}catch(e){logError_(e);}});
+  admins.forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Workdone revision approval required',message:String(u.name||u.username)+' submitted '+created.length+' revised work line(s) for '+String(created[0].workDate||'')+'. Revision: '+group,type:'WORKDONE_APPROVAL',relatedId:group,readAt:'',createdAt:now});}catch(e){logError_(e);}});
   activity_(u,'SUBMIT_WORKDONE_REVISION','time',group,String(created.length)+' line(s)');
   return {submitted:true,publicationStatus:'PENDING_APPROVAL',revisionGroupId:group,count:created.length,logTime:now};
 }
@@ -390,7 +390,7 @@ function update_(u,q){
   const old=rows_(k).find(x=>x.id===String(q.id));if(!old||!visible_(u,k,old))throw Error('Record not found/access denied.');
   if(k==='tasks'&&u.role==='EMPLOYEE'&&String(old.createdBy||'')!==String(u.id))throw Error('Only assignments created by you can be edited.');
   if(['receipts','payments','ledger','reimbursement'].includes(k))throw Error('Accounting vouchers and ledger records must be managed through dedicated accounting actions.');
-  const patch=sanitize_(k,q.record||{});ownership_(u,k,patch,true);const r=Object.assign({},old,patch,{id:old.id,createdAt:old.createdAt,updatedAt:iso_()});
+  const patch=sanitize_(k,q.record||{});ownership_(u,k,patch,true);if(k==='time'&&u.role==='EMPLOYEE'&&String(old.publicationStatus||'PUBLISHED').toUpperCase()==='PUBLISHED'&&(Object.prototype.hasOwnProperty.call(q.record||{},'startTime')||Object.prototype.hasOwnProperty.call(q.record||{},'endTime')))throw Error('Published workdone timings are locked. Edit the worksheet and submit the revision for Admin approval.');const r=Object.assign({},old,patch,{id:old.id,createdAt:old.createdAt,updatedAt:iso_()});
   if(k==='accounts')validateAccount_(r);
   if(k==='invoices')invoiceMath_(r);write_(k,r.id,r);activity_(u,'UPDATE',k,r.id,'');return publicRec_(k,r);
 }
