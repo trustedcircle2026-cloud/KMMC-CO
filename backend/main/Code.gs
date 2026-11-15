@@ -706,7 +706,7 @@ function recordCollection_(u,q){
 function outstanding_(u,q){
   const cid=u.role==='CLIENT'?String(u.clientId||''):String(q.clientId||'');
   if(u.role==='CLIENT'&&!cid)throw Error('Client login is not linked to clientId.');
-  if(!['ADMIN','EMPLOYEE','CLIENT'].includes(u.role))throw Error('Access denied.');
+  if(!isAdmin_(u)&&!['EMPLOYEE','CLIENT'].includes(String(u.role||'').toUpperCase()))throw Error('Access denied.');
   let clients=rows_('clients').filter(c=>!cid||String(c.id)===cid);
   if(u.role==='EMPLOYEE')clients=clients.filter(c=>!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId));
   return clients.map(c=>{
