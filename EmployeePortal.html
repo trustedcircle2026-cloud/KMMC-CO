@@ -1005,7 +1005,7 @@ async function renderEmployeeProfile(){
    const blob=await response.blob();
    logoData=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
   }catch(e){console.warn('KMMC logo unavailable for ID card:',e);}
-  const drawLogo=(x,y)=>{if(logoData){try{pdf.addImage(logoData,'PNG',x,y+0.2,16,8,undefined,'FAST');}catch(e){}}else{text('CA',x+2,y+5.5,10,blue,'bold');text('INDIA',x+1,y+8.5,3.5,muted,'bold');}text('K MAHESH MANICKHAM & CO.',x+19,y+4.5,6.1,blue,'bold');text('CHARTERED ACCOUNTANTS',x+19,y+8.2,4.1,muted,'bold');};
+  const drawLogo=(x,y)=>{if(logoData){try{pdf.addImage(logoData,'PNG',x,y+1.0,10,5,undefined,'FAST');}catch(e){}}else{text('CA',x+1.5,y+4.5,6,blue,'bold');text('INDIA',x+1,y+6.5,2.5,muted,'bold');}text('K MAHESH MANICKHAM & CO.',x+13,y+4.2,6.1,blue,'bold');text('CHARTERED ACCOUNTANTS',x+13,y+7.2,4.1,muted,'bold');};
   // FRONT — KMMC branding with the supplied horizontal firm logo.
   rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
   pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');
@@ -1013,9 +1013,7 @@ async function renderEmployeeProfile(){
   pdf.setFillColor(...green);pdf.rect(0.8,12.2,W-1.6,1.2,'F');
   if(photo){try{pdf.addImage(photo,'JPEG',5,18,20,23,undefined,'FAST');pdf.setDrawColor(207,220,232);pdf.roundedRect(5,18,20,23,1,1,'S');}catch(e){}}
   text(name,29,21,10,blue,'bold');text(designation,29,26,6.5,muted);pdf.setDrawColor(205,218,229);pdf.line(29,29,W-5,29);
-  text('EMPLOYEE ID',29,34,5,muted,'bold');text(empId,29,39,8,ink,'bold');text('JOINING DATE',29,44,5,muted,'bold');text(displayValue(profile.joiningDate),29,48,6.2,ink);
-  pdf.setFillColor(...green);pdf.roundedRect(5,45,18,5,2,2,'F');text(String(profile.status||'ACTIVE').toUpperCase(),7,48.4,5,[255,255,255],'bold');
-  text('EMPLOYEE IDENTITY CARD',5,52,4.2,muted,'bold');
+  text('EMPLOYEE ID',29,32.5,4.2,muted,'bold');text(empId,29,36,6.2,ink,'bold');text('JOINING DATE',29,39.5,4.2,muted,'bold');text(displayValue(profile.joiningDate),29,43,5.4,ink);text('DATE OF BIRTH',29,46.5,4.2,muted,'bold');text(displayValue(profile.dob),29,49.5,5.4,ink);text('BLOOD GROUP',54,46.5,4.2,muted,'bold');text(profile.bloodGroup||'—',54,49.5,5.4,ink,'bold');
   // BACK — repeat the same KMMC logo and keep employee contact details.
   pdf.addPage([85.6,54],'landscape');rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
   pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');drawLogo(5,2.0);
