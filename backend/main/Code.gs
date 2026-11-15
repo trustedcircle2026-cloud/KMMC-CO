@@ -239,21 +239,47 @@ function setupKmmcAdminFromProperties(){
   p.deleteProperty('KMMC_ADMIN_PASSWORD');
   return 'Admin bootstrapped. Temporary password property deleted. Keep the password securely.';
 }
+/**
+ * One-time migration/setup for the primary Developer account.
+ * Preserves the existing bootstrap ADMIN password hash when available.
+ * If no bootstrap account exists, uses KMMC_ADMIN_PASSWORD from Script Properties.
+ */
+function setupKmmcDeveloperAccount(){
+  if(!configured_())throw Error('Run setupKmmcBackend() first.');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    const users=rows_('users'), target='dev1';
+    let dev=users.find(x=>String(x.username||'').trim().toLowerCase()===target);
+    if(dev){
+      if(!['ADMIN','DEVELOPER'].includes(String(dev.role||'').toUpperCase()))throw Error('Dev1 is already assigned to a non-administrator account. Resolve the username conflict before setup.');
+      dev.role='DEVELOPER';dev.name=dev.name||'KMMC Developer';dev.status='ACTIVE';dev.updatedAt=iso_();write_('users',dev.id,dev);
+      return 'Developer account Dev1 is ready. Existing password retained.';
+    }
+    const props=PropertiesService.getScriptProperties();
+    const configuredName=String(props.getProperty('KMMC_ADMIN_USERNAME')||'admin').trim().toLowerCase();
+    const legacy=users.find(x=>String(x.username||'').trim().toLowerCase()===configuredName&&String(x.role||'').toUpperCase()==='ADMIN');
+    if(legacy){
+      if(users.some(x=>String(x.username||'').trim().toLowerCase()===target))throw Error('User ID Dev1 is already in use.');
+      legacy.username='Dev1';legacy.role='DEVELOPER';legacy.name=legacy.name||'KMMC Developer';legacy.status='ACTIVE';legacy.updatedAt=iso_();write_('users',legacy.id,legacy);
+      return 'Developer account created as Dev1 by migrating the existing bootstrap account. Existing password retained.';
+    }
+    const pass=props.getProperty('KMMC_ADMIN_PASSWORD');
+    if(!pass)throw Error('No existing bootstrap admin account or KMMC_ADMIN_PASSWORD property was found. Set KMMC_ADMIN_PASSWORD in Script Properties, then run setupKmmcDeveloperAccount() again.');
+    const salt=Utilities.getUuid(),now=iso_();
+    const u={id:uid_(),username:'Dev1',passwordHash:hash_(pass,salt),salt:salt,role:'DEVELOPER',name:'KMMC Developer',email:'',phone:'',clientId:'',employeeId:'',status:'ACTIVE',mustChangePassword:false,createdAt:now,updatedAt:now,lastLoginAt:''};
+    append_('users',u);props.deleteProperty('KMMC_ADMIN_PASSWORD');
+    return 'Developer account Dev1 created. Bootstrap password property deleted after secure hash storage.';
+  }finally{lock.releaseLock();}
+}
+
 function login_(q){
   const pass=String(q.password||''), requestedRole=String(q.role||'').trim().toUpperCase();
   let name=String(q.username||'').trim().toLowerCase(), u=null;
   if(!pass)throw Error('Password required.');
-  if(requestedRole==='ADMIN'){
-    // Admin login requires only the password. It still validates the stored salted hash.
-    const configuredName=String(PropertiesService.getScriptProperties().getProperty('KMMC_ADMIN_USERNAME')||'').trim().toLowerCase();
-    const admins=rows_('users').filter(x=>String(x.role).toUpperCase()==='ADMIN'&&x.status==='ACTIVE');
-    u=(configuredName?admins.find(x=>String(x.username).toLowerCase()===configuredName):null)||admins[0]||null;
-    name=u?String(u.username).toLowerCase():'admin';
-  }else{
-    if(!name)throw Error('Username required.');
-    u=rows_('users').find(x=>String(x.username).toLowerCase()===name);
-    if(u&&requestedRole&&String(u.role).toUpperCase()!==requestedRole)u=null;
-  }
+  if(!name)throw Error('User ID required.');
+  u=rows_('users').find(x=>String(x.username).trim().toLowerCase()===name);
+  if(u&&requestedRole==='ADMIN'&&!['ADMIN','OFFICE_ADMIN','SUPER_ADMIN','DEVELOPER'].includes(String(u.role).toUpperCase()))u=null;
+  else if(u&&requestedRole&&requestedRole!=='ADMIN'&&String(u.role).toUpperCase()!==requestedRole)u=null;
   if(!u||u.status!=='ACTIVE'||hash_(pass,String(u.salt))!==String(u.passwordHash)){loginLog_(u&&u.id||'',name,'FAILED');throw Error('Invalid username or password.');}
   const token=uid_()+'.'+uid_(), th=sha_(token), now=new Date(), exp=new Date(now.getTime()+KMMC.SESSION_HOURS*3600000);
   rawAppend_('DB_SESSIONS',{id:uid_(),userId:u.id,tokenHash:th,expiresAt:exp.toISOString(),createdAt:now.toISOString(),revokedAt:''});
