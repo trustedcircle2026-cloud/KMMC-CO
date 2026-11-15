@@ -334,6 +334,7 @@ function createUser_(admin,q){
     if(role==='SUPER_ADMIN'&&!isDeveloper_(admin))throw Error('Only Developer can create a Super Admin.');
     if(role==='DEVELOPER'&&!isDeveloper_(admin))throw Error('Only Developer can create another Developer.');
   }else if(!['EMPLOYEE','CLIENT'].includes(role))throw Error('Unsupported account role.');
+  if(['OFFICE_ADMIN','SUPER_ADMIN','DEVELOPER'].includes(role)&&(!String(x.name||'').trim()||!String(x.email||'').trim()))throw Error('Administrator name and registered email are required.');
   if(!/^[a-z0-9._-]{3,60}$/.test(username))throw Error('Username must be 3–60 letters/numbers/dot/underscore/hyphen.');
   if(!pass)throw Error('Initial password is required.');
 
