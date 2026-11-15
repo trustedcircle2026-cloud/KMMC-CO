@@ -341,18 +341,57 @@ setInterval(flushPendingWrites,15000);
  async function renderDeveloperConsole(){
    if(!isDeveloperUser)throw new Error('Developer access required.');
    el('pageTitle').textContent='Developer Console';
-   el('pageSubtitle').textContent='Technical diagnostics, database health, automation triggers and recent backend errors.';
-   el('tableHeading').textContent='System Diagnostics';
-   el('pageActions').innerHTML='<button class="btn" id="refreshDeveloperConsole">Refresh Diagnostics</button>';
-   el('tableContainer').innerHTML='<div class="empty">Running system diagnostics…</div>';
+   el('pageSubtitle').textContent='System health, database maintenance, automation, configuration inventory and diagnostics.';
+   el('tableHeading').textContent='Developer Workspace';
+   el('pageActions').innerHTML='<button class="btn" id="refreshDeveloperConsole">↻ Refresh All</button>';
+   el('tableContainer').innerHTML='<div class="empty">Loading Developer Console…</div>';
+   const escCell=v=>esc(v==null?'—':String(v));
    async function load(){
+     const host=el('tableContainer');
+     host.innerHTML='<div class="empty">Checking application and database health…</div>';
      try{
        const d=await api('developerDiagnostics');
-       const modules=Object.entries(d.database?.modules||{}).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+esc(v)+'</td></tr>').join('');
-       const triggers=(d.triggers||[]).map(t=>'<tr><td>'+esc(t.handler)+'</td><td>'+esc(t.eventType)+'</td><td>'+esc(t.source)+'</td></tr>').join('');
-       const errors=(d.errors||[]).map(e=>'<tr><td>'+esc(e.createdAt||'')+'</td><td>'+esc(e.action||'')+'</td><td>'+esc(e.message||'')+'</td></tr>').join('');
-       el('tableContainer').innerHTML='<div class="grid-2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px"><section class="panel"><div class="panel-body"><div class="hint">Application</div><h3>'+esc(d.app||'KMMC')+'</h3><strong>Version '+esc(d.version||'—')+'</strong></div></section><section class="panel"><div class="panel-body"><div class="hint">Database</div><h3>'+(d.database?.configured?'Connected':'Not configured')+'</h3><span>'+esc(d.database?.spreadsheetName||'—')+'</span><div class="hint">'+esc(d.database?.moduleCount||0)+' modules · Generated '+esc(d.generatedAt||'')+'</div></div></section><section class="panel"><div class="panel-body"><div class="hint">Automation Triggers</div><h3>'+(d.triggers||[]).length+'</h3><span>Installed Apps Script triggers</span></div></section><section class="panel"><div class="panel-body"><div class="hint">Recent Backend Errors</div><h3>'+(d.errors||[]).length+'</h3><span>Latest 50 recorded errors</span></div></section></div><section class="panel" style="margin-top:16px"><div class="panel-head"><h3>Database Module Records</h3></div><div class="panel-body"><div class="table-wrap"><table><thead><tr><th>Module</th><th>Records</th></tr></thead><tbody>'+modules+'</tbody></table></div></div></section><section class="panel" style="margin-top:16px"><div class="panel-head"><h3>Installed Triggers</h3></div><div class="panel-body">'+(triggers?'<div class="table-wrap"><table><thead><tr><th>Handler</th><th>Event</th><th>Source</th></tr></thead><tbody>'+triggers+'</tbody></table></div>':'<div class="empty">No installed triggers found.</div>')+'</div></section><section class="panel" style="margin-top:16px"><div class="panel-head"><h3>Backend Error Log</h3></div><div class="panel-body">'+(errors?'<div class="table-wrap"><table><thead><tr><th>Date / Time</th><th>Action</th><th>Error</th></tr></thead><tbody>'+errors+'</tbody></table></div>':'<div class="empty">No backend errors recorded.</div>')+'</div></section>';
-     }catch(e){el('tableContainer').innerHTML='<div class="empty">Diagnostics failed: '+esc(e.message)+'</div>';}
+       const modules=Object.entries(d.database?.modules||{}).map(([k,v])=>'<tr><td>'+escCell(k)+'</td><td>'+escCell(v)+'</td></tr>').join('');
+       const triggers=(d.triggers||[]).map(t=>'<tr><td>'+escCell(t.handler)+'</td><td>'+escCell(t.eventType)+'</td><td>'+escCell(t.source)+'</td></tr>').join('');
+       const errors=(d.errors||[]).map(e=>'<tr><td>'+escCell(e.createdAt)+'</td><td>'+escCell(e.action)+'</td><td style="white-space:normal;min-width:260px">'+escCell(e.message)+'</td></tr>').join('');
+       const props=(d.scriptProperties||[]).map(k=>'<tr><td>'+escCell(k)+'</td><td><span class="badge">Configured · value hidden</span></td></tr>').join('');
+       const configs=(d.systemConfig||[]).map(x=>'<tr><td>'+escCell(x.key)+'</td><td>'+escCell(x.updatedAt)+'</td><td>Value protected</td></tr>').join('');
+       host.innerHTML=
+       '<div class="grid-2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">'+
+       '<section class="panel"><div class="panel-body"><div class="hint">Application</div><h3>'+escCell(d.app)+'</h3><strong>Version '+escCell(d.version)+'</strong><div class="hint">Checked '+escCell(d.generatedAt)+'</div></div></section>'+
+       '<section class="panel"><div class="panel-body"><div class="hint">Database connection</div><h3>'+(d.database?.configured?'Connected':'Not configured')+'</h3><div>'+escCell(d.database?.spreadsheetName)+'</div><div class="hint">'+escCell(d.database?.moduleCount)+' data modules</div><button class="btn small" id="runDbTest" style="margin-top:10px">Run database integrity check</button><div id="dbTestResult" class="hint" style="margin-top:8px"></div></div></section>'+
+       '<section class="panel"><div class="panel-body"><div class="hint">Installed triggers</div><h3>'+(d.triggers||[]).length+'</h3><div class="hint">Project automation triggers</div><button class="btn small" id="repairClockout" style="margin-top:10px">Repair auto clock-out trigger</button></div></section>'+
+       '<section class="panel"><div class="panel-body"><div class="hint">Backend errors</div><h3>'+(d.errors||[]).length+'</h3><div class="hint">Most recent 50 logged errors</div><span class="badge">'+((d.errors||[]).length?'Review required':'No recent errors')+'</span></div></section></div>'+
+       '<section class="panel" style="margin-top:14px"><div class="panel-head"><h3>Database Backup</h3><span class="hint">Creates a timestamped copy in Google Drive</span></div><div class="panel-body"><p class="muted">A backup does not change the live database. Use this before planned maintenance or major configuration changes.</p><button class="btn primary" id="createDbBackup">Create database backup</button><div id="backupResult" class="hint" style="margin-top:10px"></div></div></section>'+
+       '<section class="panel" style="margin-top:14px"><div class="panel-head"><h3>Database Module Records</h3></div><div class="panel-body"><div class="table-wrap"><table><thead><tr><th>Module</th><th>Records</th></tr></thead><tbody>'+modules+'</tbody></table></div></div></section>'+
+       '<section class="panel" style="margin-top:14px"><div class="panel-head"><h3>Installed Apps Script Triggers</h3></div><div class="panel-body">'+(triggers?'<div class="table-wrap"><table><thead><tr><th>Handler</th><th>Event type</th><th>Source</th></tr></thead><tbody>'+triggers+'</tbody></table></div>':'<div class="empty">No installed triggers found.</div>')+'</div></section>'+
+       '<section class="panel" style="margin-top:14px"><div class="panel-head"><h3>Script Property Inventory</h3><span class="hint">Names only — secret values are never returned</span></div><div class="panel-body">'+(props?'<div class="table-wrap"><table><thead><tr><th>Property</th><th>Value visibility</th></tr></thead><tbody>'+props+'</tbody></table></div>':'<div class="empty">No non-sensitive script properties found.</div>')+'</div></section>'+
+       '<section class="panel" style="margin-top:14px"><div class="panel-head"><h3>System Configuration Keys</h3><span class="hint">Values are not exposed in this console</span></div><div class="panel-body">'+(configs?'<div class="table-wrap"><table><thead><tr><th>Key</th><th>Last updated</th><th>Value</th></tr></thead><tbody>'+configs+'</tbody></table></div>':'<div class="empty">No system configuration entries found.</div>')+'</div></section>'+
+       '<section class="panel" style="margin-top:14px"><div class="panel-head"><h3>Recent Backend Error Log</h3><button class="btn small" id="copyErrorLog">Copy visible errors</button></div><div class="panel-body">'+(errors?'<div class="table-wrap"><table><thead><tr><th>Date / Time</th><th>Action</th><th>Error</th></tr></thead><tbody>'+errors+'</tbody></table></div>':'<div class="empty">No backend errors recorded.</div>')+'</div></section>'+
+       '<section class="panel" style="margin-top:14px;border:1px solid var(--border)"><div class="panel-head"><h3>Protected Operations</h3></div><div class="panel-body"><p class="muted">Database reset, arbitrary script execution, secret-value editing and unrestricted trigger deletion are intentionally unavailable from the web console. Use reviewed maintenance procedures with a verified backup.</p><div class="hint">All available maintenance actions are checked again by the backend and recorded in the activity log.</div></div></section>';
+       el('runDbTest')?.addEventListener('click',async()=>{
+         const out=el('dbTestResult');out.textContent='Checking…';
+         try{const r=await api('developerDatabaseTest');out.textContent=(r.healthy?'Healthy — ':'Missing sheets — ')+(r.missingSheets||[]).join(', ')+(r.healthy?'All '+r.requiredSheets.length+' required sheets found.':'');}
+         catch(e){out.textContent='Check failed: '+e.message;}
+       });
+       el('createDbBackup')?.addEventListener('click',async()=>{
+         const phrase=prompt('This creates a full copy of the configured KMMC database in Drive. Type BACKUP KMMC DATABASE to continue.');
+         if(phrase===null)return;
+         const out=el('backupResult');out.textContent='Creating backup…';
+         try{const r=await api('developerCreateBackup',{confirmation:phrase});out.innerHTML='Backup created: <strong>'+escCell(r.name)+'</strong> · <a href="'+esc(r.url)+'" target="_blank" rel="noopener">Open backup in Drive</a>';}
+         catch(e){out.textContent='Backup failed: '+e.message;}
+       });
+       el('repairClockout')?.addEventListener('click',async()=>{
+         const phrase=prompt('This replaces only the autoCloseSessionsAtNinePm trigger with the standard five-minute schedule. Type REPAIR CLOCKOUT TRIGGER to continue.');
+         if(phrase===null)return;
+         try{const r=await api('developerRepairClockoutTrigger',{confirmation:phrase});showNotice('Auto clock-out trigger repaired and verified.','success');await load();}
+         catch(e){showNotice('Trigger repair failed: '+e.message,'error');}
+       });
+       el('copyErrorLog')?.addEventListener('click',async()=>{
+         const text=(d.errors||[]).map(x=>[x.createdAt,x.action,x.message].join(' | ')).join('\n');
+         try{await navigator.clipboard.writeText(text);showNotice('Error log copied.','success');}catch(e){showNotice('Clipboard access unavailable.','error');}
+       });
+     }catch(e){host.innerHTML='<div class="empty">Developer diagnostics failed: '+esc(e.message)+'<br><button class="btn small" id="retryDeveloperConsole" style="margin-top:10px">Try again</button></div>';el('retryDeveloperConsole')?.addEventListener('click',load);}
    }
    el('pageActions').querySelector('#refreshDeveloperConsole').addEventListener('click',load);
    await load();
