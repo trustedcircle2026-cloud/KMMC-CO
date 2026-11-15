@@ -1006,7 +1006,7 @@ async function renderEmployeeProfile(){
    const blob=await response.blob();
    logoData=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
   }catch(e){console.warn('KMMC logo unavailable for ID card:',e);}
-  const drawLogo=(x,y)=>{if(logoData){try{pdf.addImage(logoData,'PNG',x,y+3.5,8.5,4.25,undefined,'FAST');}catch(e){}}else{text('CA',x+1,y+5.7,4.5,blue,'bold');text('INDIA',x+0.8,y+7.3,2,muted,'bold');}text('K MAHESH MANICKHAM & CO.',x+10,y+4.5,9,blue,'bold');text('CHARTERED ACCOUNTANTS',x+10,y+7.5,4.5,muted,'bold');};
+  const drawLogo=(x,y)=>{if(logoData){try{pdf.addImage(logoData,'PNG',x,y+3.5,8.5,4.25,undefined,'FAST');}catch(e){}}else{text('CA',x+1,y+5.7,4.5,blue,'bold');text('INDIA',x+0.8,y+7.3,2,muted,'bold');}text('K MAHESH MANICKHAM & CO.',x+10,y+4.5,8.2,blue,'bold');text('CHARTERED ACCOUNTANTS',x+10,y+7.5,4.3,muted,'bold');};
   // FRONT — KMMC branding with the supplied horizontal firm logo.
   rounded(0.8,0.8,W-1.6,H-1.6,2,[255,255,255]);
   pdf.setFillColor(255,255,255);pdf.roundedRect(1,1,W-2,12,2,2,'F');
