@@ -134,7 +134,7 @@
     const roleData = {
       customer: {apiRole:'CLIENT',label:'Customer ID / Email',placeholder:'Enter user name',button:'Log In'},
       employee: {apiRole:'EMPLOYEE',label:'Employee ID / Work email',placeholder:'Enter employee ID',button:'Log In'},
-      admin: {apiRole:'ADMIN',label:'Admin password',placeholder:'Enter admin password',button:'Log In'}
+      admin: {apiRole:'ADMIN',label:'Admin User ID',placeholder:'Enter Admin User ID',button:'Log In'}
     };
     const tabs=document.querySelectorAll('.role-button');
     const roleInput=document.getElementById('selectedRole');
@@ -150,7 +150,7 @@
       roleInput.value=role;
       tabs.forEach(tab=>tab.setAttribute('aria-pressed',String(tab.dataset.role===role)));
       usernameLabel.textContent=data.label;username.placeholder=data.placeholder;submit.textContent=data.button;
-      const isAdmin=role==='admin';document.getElementById('usernameField').hidden=isAdmin;username.required=!isAdmin;if(isAdmin)username.value='';
+      const isAdmin=role==='admin';document.getElementById('usernameField').hidden=false;username.required=true;if(isAdmin){username.autocomplete='username';username.value='';}
       setStatus('Enter your account details to continue.');
     }
     tabs.forEach(tab=>tab.addEventListener('click',()=>setRole(tab.dataset.role)));
@@ -163,7 +163,7 @@
     form.addEventListener('submit',async event=>{
       event.preventDefault();if(!form.reportValidity())return;
       const role=roleInput.value,expected=roleData[role].apiRole,userName=username.value.trim(),userPassword=password.value;
-      if((role!=='admin'&&!userName)||!userPassword){setStatus(role==='admin'?'Enter the Admin password.':'Enter your username and password.',true);return;}
+      if(!userName||!userPassword){setStatus(role==='admin'?'Enter your Admin User ID and password.':'Enter your username and password.',true);return;}
       submit.disabled=true;submit.textContent='Signing in…';setStatus('Checking your credentials. Please wait.');
       try{
         const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',role:expected,username:userName,password:userPassword})});
@@ -188,7 +188,7 @@
             ? 'The configured Apps Script URL returned its health/status response instead of the login result. Deploy the latest backend Code.gs as a Web App, then update API_URL in login.html and portal.html to that deployment URL.'
             : 'Apps Script did not return the required session token. Response fields: '+(keys||'none')+'. Check the backend login action and redeploy the latest Code.gs.');
         }
-        if(String(user.role||'').toUpperCase()!==expected){
+        const actualRole=String(user.role||'').toUpperCase();const validRole=role==='admin'?['ADMIN','OFFICE_ADMIN','SUPER_ADMIN','DEVELOPER'].includes(actualRole):actualRole===expected;if(!validRole){
           try{await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'logout',token:data.token})});}catch(ignore){}
           throw new Error('This account is registered as '+String(user.role||'unknown')+'. Select the matching login type.');
         }
@@ -198,7 +198,7 @@
         sessionStorage.setItem('kmmc_session_token',data.token);
         sessionStorage.setItem('kmmc_session_expires_at',data.expiresAt||'');
         sessionStorage.setItem('kmmc_user',JSON.stringify(user));
-        password.value='';setStatus('Login successful. Opening your workspace…');const target=new URL(user.role==='EMPLOYEE'?'EmployeePortal.html':'portal.html',window.location.href);const workspaceUrl=target.href;let workspaceTab=null;try{workspaceTab=window.open(workspaceUrl,'_blank');}catch(ignore){}if(workspaceTab){try{workspaceTab.focus();}catch(ignore){}setStatus('Your workspace is opening in a new tab.');}else{setStatus('Your browser blocked the new tab. Allow pop-ups for this site; opening your workspace here instead.');window.location.href=workspaceUrl;}
+        password.value='';setStatus('Login successful. Opening your workspace…');const adminPage={OFFICE_ADMIN:'Admin1.html',SUPER_ADMIN:'Superadmin.html',DEVELOPER:'portal.html',ADMIN:'portal.html'};const destination=user.role==='EMPLOYEE'?'EmployeePortal.html':(adminPage[String(user.role||'').toUpperCase()]||'portal.html');const target=new URL(destination,window.location.href);const workspaceUrl=target.href;let workspaceTab=null;try{workspaceTab=window.open(workspaceUrl,'_blank');}catch(ignore){}if(workspaceTab){try{workspaceTab.focus();}catch(ignore){}setStatus('Your workspace is opening in a new tab.');}else{setStatus('Your browser blocked the new tab. Allow pop-ups for this site; opening your workspace here instead.');window.location.href=workspaceUrl;}
       }catch(error){
         const message=String(error&&error.message||'Unable to sign in.');
         if(/Failed to fetch|NetworkError|Load failed/i.test(message)){
