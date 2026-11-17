@@ -1331,6 +1331,7 @@ function renderEmployeeGSTTools(){
     const docRoot=data.doc_issue?.doc_det||data.doc_issue?.docs||data.doc_issue||[];const docList=Array.isArray(docRoot)?docRoot:(Array.isArray(docRoot.doc_det)?docRoot.doc_det:[]);
     docList.forEach(group=>(group.docs||group.doc||[]).forEach(d=>{const total=Number(d.totnum||d.total||0),cancelled=Number(d.cancel||d.cancelled||0);documentRows.push({type:String(group.doc_typ||group.doc_type||d.doc_typ||'Document'),from:String(d.from||d.sr_from||''),to:String(d.to||d.sr_to||''),total,cancelled,net:Math.max(0,total-cancelled)});}));
     processed.push({fileName:item.file.name,gstin,clientName:'Loading...',fy:meta.fy,month:meta.month,period,filingType:meta.filingType});
+    renderQueue();
     progress(65+(i+1)/staged.length*10,'Preparing report rows '+(i+1)+' of '+staged.length);
    }
    renderReport();closeModal();status('Report table is ready. Fetching client and party names in the background…');
