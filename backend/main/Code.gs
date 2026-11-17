@@ -84,6 +84,36 @@ function publicEnquiry_(q){
     return {received:true,reference:id,submittedAt};
   }finally{lock.releaseLock();}
 }
+
+/**
+ * Look up GST registration details through Razorpay.
+ * This endpoint accepts only a GSTIN; uploaded GSTR-1 JSON is never received or stored here.
+ */
+function gstinLookup_(actor,q){
+  if(!actor||!['ADMIN','EMPLOYEE'].includes(String(actor.role||'').toUpperCase()))throw Error('Access denied.');
+  const gstin=String(q.gstin||'').trim().toUpperCase();
+  if(!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin))throw Error('Enter a valid 15-character GSTIN.');
+  const url='https://razorpay.com/api/gstin/'+encodeURIComponent(gstin);
+  const response=UrlFetchApp.fetch(url,{method:'get',muteHttpExceptions:true,followRedirects:true});
+  const status=response.getResponseCode();
+  if(status<200||status>=300)throw Error('GSTIN lookup provider returned HTTP '+status+'.');
+  const payload=JSON.parse(response.getContentText()||'{}');
+  const d=payload&&payload.enrichment_details&&payload.enrichment_details.online_provider&&payload.enrichment_details.online_provider.details||{};
+  const val=x=>x&&typeof x==='object'&&Object.prototype.hasOwnProperty.call(x,'value')?x.value:(x||'');
+  return {
+    gstin:val(d.gstin)||gstin,
+    legalName:val(d.legal_name),
+    tradeName:val(d.trade_name),
+    registrationDate:val(d.registration_date),
+    constitution:val(d.constitution),
+    taxpayerType:val(d.tax_payer_type),
+    status:val(d.status),
+    stateJurisdiction:val(d.state_jurisdiction),
+    centralJurisdiction:val(d.central_jurisdiction),
+    raw:payload
+  };
+}
+
 function route_(a,q){
   const action=String(a||'');
   if(action==='publicEnquiry')return publicEnquiry_(q);
@@ -93,6 +123,7 @@ function route_(a,q){
   if(restrictedWrites.includes(action)){const actor=auth_(q);if(actor.role==='EMPLOYEE'&&employeeApprovalStatus_(actor)!=='APPROVED')throw Error('Your account is awaiting administrator approval. This action is unavailable until approval.');}
   switch(String(a||'')){
     case 'health':return {app:'KMMC ERP API',version:KMMC.VERSION,setup:configured_()};
+    case 'gstinLookup':return gstinLookup_(auth_(q),q);
     case 'login':return login_(q);
     case 'logout':return logout_(q);
     case 'validateSession':case 'myProfile':return {user:pubUser_(auth_(q))};
