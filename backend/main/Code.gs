@@ -1209,10 +1209,14 @@ function notifyOfficeAdminsOfEmployeeActivity_(actor,action,module,recordId,deta
   admins.forEach(admin=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:admin.id,title:actionLabel,message,type:'EMPLOYEE_ACTIVITY',relatedId:id,readAt:'',createdAt:createdAt||iso_(),module:moduleKey,recordId:id,actorName:who,employeeCode:String(employee.employeeCode||''),action:String(action||''),detailsJson:JSON.stringify(detailsObject)});}catch(ignore){}});
 }
 function employeeActivityLabel_(action,module){
-  const map={LOGIN:'logged in',LOGOUT:'logged out',EMPLOYEE_SELF_REGISTER:'submitted employee registration',CLOCK_IN:'clocked in',CLOCK_OUT:'clocked out',BREAK_START:'started a break',BREAK_STOP:'ended a break',SUBMIT_PROFILE_UPDATE:'submitted a profile change request',SUBMIT_PROFILE_PHOTO:'submitted a profile photo',SUBMIT_MANUAL_WORKDONE:'submitted workdone for approval',TASK_SUBMITTED_FOR_VERIFICATION:'submitted a task for verification',CREATE_SUPPORT_TICKET:'raised a support request',QUICK_CREATE_CLIENT:'added a client'};
+  const map={LOGIN:'logged in',LOGOUT:'logged out',EMPLOYEE_SELF_REGISTER:'submitted employee registration',CLOCK_IN:'clocked in',CLOCK_OUT:'clocked out',BREAK_START:'started a break',BREAK_STOP:'ended a break',SUBMIT_PROFILE_UPDATE:'submitted a profile change request',SUBMIT_PROFILE_PHOTO:'submitted a profile photo',SUBMIT_WORKDONE_REVISION:'submitted workdone for approval',TASK_SUBMITTED_FOR_VERIFICATION:'submitted a task for verification',TASK_TIMER_START:'started an assignment',TASK_STATUS:'changed task status',CREATE_SUPPORT_TICKET:'raised a support request',QUICK_CREATE_CLIENT:'added a client',DRIVE_CREATE:'created a Drive item',DRIVE_UPLOAD:'uploaded a document',DRIVE_EDIT:'edited a Drive document',DRIVE_DELETE:'deleted a Drive item',UPLOAD_EMPLOYEE_RESUME:'uploaded a resume',PASSWORD_RESET:'reset the account password',CHANGE_PASSWORD:'changed the account password'};
   if(map[action])return map[action];
+  const labels={tasks:'task / assignment',leave:'leave request',clients:'client record',documents:'document',time:'time entry',workdone:'workdone entry',supportTickets:'support request',profileChanges:'profile request',invoices:'invoice',collections:'collection'};
+  const noun=labels[module]||String(module||'record').replace(/([A-Z])/g,' $1').toLowerCase();
+  const verbs={CREATE:'created a',UPDATE:'updated a',DELETE:'deleted a'};
+  if(verbs[action])return verbs[action]+' '+noun;
   const verb=String(action||'ACTIVITY').toLowerCase().replace(/_/g,' ');
-  return verb.charAt(0).toUpperCase()+verb.slice(1)+(module?' · '+String(module).replace(/([A-Z])/g,' $1'):'');
+  return verb.charAt(0).toUpperCase()+verb.slice(1)+(module?' · '+noun:'');
 }
 function adminEmployeeActivity_(admin){
   if(String(admin.role||'').toUpperCase()!=='OFFICE_ADMIN')throw Error('Office Admin access required.');
