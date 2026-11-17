@@ -30,7 +30,7 @@ const KMMC = {
     ledger:{s:'DB_ACCOUNTING_LEDGER',h:['id','entryDate','voucherType','voucherId','voucherNo','accountId','accountCode','accountName','group','debit','credit','narration','status','createdBy','createdAt'],r:['ADMIN'],ro:true},
     reimbursement:{s:'DB_REIMBURSEMENT_CLAIMS',h:['id','claimNo','employeeId','employeeName','claimDate','category','description','amountClaimed','amountApproved','amountPaid','status','approvedBy','approvedAt','paidAt','receiptUrl','createdBy','createdAt','updatedAt'],r:['ADMIN']},
     messages:{s:'DB_MESSAGES',h:['id','fromUserId','toUserId','clientId','subject','message','status','createdAt','readAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
-    notifications:{s:'DB_NOTIFICATIONS',h:['id','userId','title','message','type','relatedId','readAt','createdAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
+    notifications:{s:'DB_NOTIFICATIONS',h:['id','userId','title','message','type','relatedId','readAt','createdAt','module','recordId','actorName','employeeCode','action','detailsJson'],r:['ADMIN','EMPLOYEE','CLIENT']},
     profileChanges:{s:'DB_PROFILE_CHANGES',h:['id','employeeId','employeeName','changesJson','photoFileId','status','submittedAt','reviewedAt','reviewedBy','reviewNote'],r:['ADMIN','EMPLOYEE']},
     supportTickets:{s:'DB_SUPPORT_TICKETS',h:['id','ticketNo','requesterUserId','requesterRole','requesterName','employeeId','clientId','category','subject','description','priority','status','attachmentFileId','attachmentUrl','adminResponse','assignedTo','createdAt','updatedAt','closedAt'],r:['ADMIN','EMPLOYEE','CLIENT']},
     activity:{s:'DB_ACTIVITY_LOG',h:['id','userId','username','role','action','module','recordId','details','createdAt'],r:['ADMIN'],ro:true},
@@ -155,6 +155,8 @@ function route_(a,q){
     case 'setTaskStatus':return setTaskStatus_(auth_(q),q);
     case 'submitTaskForVerification':return submitTaskForVerification_(auth_(q),q);
     case 'adminApprovals':return adminApprovals_(auth_(q));
+    case 'adminEmployeeActivity':return adminEmployeeActivity_(auth_(q));
+    case 'markAdminEmployeeActivityRead':return markAdminEmployeeActivityRead_(auth_(q),q);
     case 'serviceRequestHistory':return serviceRequestHistory_(auth_(q));
     case 'reviewTaskVerification':return reviewTaskVerification_(auth_(q),q);
     case 'startTask':return taskStatus_(auth_(q),q,'IN_PROGRESS');
@@ -364,7 +366,22 @@ function setUserStatus_(admin,q){
 function dashboard_(u){
   const role=u.role, keys=isSuperAdmin_(u)?Object.keys(KMMC.M):isAdmin_(u)?Object.keys(KMMC.M).filter(k=>!['accounts','receipts','payments','vouchers','reports','users','activity','loginlog'].includes(k)):role==='CLIENT'?['tasks','documents','invoices','collections','messages','notifications']:['clients','tasks','time','workdone','attendance','leave','documents','invoices','collections','expenses','messages','notifications'];
   const counts={};keys.forEach(k=>counts[k]=rows_(k).filter(r=>visible_(u,k,r)).length);
-  return {user:pubUser_(u),counts,outstanding:outstandingSummary_(u)};
+  const result={user:pubUser_(u),counts,outstanding:outstandingSummary_(u)};
+  if(String(role).toUpperCase()==='OFFICE_ADMIN')result.employeeLiveStatus_=employeeLiveStatus_();
+  return result;
+}
+function employeeLiveStatus_(){
+  const employees=rows_('employees'),users=rows_('users'),attendance=rows_('attendance'),time=rows_('time'),tasks=rows_('tasks'),clients=rows_('clients'),day=localDay_(new Date());
+  const result=employees.map(e=>{
+    const account=users.find(x=>String(x.role)==='EMPLOYEE'&&String(x.employeeId)===String(e.id));
+    const att=attendance.filter(x=>String(x.employeeId)===String(e.id)&&dateKey_(x.workDate)===day&&!x.checkOut).sort((a,b)=>String(b.checkIn||'').localeCompare(String(a.checkIn||'')))[0]||null;
+    const active=att?time.filter(x=>String(x.employeeId)===String(e.id)&&dateKey_(x.workDate)===day&&!x.endTime&&['WORK','BREAK'].includes(String(x.entryType||'').toUpperCase())).sort((a,b)=>String(b.startTime||'').localeCompare(String(a.startTime||'')))[0]||null:null;
+    const task=active&&active.taskId?tasks.find(x=>String(x.id)===String(active.taskId)):null,client=task&&task.clientId?clients.find(x=>String(x.id)===String(task.clientId)):null;
+    const accountStatus=String(account&&account.status||e.status||'ACTIVE').toUpperCase(),approval=String(e.approvalStatus||'APPROVED').toUpperCase();
+    const workingStatus=accountStatus!=='ACTIVE'?'ACCOUNT INACTIVE':approval!=='APPROVED'?'PENDING APPROVAL':!att?'NOT CLOCKED IN':active&&String(active.entryType).toUpperCase()==='BREAK'?'ON BREAK':'WORKING';
+    return {employeeId:e.id,employeeCode:e.employeeCode||'',name:e.name||account&&account.name||'Employee',department:e.department||'',designation:e.designation||'',accountStatus,approvalStatus:approval,workingStatus,clockInAt:att&&att.checkIn||'',taskId:task&&task.id||'',taskTitle:task&&(task.title||task.description)||active&&active.description||'',jobNumber:task&&task.jobNumber||active&&active.jobNumber||'',clientName:client&&client.name||'',timerStartedAt:active&&active.startTime||''};
+  }).sort((a,b)=>{const rank=x=>x.workingStatus==='WORKING'?0:x.workingStatus==='ON BREAK'?1:x.workingStatus==='NOT CLOCKED IN'?2:3;return rank(a)-rank(b)||String(a.name).localeCompare(String(b.name));});
+  return {employees:result,counts:{total:result.length,working:result.filter(x=>x.workingStatus==='WORKING').length,onBreak:result.filter(x=>x.workingStatus==='ON BREAK').length,notClockedIn:result.filter(x=>x.workingStatus==='NOT CLOCKED IN').length,pendingApproval:result.filter(x=>x.workingStatus==='PENDING APPROVAL').length}};
 }
 function list_(u,q){
   const k=module_(q.module);authorize_(u,k,'read');let a=rows_(k).filter(r=>visible_(u,k,r));
@@ -988,7 +1005,6 @@ function updateMyEmployeeProfile_(u,q){
     const now=iso_();
     if(pending){const merged=Object.assign({},JSON.parse(pending.changesJson||'{}'),changes);pending.changesJson=JSON.stringify(merged);pending.submittedAt=now;write_('profileChanges',pending.id,pending);}
     else{pending={id:uid_(),employeeId:String(e.id),employeeName:String(e.name||u.name||''),changesJson:JSON.stringify(changes),photoFileId:'',status:'PENDING',submittedAt:now,reviewedAt:'',reviewedBy:'',reviewNote:''};append_('profileChanges',pending);}
-    rows_('users').filter(x=>isAdmin_(x)&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Employee profile update approval required',message:String(e.name||u.name)+' submitted profile changes for approval.',type:'PROFILE_APPROVAL',relatedId:pending.id,createdAt:now});}catch(ignore){}});
     activity_(u,'SUBMIT_PROFILE_UPDATE','profileChanges',pending.id,'Awaiting Admin approval');
     return {submitted:true,status:'PENDING',requestId:pending.id,profile:myEmployeeProfile_(u)};
   }finally{lock.releaseLock();}
@@ -1007,7 +1023,6 @@ function uploadMyProfilePhoto_(u,q){
     const now=iso_();let pending=rows_('profileChanges').find(x=>String(x.employeeId)===String(e.id)&&String(x.status).toUpperCase()==='PENDING');
     if(pending){if(pending.photoFileId){try{DriveApp.getFileById(String(pending.photoFileId)).setTrashed(true);}catch(ignore){}}pending.photoFileId=file.getId();pending.submittedAt=now;write_('profileChanges',pending.id,pending);}
     else{pending={id:uid_(),employeeId:String(e.id),employeeName:String(e.name||u.name||''),changesJson:'{}',photoFileId:file.getId(),status:'PENDING',submittedAt:now,reviewedAt:'',reviewedBy:'',reviewNote:''};append_('profileChanges',pending);}
-    rows_('users').filter(x=>isAdmin_(x)&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE').forEach(a=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:a.id,title:'Employee profile photo approval required',message:String(e.name||u.name)+' submitted a profile photo for approval.',type:'PROFILE_APPROVAL',relatedId:pending.id,createdAt:now});}catch(ignore){}});
     activity_(u,'SUBMIT_PROFILE_PHOTO','profileChanges',pending.id,name);
     return {submitted:true,status:'PENDING',requestId:pending.id,profile:myEmployeeProfile_(u)};
   }finally{lock.releaseLock();}
@@ -1170,7 +1185,47 @@ function rawAppend_(name,r){const sh=sheet_(name),h=sh.getRange(1,1,1,sh.getLast
 function write_(k,id,r){rawWrite_(KMMC.M[k].s,id,r);}
 function rawWrite_(name,id,r){const sh=sheet_(name),row=findRow_(sh,id);if(row<2)throw Error('Record not found.');const h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];sh.getRange(row,1,1,h.length).setValues([h.map(k=>r[k]==null?'':r[k])]);}
 function findRow_(sh,id){if(sh.getLastRow()<2)return -1;const v=sh.getRange(2,1,sh.getLastRow()-1,1).getDisplayValues();for(let i=0;i<v.length;i++)if(String(v[i][0])===String(id))return i+2;return -1;}
-function activity_(u,a,m,id,d){try{rawAppend_('DB_ACTIVITY_LOG',{id:uid_(),userId:u.id,username:u.username,role:u.role,action:a,module:m,recordId:id,details:String(d||'').slice(0,500),createdAt:iso_()});}catch(e){}}
+function activity_(u,a,m,id,d){
+  const now=iso_();
+  try{rawAppend_('DB_ACTIVITY_LOG',{id:uid_(),userId:u.id,username:u.username,role:u.role,action:a,module:m,recordId:id,details:String(d||'').slice(0,500),createdAt:now});}catch(e){}
+  if(String(u&&u.role||'').toUpperCase()==='EMPLOYEE')try{notifyOfficeAdminsOfEmployeeActivity_(u,a,m,id,d,now);}catch(e){logError_(e);}
+}
+function notifyOfficeAdminsOfEmployeeActivity_(actor,action,module,recordId,details,createdAt){
+  const sheet=sheet_('DB_NOTIFICATIONS');ensureHeaders_(sheet,KMMC.M.notifications.h);
+  const employees=rows_('employees'),employee=employees.find(x=>String(x.id)===String(actor.employeeId))||{};
+  const users=rows_('users'),admins=users.filter(x=>String(x.role||'').toUpperCase()==='OFFICE_ADMIN'&&String(x.status||'ACTIVE').toUpperCase()==='ACTIVE');
+  if(!admins.length)return;
+  const moduleKey=String(module||''),id=String(recordId||'');
+  let record=null;
+  try{if(moduleKey==='auth')record=users.find(x=>String(x.id)===id)||null;else if(KMMC.M[moduleKey])record=rows_(moduleKey).find(x=>String(x.id)===id)||null;}catch(ignore){}
+  const cleanRecord=record?JSON.parse(JSON.stringify(record)):null;
+  if(cleanRecord){['passwordHash','salt','tokenHash','resumeBase64','base64Data'].forEach(k=>delete cleanRecord[k]);}
+  const employeeSnapshot=employee?Object.assign({},employee):{};
+  ['salary','approvalNote','approvedBy','profilePhotoFileId','resumeFileId'].forEach(k=>delete employeeSnapshot[k]);
+  const detailsObject={action:String(action||''),module:moduleKey,recordId:id,details:String(details||''),employee:employeeSnapshot,record:cleanRecord,actor:{name:String(actor.name||actor.username||employee.name||'Employee'),username:String(actor.username||''),employeeCode:String(employee.employeeCode||''),employeeId:String(actor.employeeId||''),role:String(actor.role||'EMPLOYEE')}};
+  const actionLabel=employeeActivityLabel_(action,moduleKey);
+  const who=String(actor.name||actor.username||employee.name||'Employee');
+  const message=(who+' '+actionLabel+(details?' · '+String(details):'')).slice(0,500);
+  admins.forEach(admin=>{try{rawAppend_('DB_NOTIFICATIONS',{id:uid_(),userId:admin.id,title:actionLabel,message,type:'EMPLOYEE_ACTIVITY',relatedId:id,readAt:'',createdAt:createdAt||iso_(),module:moduleKey,recordId:id,actorName:who,employeeCode:String(employee.employeeCode||''),action:String(action||''),detailsJson:JSON.stringify(detailsObject)});}catch(ignore){}});
+}
+function employeeActivityLabel_(action,module){
+  const map={LOGIN:'logged in',LOGOUT:'logged out',EMPLOYEE_SELF_REGISTER:'submitted employee registration',CLOCK_IN:'clocked in',CLOCK_OUT:'clocked out',BREAK_START:'started a break',BREAK_STOP:'ended a break',SUBMIT_PROFILE_UPDATE:'submitted a profile change request',SUBMIT_PROFILE_PHOTO:'submitted a profile photo',SUBMIT_MANUAL_WORKDONE:'submitted workdone for approval',TASK_SUBMITTED_FOR_VERIFICATION:'submitted a task for verification',CREATE_SUPPORT_TICKET:'raised a support request',QUICK_CREATE_CLIENT:'added a client'};
+  if(map[action])return map[action];
+  const verb=String(action||'ACTIVITY').toLowerCase().replace(/_/g,' ');
+  return verb.charAt(0).toUpperCase()+verb.slice(1)+(module?' · '+String(module).replace(/([A-Z])/g,' $1'):'');
+}
+function adminEmployeeActivity_(admin){
+  if(String(admin.role||'').toUpperCase()!=='OFFICE_ADMIN')throw Error('Office Admin access required.');
+  ensureHeaders_(sheet_('DB_NOTIFICATIONS'),KMMC.M.notifications.h);
+  return rows_('notifications').filter(x=>String(x.userId)===String(admin.id)&&String(x.type)==='EMPLOYEE_ACTIVITY').sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,100).map(x=>{let details={};try{details=JSON.parse(x.detailsJson||'{}');}catch(ignore){}return {id:x.id,title:x.title,message:x.message,type:x.type,relatedId:x.relatedId,readAt:x.readAt||'',createdAt:x.createdAt,module:x.module||'',recordId:x.recordId||'',actorName:x.actorName||'',employeeCode:x.employeeCode||'',action:x.action||'',details};});
+}
+function markAdminEmployeeActivityRead_(admin,q){
+  if(String(admin.role||'').toUpperCase()!=='OFFICE_ADMIN')throw Error('Office Admin access required.');
+  const id=String(q.id||''),n=rows_('notifications').find(x=>String(x.id)===id&&String(x.userId)===String(admin.id)&&String(x.type)==='EMPLOYEE_ACTIVITY');
+  if(!n)throw Error('Activity notification not found.');
+  if(!n.readAt){n.readAt=iso_();write_('notifications',n.id,n);}
+  return {marked:true,id:n.id};
+}
 function loginLog_(id,n,result){try{rawAppend_('DB_LOGIN_LOG',{id:uid_(),userId:id,username:n,result,createdAt:iso_()});}catch(e){}}
 function logError_(e){try{rawAppend_('DB_ERROR_LOG',{id:uid_(),action:'API',message:String(e&&e.message||e).slice(0,1000),createdAt:iso_()});}catch(x){}}
 function hash_(p,s){return sha_(String(s)+'|'+String(p)+'|'+String(PropertiesService.getScriptProperties().getProperty(KMMC.SECRET_PROP)||''));}
