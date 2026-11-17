@@ -1342,7 +1342,7 @@ function renderEmployeeGSTTools(){
  });
  const getGstReportMeta=batch=>{
   const clients=[...new Map(batch.processed.map(x=>[x.gstin,{gstin:x.gstin,name:x.clientName||'Name Not Found'}])).values()];
-  const periods=[...new Set(batch.processed.map(x=>x.period))].map(label=>{const m=String(label).match(/^([A-Za-z]+)\\s+(\\d{4})$/);return {label,index:Number(m[2])*12+new Date(m[1]+' 1, '+m[2]).getMonth()};}).sort((a,b)=>a.index-b.index);
+  const periods=[...new Set(batch.processed.map(x=>x.period))].map(label=>{const m=String(label).match(/^([A-Za-z]+)\s+(\d{4})$/);return {label,index:Number(m[2])*12+new Date(m[1]+' 1, '+m[2]).getMonth()};}).sort((a,b)=>a.index-b.index);
   const groups=[];periods.forEach(p=>{const last=groups[groups.length-1];if(last&&p.index===last.end+1){last.end=p.index;last.to=p.label;}else groups.push({start:p.index,end:p.index,from:p.label,to:p.label});});
   const periodText=groups.map(g=>g.from===g.to?g.from:g.from+' - '+g.to).join(', ')||'Not available';
   return {clients,periodText,monthCount:periods.length,clientText:clients.map(x=>x.name).join(', '),gstinText:clients.map(x=>x.gstin).join(', ')};
