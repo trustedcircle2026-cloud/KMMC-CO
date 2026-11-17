@@ -1342,7 +1342,7 @@ function renderEmployeeGSTTools(){
  });
  const getGstReportMeta=batch=>{
   const clients=[...new Map(batch.processed.map(x=>[x.gstin,{gstin:x.gstin,name:x.clientName||'Name Not Found'}])).values()];
-  const periods=[...new Map(batch.processed.map(x=>{const m=String(x.period||'').match(/^([A-Za-z]+)\\s+(\\d{4})$/);return [x.period,m?{label:x.period,index:Number(m[2])*12+new Date(m[1]+' 1, '+m[2]).getMonth()}:null];}).filter(x=>x[1]).map(x=>x[0]))].map(label=>{const m=String(label).match(/^([A-Za-z]+)\\s+(\\d{4})$/);return {label,index:Number(m[2])*12+new Date(m[1]+' 1, '+m[2]).getMonth()};}).sort((a,b)=>a.index-b.index);
+  const periods=[...new Set(batch.processed.map(x=>x.period))].map(label=>{const m=String(label).match(/^([A-Za-z]+)\\s+(\\d{4})$/);return {label,index:Number(m[2])*12+new Date(m[1]+' 1, '+m[2]).getMonth()};}).sort((a,b)=>a.index-b.index);
   const groups=[];periods.forEach(p=>{const last=groups[groups.length-1];if(last&&p.index===last.end+1){last.end=p.index;last.to=p.label;}else groups.push({start:p.index,end:p.index,from:p.label,to:p.label});});
   const periodText=groups.map(g=>g.from===g.to?g.from:g.from+' - '+g.to).join(', ')||'Not available';
   return {clients,periodText,monthCount:periods.length,clientText:clients.map(x=>x.name).join(', '),gstinText:clients.map(x=>x.gstin).join(', ')};
@@ -1354,7 +1354,7 @@ function renderEmployeeGSTTools(){
   const batch=window.__kmmcGstBatch;if(!batch)return;if(!window.ExcelJS){status('Excel formatting library is still loading.','error');return;}
   const meta=getGstReportMeta(batch),wb=new ExcelJS.Workbook();wb.creator='K Mahesh Manickham and Co.';wb.subject='GST Detailed Report';
   const ws=wb.addWorksheet('GST Detailed',{views:[{state:'frozen',ySplit:5}],pageSetup:{orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0},headerFooter:{oddFooter:'&LK MAHESH MANICKHAM AND CO.&RPage &P of &N'}});
-  ws.mergeCells('A1:L1');ws.getCell('A1').value='K MAHESH MANICKHAM AND CO. | GST DETAILED REPORT';ws.getCell('A1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF174F78'}};ws.getCell('A1').font={bold:true,color:{argb:'FFFFFFFF'},size:15};ws.getCell('A1').alignment={horizontal:'center',vertical:'middle'};ws.getRow(1).height=34;
+  ws.getCell('A1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF174F78'}};ws.mergeCells('B1:L1');ws.getCell('B1').value='K MAHESH MANICKHAM AND CO. | GST DETAILED REPORT';ws.getCell('B1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF174F78'}};ws.getCell('B1').font={bold:true,color:{argb:'FFFFFFFF'},size:15};ws.getCell('B1').alignment={horizontal:'center',vertical:'middle'};ws.getRow(1).height=34;
   const logo=await getGstLogoData();if(logo){try{const imageId=wb.addImage({base64:logo,extension:'png'});ws.addImage(imageId,{tl:{col:0.12,row:0.12},ext:{width:48,height:30}});}catch(e){console.warn('Could not embed CA logo in Excel:',e);}}
   ws.mergeCells('A2:L2');ws.getCell('A2').value='Client Name: '+(meta.clientText||'Name Not Found')+' | GSTIN: '+meta.gstinText;ws.getCell('A2').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8F2F8'}};ws.getCell('A2').font={bold:true,color:{argb:'FF174F78'}};ws.getRow(2).height=24;
   ws.mergeCells('A3:L3');ws.getCell('A3').value='Period: '+meta.periodText+' | No. of Months: '+meta.monthCount;ws.getCell('A3').font={bold:true,color:{argb:'FF263F53'},size:10};ws.getRow(3).height=21;
