@@ -175,3 +175,17 @@ The queue is loaded from the authenticated adminApprovals API. All review action
 
 ### Backend schema migration
 After deploying the updated Code.gs, run setupKmmcBackend() once to add the task verification columns to the existing DB_TASKS sheet. This migration appends missing headers and preserves existing rows. Then deploy a new Apps Script Web App version so the Admin portal can call adminApprovals and reviewTaskVerification.
+
+
+## GSTIN lookup authorization (UrlFetchApp permission error)
+
+If the GST page reports that the script does not have permission to call `UrlFetchApp.fetch`:
+
+1. Open the Apps Script project that contains this `Code.gs`.
+2. In the function selector, choose `authorizeGstVerifyExternalRequests` and click **Run**.
+3. Review and allow the Google authorization prompt. This grants the external HTTP request permission to the script owner.
+4. If the project has an `appsscript.json` manifest with an explicit `oauthScopes` list, add `https://www.googleapis.com/auth/script.external_request` to that existing list without removing its other scopes, then save.
+5. Go to **Deploy → Manage deployments → Edit → New version → Deploy**. Keep the existing deployment URL and execution identity.
+6. Reload the Employee Portal and retry GSTIN party-name lookup.
+
+The helper makes a small request to Google's no-content endpoint only to trigger and verify the OAuth authorization. It does not write GST data or call the GSTVerify provider. The repository does not contain the live Apps Script manifest, so any explicit scope list must be updated in the Apps Script editor itself.
