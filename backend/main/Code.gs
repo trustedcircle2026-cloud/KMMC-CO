@@ -1358,3 +1358,20 @@ function updateEmployee_(admin,q){needAdmin_(admin);const id=String(q.id||''),ol
 function deleteEmployee_(admin,q){needAdmin_(admin);const id=String(q.id||''),r=rows_('employees').find(x=>x.id===id);if(!r)throw Error('Employee not found.');if(rows_('tasks').some(x=>x.employeeId===id)||rows_('time').some(x=>x.employeeId===id))throw Error('Employee has work/time records. Mark inactive instead of deleting.');const u=rows_('users').find(x=>x.role==='EMPLOYEE'&&x.employeeId===id);if(u){u.status='INACTIVE';u.updatedAt=iso_();write_('users',u.id,u);}const sh=sheet_(KMMC.M.employees.s),row=findRow_(sh,id);if(row>1)sh.deleteRow(row);activity_(admin,'DELETE_EMPLOYEE','employees',id,r.employeeCode);return {deleted:true,employeeCode:r.employeeCode};}
 function saveEmployeeResume_(emp,x){const props=PropertiesService.getScriptProperties(),rootId=props.getProperty('KMMC_EMPLOYEE_FOLDER_ID')||props.getProperty('KMMC_DOCUMENTS_FOLDER_ID');if(!rootId)throw Error('Set KMMC_EMPLOYEE_FOLDER_ID or KMMC_DOCUMENTS_FOLDER_ID in Script Properties to the Google Drive parent folder ID.');const root=DriveApp.getFolderById(rootId),resumeFolders=root.getFoldersByName('Resume'),resumeRoot=resumeFolders.hasNext()?resumeFolders.next():root.createFolder('Resume'),personFolders=resumeRoot.getFoldersByName(emp.employeeCode+' - '+emp.name),person=personFolders.hasNext()?personFolders.next():resumeRoot.createFolder(emp.employeeCode+' - '+emp.name);const name=String(x.resumeName||('Resume - '+emp.name)),mime=String(x.resumeMimeType||'application/pdf'),b64=String(x.resumeBase64||'').replace(/^data:[^,]*,/,'');if(!b64||b64.length>8*1024*1024)throw Error('Resume upload is required and must be under about 8 MB.');const file=person.createFile(Utilities.newBlob(Utilities.base64Decode(b64),mime,name));return {id:file.getId(),url:file.getUrl()};}
 
+
+
+/**
+ * Run this function manually once from the Apps Script editor as the Web App owner.
+ * Google will prompt for the external_request OAuth scope. After approval, redeploy
+ * the existing Web App as a new version so gstinLookup_ can call GSTVerify.
+ */
+function authorizeGstVerifyExternalRequests(){
+  const response=UrlFetchApp.fetch('https://www.google.com/generate_204',{
+    method:'get',
+    muteHttpExceptions:true,
+    followRedirects:true
+  });
+  const status=response.getResponseCode();
+  if(status<200||status>=400)throw Error('External request authorization test returned HTTP '+status+'.');
+  return 'External HTTP request permission is authorized. You can now redeploy the KMMC Web App.';
+}
