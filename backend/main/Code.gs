@@ -86,30 +86,33 @@ function publicEnquiry_(q){
 }
 
 /**
- * Look up GST registration details through Razorpay.
- * This endpoint accepts only a GSTIN; uploaded GSTR-1 JSON is never received or stored here.
+ * Look up GST registration details through GSTVerify.
+ * This endpoint accepts only a GSTIN; uploaded GST JSON files remain browser-side.
  */
 function gstinLookup_(actor,q){
   if(!actor||!['ADMIN','EMPLOYEE'].includes(String(actor.role||'').toUpperCase()))throw Error('Access denied.');
   const gstin=String(q.gstin||'').trim().toUpperCase();
   if(!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin))throw Error('Enter a valid 15-character GSTIN.');
-  const url='https://razorpay.com/api/gstin/'+encodeURIComponent(gstin);
+  const url='https://api.gstverify.dubey.app/api/v1/gst/details?gstin='+encodeURIComponent(gstin)+'&full=false';
   const response=UrlFetchApp.fetch(url,{method:'get',muteHttpExceptions:true,followRedirects:true});
-  const status=response.getResponseCode();
-  if(status<200||status>=300)throw Error('GSTIN lookup provider returned HTTP '+status+'.');
+  const httpStatus=response.getResponseCode();
+  if(httpStatus<200||httpStatus>=300)throw Error('GSTVerify lookup provider returned HTTP '+httpStatus+'.');
   const payload=JSON.parse(response.getContentText()||'{}');
-  const d=payload&&payload.enrichment_details&&payload.enrichment_details.online_provider&&payload.enrichment_details.online_provider.details||{};
-  const val=x=>x&&typeof x==='object'&&Object.prototype.hasOwnProperty.call(x,'value')?x.value:(x||'');
+  if(payload.success!==true||!payload.data)throw Error('GSTVerify could not retrieve details for this GSTIN.');
+  const d=payload.data;
   return {
-    gstin:val(d.gstin)||gstin,
-    legalName:val(d.legal_name),
-    tradeName:val(d.trade_name),
-    registrationDate:val(d.registration_date),
-    constitution:val(d.constitution),
-    taxpayerType:val(d.tax_payer_type),
-    status:val(d.status),
-    stateJurisdiction:val(d.state_jurisdiction),
-    centralJurisdiction:val(d.central_jurisdiction),
+    gstin:String(d.gstin||gstin),
+    legalName:String(d.lgnm||''),
+    tradeName:String(d.tradeNam||''),
+    registrationDate:String(d.rgdt||''),
+    constitution:String(d.ctb||''),
+    taxpayerType:String(d.dty||''),
+    status:String(d.sts||''),
+    stateJurisdiction:String(d.stj||''),
+    centralJurisdiction:String(d.ctj||''),
+    principalAddress:String(d.pradr&&d.pradr.adr||d.principal_address||''),
+    businessNature:Array.isArray(d.nba)?d.nba:[],
+    einvoiceStatus:String(d.einvoiceStatus||''),
     raw:payload
   };
 }
