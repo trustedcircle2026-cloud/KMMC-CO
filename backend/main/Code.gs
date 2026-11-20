@@ -418,7 +418,7 @@ function employeeLiveStatus_(){
   return {employees:result,counts:{total:result.length,working:result.filter(x=>x.workingStatus==='WORKING').length,onBreak:result.filter(x=>x.workingStatus==='ON BREAK').length,notClockedIn:result.filter(x=>x.workingStatus==='NOT CLOCKED IN').length,pendingApproval:result.filter(x=>x.workingStatus==='PENDING APPROVAL').length}};
 }
 function list_(u,q){
-  const k=module_(q.module);authorize_(u,k,'read');let a=rows_(k).filter(r=>visible_(u,k,r));
+  const k=module_(q.module);authorize_(u,k,'read');if(k==='time')ensureHeaders_(sheet_(KMMC.M.time.s),KMMC.M.time.h);let a=rows_(k).filter(r=>visible_(u,k,r));
   if(q.filter&&typeof q.filter==='object')Object.keys(q.filter).forEach(f=>{a=a.filter(r=>String(r[f]??'')===String(q.filter[f]));});
   const limit=Math.min(Math.max(Number(q.limit||100),1),KMMC.MAX_PAGE),offset=Math.max(Number(q.offset||0),0);
   const clients= (k==='tasks'||k==='time'||k==='workdone'||k==='documents')?rows_('clients'):[];const records=a.slice(offset,offset+limit).map(r=>{const out=publicRec_(k,r);if(['tasks','time','workdone','documents'].includes(k)){const c=clients.find(x=>String(x.id)===String(r.clientId));if(c){out.clientCode=String(c.clientCode||'');out.clientName=String(c.name||'');}}return out;});return {records,total:a.length,limit,offset};
@@ -427,6 +427,7 @@ function get_(u,q){const k=module_(q.module);authorize_(u,k,'read');const r=rows
 
 function submitManualWorkdoneForApproval_(u,q){
   if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  ensureHeaders_(sheet_(KMMC.M.time.s),KMMC.M.time.h);
   const records=Array.isArray(q.records)?q.records:[];if(!records.length)throw Error('No revised work lines supplied.');
   if(records.length>100)throw Error('A revision cannot contain more than 100 work lines.');
   const group=uid_(),now=iso_(),created=[];
