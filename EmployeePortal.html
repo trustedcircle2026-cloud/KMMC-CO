@@ -1312,6 +1312,21 @@ function renderEmployeeGSTTools(){
  const partyName=r=>{const d=detailsOf(r),root=r?.data?.data||r?.data||r;return valueOf(d.trade_name)||valueOf(d.tradeNam)||valueOf(d.legal_name)||valueOf(d.lgnm)||root?.tradeNam||root?.trade_name||root?.lgnm||root?.legal_name||r?.tradeName||r?.legalName||'';};
  const status=(m,k)=>{const n=el('employeeGstStatus');if(n){n.textContent=m;n.className='employee-gst-status'+(k?' '+k:'');n.classList.toggle('is-processing',!k||k==='processing');n.setAttribute('aria-live','polite');n.setAttribute('aria-atomic','true');const match=String(m).match(/(\d+)\s+of\s+(\d+)\s+unique GSTINs/i);if(match){const done=Number(match[1]),total=Math.max(1,Number(match[2])),pct=Math.min(100,done/total*100);n.style.setProperty('--gst-progress',pct+'%');n.dataset.progress=done+'/'+total;if(!n.querySelector('.gst-progress-track'))n.insertAdjacentHTML('beforeend','<span class="gst-progress-track" aria-hidden="true"><span class="gst-progress-fill"></span></span>');}else if(k==='success'){n.style.setProperty('--gst-progress','100%');n.dataset.progress='complete';const bar=n.querySelector('.gst-progress-track');if(bar)bar.querySelector('.gst-progress-fill').style.width='100%';}}};
  const fyLabel=x=>x.fy||'';
+ const parse3B=(data,period,fileName)=>{
+  const amounts=x=>({txval:Number(x?.txval||0),iamt:Number(x?.iamt||0),camt:Number(x?.camt||0),samt:Number(x?.samt||0),csamt:Number(x?.csamt||0)});
+  const tax=x=>({iamt:Number(x?.iamt||0),camt:Number(x?.camt||0),samt:Number(x?.samt||0),csamt:Number(x?.csamt||0)});
+  const sup=data.sup_details||{},out=sup.osup_det||{},supplies=[['Outward taxable supplies (other than zero rated, nil rated and exempted)',sup.osup_det],['Outward taxable supplies (zero rated)',sup.osup_zero],['Other outward supplies (nil rated, exempted)',sup.osup_nil_exmp],['Inward supplies liable to reverse charge',sup.isup_rev],['Non-GST outward supplies',sup.osup_nongst]].map(([label,obj])=>({label,...amounts(obj)}));
+  const interstate=['unreg_details','comp_details','uin_details'].flatMap(k=>(data.inter_sup?.[k]||[]).map(x=>({category:k==='unreg_details'?'Unregistered':k==='comp_details'?'Composition':'UIN',pos:String(x.pos||x.p_spl||''),...amounts(x)})));
+  const itc=[...['itc_avl','itc_rev','itc_inelg'].flatMap(k=>(data.itc_elg?.[k]||[]).map(x=>({section:k==='itc_avl'?'Available':k==='itc_rev'?'Reversed':'Ineligible',type:String(x.ty||''),...tax(x)})))];
+  const taxPay=data.taxpayble?.returnsDbCdredList||{},payments=[];
+  ['tax_pay','net_tax_pay'].forEach(k=>(taxPay[k]||[]).forEach(x=>payments.push({mode:k==='tax_pay'?'Tax liability':'Net tax payable',date:x.trandate||'',igst:Number(x.igst?.tx||0),cgst:Number(x.cgst?.tx||0),sgst:Number(x.sgst?.tx||0),cess:Number(x.cess?.tx||0),debitId:x.debit_id||''})));
+  ['pd_by_cash','pd_by_itc','pd_by_nls'].forEach(k=>(taxPay.tax_paid?.[k]||[]).forEach(x=>payments.push({mode:k==='pd_by_cash'?'Paid by cash':k==='pd_by_itc'?'Paid by ITC':'Paid by negative liability',date:x.trandate||'',igst:Number(x.igst?.tot||x.igst_igst_amt||0),cgst:Number(x.cgst?.tot||x.cgst_cgst_amt||0),sgst:Number(x.sgst?.tot||x.sgst_sgst_amt||0),cess:Number(x.cess?.tot||x.cess_cess_amt||0),debitId:x.debit_id||''})));
+  const bal=data.taxpayble?.bal||{},cash=bal.cash_bal||{},itcBal=bal.itc_bal||{};
+  const ledgers=[{ledger:'Cash Balance',igst:cash.igst?.tx||0,cgst:cash.cgst?.tx||0,sgst:cash.sgst?.tx||0,cess:cash.cess?.tx||0},{ledger:'ITC Balance',igst:itcBal.igst_bal||0,cgst:itcBal.cgst_bal||0,sgst:itcBal.sgst_bal||0,cess:itcBal.cess_bal||0}];
+  const feeRoot=data.intr_ltfee||{},interest=[tax(feeRoot.intr_details||{})],lateFee=[tax(feeRoot.ltfee_details||{})];
+  const eco=data.eco_dtls||{},ecommerce=[{label:'E-commerce operator supplies',...amounts(eco.eco_sup)},{label:'E-commerce registered supplies',...amounts(eco.eco_reg_sup)}];
+  return {gstin:String(data.gstin||''),period,fileName,outwardTaxable:Number(out.txval||0),outwardTax:tax(out),supplies,interstate,itc,payments,ledgers,fees:{interest,lateFee},ecommerce,netITC:tax(data.itc_elg?.itc_net||{}),cashPaid:Number(data.tt_val?.tt_csh_pd||0),itcPaid:Number(data.tt_val?.tt_itc_pd||0)};
+ };
  const parseItem=(item,index,inv,party,section,itemPeriod,fileName)=>{
   const d=item?.itm_det||item?.item_det||item?.det||item||{};
   return {gstin:party.gstin||'',partyName:'',invoice:String(inv?.inum||inv?.nt_num||inv?.doc_num||''),date:String(inv?.idt||inv?.nt_dt||inv?.doc_dt||''),invoiceValue:Number(inv?.val||inv?.nt_val||inv?.doc_val||(section==='B2CS'?(Number(d.txval||d.taxable_value||item?.txval||0)+Number(d.iamt||d.igst||item?.iamt||0)+Number(d.camt||d.cgst||item?.camt||0)+Number(d.samt||d.sgst||item?.samt||0)+Number(d.csamt||d.cess||item?.csamt||0)):0)),itemNo:String(item?.num||item?.item_no||index+1),rate:Number(d.rt||d.tax_rate||item?.rt||0),taxable:Number(d.txval||d.taxable_value||item?.txval||0),igst:Number(d.iamt||d.igst||item?.iamt||0),cgst:Number(d.camt||d.cgst||item?.camt||0),sgst:Number(d.samt||d.sgst||item?.samt||0),cess:Number(d.csamt||d.cess||item?.csamt||0),section,period:itemPeriod,fileName};
@@ -1360,6 +1375,33 @@ function renderEmployeeGSTTools(){
  el('employeeGstClearJson').addEventListener('click',reset);
  const readFile=(f,onProgress)=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onprogress=e=>{if(e.lengthComputable)onProgress(e.loaded/e.total);};reader.onload=()=>resolve(JSON.parse(String(reader.result)));reader.onerror=()=>reject(new Error('Could not read '+f.name));reader.onabort=()=>reject(new Error('Reading cancelled: '+f.name));reader.readAsText(f);});
  const renderReport=()=>{
+  if(returnType.value==='GSTR3B'){
+   const b=processed.filter(x=>x.threeB).map(x=>x.threeB);
+   const sum=(key)=>b.reduce((a,x)=>a+Number(x[key]||0),0);
+   const taxSum=(key)=>['iamt','camt','samt','csamt'].map(k=>b.reduce((a,x)=>a+Number(x[key]?.[k]||0),0));
+   const out=sum('outwardTaxable'),outTax=taxSum('outwardTax'),netITC=taxSum('netITC'),paidCash=taxSum('cashPaid'),paidITC=taxSum('itcPaid'),interest=taxSum('interest'),lateFee=taxSum('lateFee');
+   const tabs=[['3BSUM','3B Summary'],['SUP','Outward Supplies'],['INTER','Interstate Supplies'],['ITC','ITC Summary'],['PAY','Tax Payment'],['LEDGER','Cash & ITC Ledger'],['INTR','Interest & Late Fee'],['ECO','E-commerce']];
+   let heads=[],rows=[],title='';
+   const v=n=>fmt(n);
+   if(activeGstTab==='3BSUM'){title='GSTR-3B Summary';heads=['Return Period','GSTIN','Taxable Outward Supplies','IGST','CGST','SGST/UTGST','Cess','Net ITC CGST','Net ITC SGST'];rows=b.map(x=>[x.period,x.gstin,v(x.outwardTaxable),v(x.outwardTax.iamt),v(x.outwardTax.camt),v(x.outwardTax.samt),v(x.outwardTax.csamt),v(x.netITC.camt),v(x.netITC.samt)]);}
+   else if(activeGstTab==='SUP'){title='Outward Supplies & Inward Supplies Liable to Reverse Charge';heads=['Supply Type','Taxable Value','IGST','CGST','SGST/UTGST','Cess'];rows=b.flatMap(x=>x.supplies.map(s=>[s.label,v(s.txval),v(s.iamt),v(s.camt),v(s.samt),v(s.csamt)]));}
+   else if(activeGstTab==='INTER'){title='Interstate Supplies';heads=['Return Period','Category','Place of Supply','Taxable Value','IGST'];rows=b.flatMap(x=>x.interstate.map(s=>[x.period,s.category,s.pos,v(s.txval),v(s.iamt)]));}
+   else if(activeGstTab==='ITC'){title='Eligible ITC, Reversal & Ineligible ITC';heads=['Return Period','ITC Section','Type','IGST','CGST','SGST/UTGST','Cess'];rows=b.flatMap(x=>x.itc.map(s=>[x.period,s.section,s.type,v(s.iamt),v(s.camt),v(s.samt),v(s.csamt)]));}
+   else if(activeGstTab==='PAY'){title='Tax Payment Details';heads=['Return Period','Payment Mode','Transaction Date','IGST','CGST','SGST/UTGST','Cess','Debit ID'];rows=b.flatMap(x=>x.payments.map(s=>[x.period,s.mode,s.date,v(s.igst),v(s.cgst),v(s.sgst),v(s.cess),s.debitId]));}
+   else if(activeGstTab==='LEDGER'){title='Cash & ITC Ledger Balances';heads=['Return Period','Ledger','IGST','CGST','SGST/UTGST','Cess'];rows=b.flatMap(x=>x.ledgers.map(s=>[x.period,s.ledger,v(s.igst),v(s.cgst),v(s.sgst),v(s.cess)]));}
+   else if(activeGstTab==='INTR'){title='Interest & Late Fee';heads=['Return Period','Type','IGST','CGST','SGST/UTGST','Cess'];rows=b.flatMap(x=>[...x.fees.interest.map(s=>[x.period,'Interest',v(s.iamt),v(s.camt),v(s.samt),v(s.csamt)]),...x.fees.lateFee.map(s=>[x.period,'Late Fee',v(s.iamt),v(s.camt),v(s.samt),v(s.csamt)])]);}
+   else{title='E-commerce Supplies';heads=['Return Period','Supply Type','Taxable Value','IGST','CGST','SGST/UTGST','Cess'];rows=b.flatMap(x=>x.ecommerce.map(s=>[x.period,s.label,v(s.txval),v(s.iamt),v(s.camt),v(s.samt),v(s.csamt)]));}
+   const totals=b.reduce((a,x)=>({tx:a.tx+x.outwardTaxable,igst:a.igst+x.outwardTax.iamt,cgst:a.cgst+x.outwardTax.camt,sgst:a.sgst+x.outwardTax.samt,cess:a.cess+x.outwardTax.csamt}),{tx:0,igst:0,cgst:0,sgst:0,cess:0});
+   const totalRow=activeGstTab==='SUP'?['GRAND TOTAL',v(b.reduce((a,x)=>a+x.supplies.reduce((n,s)=>n+s.txval,0),0)),v(b.reduce((a,x)=>a+x.supplies.reduce((n,s)=>n+s.iamt,0),0)),v(b.reduce((a,x)=>a+x.supplies.reduce((n,s)=>n+s.camt,0),0)),v(b.reduce((a,x)=>a+x.supplies.reduce((n,s)=>n+s.samt,0),0)),v(b.reduce((a,x)=>a+x.supplies.reduce((n,s)=>n+s.csamt,0),0))]:activeGstTab==='3BSUM'?['GRAND TOTAL','',v(totals.tx),v(totals.igst),v(totals.cgst),v(totals.sgst),v(totals.cess),v(b.reduce((a,x)=>a+x.netITC.camt,0)),v(b.reduce((a,x)=>a+x.netITC.samt,0))]:null;
+   const totalHtml=totalRow?'<tfoot><tr class="gst-grand-total-row">'+totalRow.map(x=>'<td>'+safe(x)+'</td>').join('')+'</tr></tfoot>':'';
+   const tabItems=tabs;
+   const tabMarkup='<div class="employee-gst-report-toolbar"><div class="employee-gst-section-tabs">'+tabs.map(([id,label])=>'<button type="button" class="employee-gst-section-tab '+(activeGstTab===id?'active':'')+'" data-gst-tab="'+id+'">'+label+'</button>').join('')+'</div><div class="employee-gst-inline-clients"><strong>'+safe([...new Set(b.map(x=>x.gstin))].join(', '))+'</strong></div></div>';
+   const table='<div class="employee-gst-table-toolbar"><strong>'+title+'</strong><span>'+b.length+' return period(s)</span></div><div class="employee-gst-table-wrap employee-gst-main-table"><table><thead><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.map(row=>'<tr>'+row.map(x=>'<td>'+safe(x)+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="'+heads.length+'">No data available for this section.</td></tr>')+'</tbody>'+totalHtml+'</table></div>';
+   results.innerHTML=tabMarkup+table;results.classList.remove('hidden');actions.classList.remove('hidden');
+   results.querySelectorAll('[data-gst-tab]').forEach(btn=>btn.addEventListener('click',()=>{activeGstTab=btn.dataset.gstTab;renderReport();}));
+   window.__kmmcGstBatch={reportKind:'GSTR3B',processed,threeB:b,reportType:'GSTR-3B Summary',returnType:'GSTR3B'};
+   return;
+  }
   const clients=[...new Map(processed.map(x=>[x.gstin,{gstin:x.gstin,name:x.clientName||'...'}])).values()];
   const clientSummary=clients.length?'<div class="employee-gst-inline-clients">'+clients.map(c=>'<span class="employee-gst-inline-client"><strong>'+(c.name==='...'?'<span class="gst-name-loading"><i>.</i><i>.</i><i>.</i></span>':safe(c.name))+'</strong><button type="button" class="employee-gst-profile-icon" data-gst-profile="'+safe(c.gstin)+'" title="View GST profile for '+safe(c.name)+'" aria-label="View GST profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c.7-4 3.3-6 7.5-6s6.8 2 7.5 6"></path></svg></button></span>').join('')+'</div>':'';
   const filtered=activeGstTab==='B2B'?partyRows.filter(x=>['B2B','CDNR'].includes(x.section)):activeGstTab==='B2C'?partyRows.filter(x=>['B2CL','B2CS','CDNUR'].includes(x.section)):[];
@@ -1478,28 +1520,33 @@ const resolveNames=async()=>{const unique=[...new Set([...processed.map(x=>x.gst
  load.addEventListener('click',async()=>{
   if(!staged.length)return;
   if(reportType.value==='RECON'){status('Reconciliation source mapping is not yet configured for this report type.','error');return;}
+  const is3B=returnType.value==='GSTR3B';
+  if(staged.some(x=>/\.zip$/i.test(x.file.name))){status('ZIP selected. ZIP extraction support must be enabled for this upload.','error');return;}
   load.disabled=true;el('employeeGstClearJson').disabled=true;processed=[];partyRows=[];hsnRows=[];documentRows=[];lookupCache={};results.classList.add('hidden');actions.classList.add('hidden');
-  status('Import started · '+staged.length+' file(s). Reading JSON and preparing the report table…','processing');
+  status('Import started · '+staged.length+' file(s). Reading JSON and preparing '+(is3B?'GSTR-3B':'GST')+' report…','processing');
   try{
    let totalBytes=staged.reduce((a,x)=>a+x.file.size,0)||1,readBytes=0;
    for(let i=0;i<staged.length;i++){
-    const item=staged[i];
-    progress(readBytes/totalBytes*65,'Reading '+(i+1)+' of '+staged.length+': '+item.file.name);
+    const item=staged[i];progress(readBytes/totalBytes*65,'Reading '+(i+1)+' of '+staged.length+': '+item.file.name);
     const data=await readFile(item.file,ratio=>progress((readBytes+item.file.size*ratio)/totalBytes*65,'Reading '+(i+1)+' of '+staged.length+': '+item.file.name));
     readBytes+=item.file.size;if(!data||typeof data!=='object'||Array.isArray(data))throw new Error(item.file.name+': JSON root must be an object.');
-    const gstin=getGstin(data);if(!gstin)throw new Error(item.file.name+': GSTIN was not found in the JSON root.');
-    const meta=periodFromJson(data);if(!meta)throw new Error(item.file.name+': filing period (fp, expected MMYYYY such as 122025) was not found in the JSON.');
+    const gstin=getGstin(data)||String(data.gstin||'').trim().toUpperCase();if(!gstin)throw new Error(item.file.name+': GSTIN was not found in the JSON root.');
+    let meta=periodFromJson(data);if(is3B){const raw=String(data.ret_period||'').trim().match(/^(0[1-9]|1[0-2])(\d{4})$/);if(raw){const m=Number(raw[1]),y=Number(raw[2]);meta={month:raw[1],year:y,fy:(m>=4?y:y-1)+'-'+((m>=4?y:y-1)+1),label:new Date(y,m-1,1).toLocaleString('en-IN',{month:'long'})+' '+y,filingType:'GSTR-3B'};}}
+    if(!meta)throw new Error(item.file.name+': return period could not be identified from the JSON.');
     const period=meta.label;item.data=data;item.gstin=gstin;item.period=period;item.periodLabel=period+' · FY '+meta.fy+' · '+(meta.filingType||'Filing type not specified');
-    const rows=extractRows(data,period,item.file.name);partyRows.push(...rows);
-    const hsnSource=data.hsn?.data||data.hsn?.det||data.hsn||[];const hsnList=Array.isArray(hsnSource)?hsnSource:(Array.isArray(hsnSource.data)?hsnSource.data:[]);
-    hsnList.forEach(h=>{const d=h?.data||h;hsnRows.push({hsn:String(d.hsn_sc||d.hsn||d.sac||''),description:String(d.desc||d.description||''),uqc:String(d.uqc||''),quantity:Number(d.qty||0),taxable:Number(d.txval||d.taxable_value||0),rate:Number(d.rt||d.rate||0),igst:Number(d.iamt||0),cgst:Number(d.camt||0),sgst:Number(d.samt||0),cess:Number(d.csamt||0)});});
-    const docRoot=data.doc_issue?.doc_det||data.doc_issue?.docs||data.doc_issue||[];const docList=Array.isArray(docRoot)?docRoot:(Array.isArray(docRoot.doc_det)?docRoot.doc_det:[]);
-    docList.forEach(group=>(group.docs||group.doc||[]).forEach(d=>{const total=Number(d.totnum||d.total||0),cancelled=Number(d.cancel||d.cancelled||0);documentRows.push({type:String(group.doc_typ||group.doc_type||d.doc_typ||'Document'),from:String(d.from||d.sr_from||''),to:String(d.to||d.sr_to||''),total,cancelled,net:Math.max(0,total-cancelled)});}));
-    processed.push({fileName:item.file.name,gstin,clientName:'Loading...',fy:meta.fy,month:meta.month,period,filingType:meta.filingType});
-    renderQueue();
-    progress(65+(i+1)/staged.length*10,'Preparing report rows '+(i+1)+' of '+staged.length);
+    if(is3B){processed.push({fileName:item.file.name,gstin,clientName:'—',fy:meta.fy,month:meta.month,period,filingType:'GSTR-3B',threeB:parse3B(data,period,item.file.name)});}
+    else{
+     const rows=extractRows(data,period,item.file.name);partyRows.push(...rows);
+     const hsnSource=data.hsn?.data||data.hsn?.det||data.hsn||[];const hsnList=Array.isArray(hsnSource)?hsnSource:(Array.isArray(hsnSource.data)?hsnSource.data:[]);
+     hsnList.forEach(h=>{const d=h?.data||h;hsnRows.push({hsn:String(d.hsn_sc||d.hsn||d.sac||''),description:String(d.desc||d.description||''),uqc:String(d.uqc||''),quantity:Number(d.qty||0),taxable:Number(d.txval||d.taxable_value||0),rate:Number(d.rt||d.rate||0),igst:Number(d.iamt||0),cgst:Number(d.camt||0),sgst:Number(d.samt||0),cess:Number(d.csamt||0)});});
+     const docRoot=data.doc_issue?.doc_det||data.doc_issue?.docs||data.doc_issue||[];const docList=Array.isArray(docRoot)?docRoot:(Array.isArray(docRoot.doc_det)?docRoot.doc_det:[]);
+     docList.forEach(group=>(group.docs||group.doc||[]).forEach(d=>{const total=Number(d.totnum||d.total||0),cancelled=Number(d.cancel||d.cancelled||0);documentRows.push({type:String(group.doc_typ||group.doc_type||d.doc_typ||'Document'),from:String(d.from||d.sr_from||''),to:String(d.to||d.sr_to||''),total,cancelled,net:Math.max(0,total-cancelled)});}));
+     processed.push({fileName:item.file.name,gstin,clientName:'Loading...',fy:meta.fy,month:meta.month,period,filingType:meta.filingType});
+    }
+    renderQueue();progress(65+(i+1)/staged.length*10,'Preparing report rows '+(i+1)+' of '+staged.length);
    }
-   renderReport();closeModal();el('employeeGstTopPanel')?.classList.add('hidden');el('employeeGstGetNames')?.classList.remove('hidden');status('Report table prepared. Click Get Names when you are ready to fetch unique GSTIN names.','success');
+   if(is3B){renderReport();closeModal();el('employeeGstTopPanel')?.classList.add('hidden');status('GSTR-3B report prepared.','success');}
+   else{renderReport();closeModal();el('employeeGstTopPanel')?.classList.add('hidden');el('employeeGstGetNames')?.classList.remove('hidden');status('Report table prepared. Click Get Names when you are ready to fetch unique GSTIN names.','success');}
    progress(100,'Report table prepared');
   }catch(e){status('Could not process files: '+e.message,'error');}
   finally{load.disabled=false;el('employeeGstClearJson').disabled=false;}
