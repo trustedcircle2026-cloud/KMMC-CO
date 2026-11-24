@@ -1379,58 +1379,81 @@ function renderEmployeeGSTTools(){
 const resolveNames=async()=>{const unique=[...new Set([...processed.map(x=>x.gstin),...partyRows.map(x=>x.gstin)].filter(Boolean))],names={};if(!unique.length){status('No recipient GSTINs were found.','success');return;}status('Fetching GST names · 0 of '+unique.length+' unique GSTINs…');for(let i=0;i<unique.length;i+=8){const batch=unique.slice(i,i+8);await Promise.all(batch.map(async gstin=>{const r=await apiGstin(gstin);names[gstin]=partyName(r)||'—';}));status('Fetching GST names · '+Math.min(i+batch.length,unique.length)+' of '+unique.length+' unique GSTINs…');}processed.forEach(x=>x.clientName=names[x.gstin]||'—');partyRows.forEach(x=>{if(x.gstin)x.partyName=names[x.gstin]||'—';});renderReport();window.__kmmcGstBatch={processed,parties:partyRows,hsn:hsnRows,documents:documentRows,monthlySummary:window.__kmmcGstBatch?.monthlySummary,reportType:reportType.options[reportType.selectedIndex]?.text||'Detailed Report (Primary)',returnType:returnType.options[returnType.selectedIndex]?.text||returnType.value};status('GST names fetched for '+unique.length+' unique GSTINs.','success');};
  const getNamesButton=el('employeeGstGetNames');
  const knownGstNames=()=>{const names={...(window.__kmmcGstFetchedNames||{})};processed.forEach(x=>{if(x.gstin&&x.clientName&&x.clientName!=='Loading...'&&x.clientName!=='—')names[x.gstin]=x.clientName;});partyRows.forEach(x=>{if(x.gstin&&x.partyName&&x.partyName!=='Loading...'&&x.partyName!=='—')names[x.gstin]=x.partyName;});return names;};
+ const saveFetchedGstName=(gstin,name)=>{
+  if(!name)return;const names=knownGstNames();names[gstin]=name;window.__kmmcGstFetchedNames=names;
+  processed.forEach(x=>{if(x.gstin===gstin)x.clientName=name;});
+  partyRows.forEach(x=>{if(x.gstin===gstin)x.partyName=name;});
+  renderReport();
+  window.__kmmcGstBatch={processed,parties:partyRows,hsn:hsnRows,documents:documentRows,monthlySummary:window.__kmmcGstBatch?.monthlySummary,reportType:reportType.options[reportType.selectedIndex]?.text||'Detailed Report (Primary)',returnType:returnType.options[returnType.selectedIndex]?.text||returnType.value};
+ };
  getNamesButton?.addEventListener('click',async()=>{
   const unique=[...new Set([...processed.map(x=>x.gstin),...partyRows.map(x=>x.gstin)].filter(Boolean))],known=knownGstNames(),pending=unique.filter(g=>!known[g]);
   if(!unique.length){status('No unique GSTINs found in the imported report.','error');return;}
   if(!pending.length){status('All '+unique.length+' unique GSTINs already have names.','success');getNamesButton.classList.add('hidden');return;}
   getNamesButton.disabled=true;
-  const overlay=document.createElement('div');overlay.className='employee-gst-name-overlay';overlay.innerHTML='<section class="employee-gst-name-dialog" role="dialog" aria-modal="true" aria-labelledby="employeeGstNameTitle"><header><div><span class="employee-gst-kicker">GSTIN NAME LOOKUP</span><h3 id="employeeGstNameTitle">Fetching Missing GSTIN Names</h3><p data-name-progress>Retrying '+pending.length+' GSTINs without names…</p></div><button type="button" class="btn" data-name-close aria-label="Close">×</button></header><div class="employee-gst-name-progress"><span data-name-bar></span></div><div class="employee-gst-name-list" data-name-list></div><footer><span data-name-summary>0 of '+pending.length+' missing names checked</span><button type="button" class="btn primary" data-name-update disabled>Update Names</button></footer></section>';
+  const overlay=document.createElement('div');overlay.className='employee-gst-name-overlay';overlay.innerHTML='<section class="employee-gst-name-dialog" role="dialog" aria-modal="true" aria-labelledby="employeeGstNameTitle"><header><div><span class="employee-gst-kicker">GSTIN NAME LOOKUP</span><h3 id="employeeGstNameTitle">Automatic GSTIN Name Fetching</h3><p data-name-progress>Starting automatic lookup…</p></div><button type="button" class="btn" data-name-close aria-label="Close">×</button></header><div class="employee-gst-name-progress"><span data-name-bar></span></div><div class="employee-gst-name-list" data-name-list></div><footer class="employee-gst-name-footer"><span data-name-summary>0 of '+unique.length+' names fetched</span><button type="button" class="btn primary" data-name-retry-all disabled>Retry Failed (0)</button></footer></section>';
   document.body.appendChild(overlay);
-  const list=overlay.querySelector('[data-name-list]'),bar=overlay.querySelector('[data-name-bar]'),progressText=overlay.querySelector('[data-name-progress]'),summary=overlay.querySelector('[data-name-summary]'),update=overlay.querySelector('[data-name-update]');
-  let finished=0,activeRequests=0;
-  const close=()=>overlay.remove();
+  const list=overlay.querySelector('[data-name-list]'),bar=overlay.querySelector('[data-name-bar]'),progressText=overlay.querySelector('[data-name-progress]'),summary=overlay.querySelector('[data-name-summary]'),retryAll=overlay.querySelector('[data-name-retry-all]');
+  const attempts=Object.create(null);let cycleRunning=false,closed=false,cycleNumber=0;
+  const close=()=>{closed=true;overlay.remove();};
   overlay.querySelector('[data-name-close]').addEventListener('click',close);
   overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
-  list.innerHTML=unique.map(g=>{const name=known[g];return '<div class="employee-gst-name-row '+(name?'fetched':'not-found')+'" data-name-row="'+safe(g)+'"><strong>'+safe(g)+'</strong><span class="name-state">'+(name?safe(name):'Name not found · pending retry')+'</span><button type="button" class="btn small gst-name-retry '+(name?'hidden':'')+'">Retry</button></div>';}).join('');
+  list.innerHTML=unique.map(g=>{const name=known[g];return '<div class="employee-gst-name-row '+(name?'fetched':'not-found')+'" data-name-row="'+safe(g)+'"><strong>'+safe(g)+'</strong><span class="name-state">'+(name?safe(name):'Waiting for lookup')+'</span><small class="name-attempts">Attempts: 0</small></div>';}).join('');
   const rowFor=g=>[...list.querySelectorAll('.employee-gst-name-row')].find(x=>x.querySelector('strong')?.textContent===g);
-  const updateCount=()=>{const count=Object.keys(known).filter(g=>unique.includes(g)).length,remaining=unique.length-count;update.disabled=count===0;update.textContent='Update Names ('+count+')';summary.textContent=count+' of '+unique.length+' names available · '+remaining+' remaining';};
-  const renderProgress=()=>{const pct=pending.length?finished/pending.length*100:100;bar.style.width=pct+'%';summary.textContent=finished+' of '+pending.length+' missing GSTINs checked · '+Math.round(pct)+'%';};
-  const fetchOne=async(g,row,viaRetry=false)=>{
-   if(activeRequests)return;activeRequests++;
-   const retry=row?.querySelector('.gst-name-retry');if(retry){retry.disabled=true;retry.textContent=viaRetry?'Retrying…':'Fetching…';}
-   row?.classList.add('loading');row?.classList.remove('not-found');if(row)row.querySelector('.name-state').textContent='Fetching via GSTIN lookup API…';
-   progressText.textContent='Fetching '+(finished+1)+' of '+pending.length+': '+g;
-   try{
-    let response=await apiGstin(g),name=partyName(response);
-    if(!name){delete lookupCache[g];const raw=await fetch('https://razorpay.com/api/gstin/'+encodeURIComponent(g),{method:'GET',headers:{'Accept':'application/json'}});if(!raw.ok)throw new Error('HTTP '+raw.status);response=await raw.json();name=partyName(response);if(!name)throw new Error('Name not returned by API');lookupCache[g]=response;try{localStorage.setItem('kmmc_gst_details_'+g,JSON.stringify({gstin:g,details:response?.data?.data||response?.data||response,savedAt:Date.now()}));}catch(e){}}
-    known[g]=name;window.__kmmcGstFetchedNames=known;
-    if(row){row.classList.remove('loading','not-found');row.classList.add('fetched');row.querySelector('.name-state').textContent=name;row.querySelector('.gst-name-retry')?.classList.add('hidden');}
-   }catch(error){if(row){row.classList.remove('loading');row.classList.add('not-found');row.querySelector('.name-state').textContent='Name not found · '+error.message;if(retry){retry.disabled=false;retry.textContent='Retry';retry.classList.remove('hidden');}}}
-   finally{activeRequests--;if(!viaRetry){finished++;renderProgress();}updateCount();}
+  const missing=()=>unique.filter(g=>!knownGstNames()[g]);
+  const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const refreshUi=()=>{
+   const names=knownGstNames(),done=unique.filter(g=>names[g]).length,left=unique.length-done,pct=done/unique.length*100;
+   bar.style.width=pct+'%';summary.textContent=done+' of '+unique.length+' GSTIN names fetched · '+Math.round(pct)+'%';
+   retryAll.textContent='Retry Failed ('+left+')';retryAll.disabled=cycleRunning||left===0;
+   getNamesButton.textContent=left?'Get Names ('+left+' remaining)':'Get Names';
+   if(!left){progressText.textContent='All GSTIN names fetched and updated in every table.';getNamesButton.classList.add('hidden');status('All '+unique.length+' GSTIN names fetched and automatically updated.','success');if(!closed)setTimeout(close,900);}
+   else getNamesButton.classList.remove('hidden');
   };
-  for(const gstin of pending){await fetchOne(gstin,rowFor(gstin),false);}
-  const remaining=pending.filter(g=>!known[g]).length;
-  progressText.textContent=remaining?'Fetching completed · '+remaining+' GSTIN(s) still need names':'All GSTIN names fetched successfully';
-  updateCount();
-  list.addEventListener('click',async event=>{
-   const retry=event.target.closest('.gst-name-retry');if(!retry||activeRequests)return;
-   const row=retry.closest('.employee-gst-name-row'),gstin=row?.querySelector('strong')?.textContent?.trim();if(!gstin)return;
-   await fetchOne(gstin,row,true);
-   const left=unique.filter(g=>!known[g]).length;progressText.textContent=left?left+' GSTIN(s) still need names':'All GSTIN names fetched successfully';
-  });
-  update.addEventListener('click',()=>{
-   window.__kmmcGstFetchedNames=known;
-   processed.forEach(x=>{if(known[x.gstin])x.clientName=known[x.gstin];});
-   partyRows.forEach(x=>{if(x.gstin&&known[x.gstin])x.partyName=known[x.gstin];});
-   renderReport();
-   window.__kmmcGstBatch={processed,parties:partyRows,hsn:hsnRows,documents:documentRows,monthlySummary:window.__kmmcGstBatch?.monthlySummary,reportType:reportType.options[reportType.selectedIndex]?.text||'Detailed Report (Primary)',returnType:returnType.options[returnType.selectedIndex]?.text||returnType.value};
-   const left=unique.filter(g=>!known[g]).length;
-   status(left?'Updated '+(unique.length-left)+' GSTIN names. '+left+' names still missing; click Get Names again to retry.':'All '+unique.length+' GSTIN names updated in every report table.','success');
-   if(!left)getNamesButton.classList.add('hidden');else{getNamesButton.disabled=false;getNamesButton.textContent='Get Names ('+left+' remaining)';}
-   close();
-  },{once:true});
-  if(!Object.keys(known).length){update.disabled=true;update.textContent='Update Names (0)';}
-  getNamesButton.disabled=false;
+  const fetchOne=async(g)=>{
+   const row=rowFor(g),attempt=(attempts[g]||0)+1;attempts[g]=attempt;
+   if(row){row.classList.add('loading');row.classList.remove('not-found');row.querySelector('.name-state').textContent='Fetching…';row.querySelector('.name-attempts').textContent='Attempts: '+attempt;}
+   progressText.textContent='Fetching '+g+' · Attempt '+attempt;
+   try{
+    delete lookupCache[g];
+    let response=await apiGstin(g),name=partyName(response);
+    if(!name){
+     delete lookupCache[g];
+     const raw=await fetch('https://razorpay.com/api/gstin/'+encodeURIComponent(g),{method:'GET',headers:{'Accept':'application/json'}});
+     if(!raw.ok)throw new Error('HTTP '+raw.status);
+     response=await raw.json();name=partyName(response);
+     if(!name)throw new Error('Name not returned by API');
+     lookupCache[g]=response;
+     try{localStorage.setItem('kmmc_gst_details_'+g,JSON.stringify({gstin:g,details:response?.data?.data||response?.data||response,savedAt:Date.now()}));}catch(e){}
+    }
+    saveFetchedGstName(g,name);
+    if(row){row.classList.remove('loading','not-found');row.classList.add('fetched');row.querySelector('.name-state').textContent=name;}
+    return true;
+   }catch(error){
+    if(row){row.classList.remove('loading');row.classList.add('not-found');row.querySelector('.name-state').textContent='Name not found · '+(error?.message||'Lookup failed');}
+    return false;
+   }finally{refreshUi();}
+  };
+  const runRetryCycle=async(isManual=false)=>{
+   if(cycleRunning)return;const targets=missing();if(!targets.length){refreshUi();return;}
+   cycleRunning=true;cycleNumber++;retryAll.disabled=true;retryAll.textContent='Retrying…';
+   const maxAttemptsPerCycle=3;
+   for(const gstin of targets){
+    for(let localAttempt=0;localAttempt<maxAttemptsPerCycle&&!knownGstNames()[gstin];localAttempt++){
+     await fetchOne(gstin);
+     if(!knownGstNames()[gstin]&&localAttempt<maxAttemptsPerCycle-1)await delay(1200*(localAttempt+1));
+    }
+   }
+   cycleRunning=false;const left=missing().length;
+   progressText.textContent=left?'Automatic retry cycle '+cycleNumber+' completed · '+left+' GSTIN(s) still failed. Use Retry Failed below to try again.':'All GSTIN names fetched successfully.';
+   retryAll.disabled=left===0;retryAll.textContent='Retry Failed ('+left+')';
+   getNamesButton.disabled=false;
+   if(left){getNamesButton.textContent='Get Names ('+left+' remaining)';status(left+' GSTIN name(s) still not found after automatic retries.','warning');}
+   refreshUi();
+  };
+  retryAll.addEventListener('click',()=>runRetryCycle(true));
+  refreshUi();
+  await runRetryCycle(false);
  });
  const clientsIndex=g=>[...new Set(processed.map(x=>x.gstin))].indexOf(g);
  load.addEventListener('click',async()=>{
