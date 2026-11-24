@@ -1635,6 +1635,43 @@ const exportExcel=async()=>{
   const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=String(batch.processed?.[0]?.gstin||'GSTIN').replace(/[^A-Za-z0-9_-]/g,'')+'_GSTR1_Report.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Formatted Excel report downloaded.','success');
  };
  const exportPdf=async()=>{
+  const currentBatch=window.__kmmcGstBatch;
+  if(currentBatch?.reportKind==='GSTR3B'){
+   const JsPDF=window.jspdf?.jsPDF;if(!JsPDF){status('PDF export library is unavailable.','error');return;}
+   const data=currentBatch.threeB||[],fmt3=n=>new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0),logo=await getGstLogoData();
+   const pdf=new JsPDF({orientation:'landscape',unit:'mm',format:'a3'}),W=420,margin=9,contentW=W-18,blue=[23,81,120],ink=[37,57,73],muted=[91,113,130];let y=9;
+   if(logo)try{pdf.addImage(logo,'PNG',margin,y,17,14);}catch(e){}
+   pdf.setFont('helvetica','bold');pdf.setFontSize(15);pdf.setTextColor(...blue);pdf.text('K MAHESH MANICKHAM AND CO.',31,y+6);
+   pdf.setFont('helvetica','normal');pdf.setFontSize(9);pdf.setTextColor(...muted);pdf.text('CHARTERED ACCOUNTANTS',31,y+12);
+   pdf.setDrawColor(205,218,229);pdf.line(margin,27,W-margin,27);y=32;
+   pdf.setFillColor(244,248,251);pdf.roundedRect(margin,y,contentW,24,2,2,'F');pdf.setFont('helvetica','bold');pdf.setFontSize(9);pdf.setTextColor(...blue);pdf.text('GSTR-3B REPORT DETAILS',margin+4,y+6);
+   pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(...ink);pdf.text('GSTIN: '+[...new Set(data.map(x=>x.gstin))].join(', '),margin+4,y+12);pdf.text('Reporting Period: '+[...new Set(data.map(x=>x.period))].join(', '),margin+4,y+18);y+=32;
+   const draw=(title,heads,rows,total=null)=>{
+    if(y>260){pdf.addPage();y=13;}
+    pdf.setFillColor(232,241,247);pdf.roundedRect(margin,y,contentW,8,1,1,'F');pdf.setFont('helvetica','bold');pdf.setFontSize(8.5);pdf.setTextColor(...blue);pdf.text(title,margin+3,y+5.5);y+=10;
+    const widths=heads.map(()=>contentW/heads.length),xs=heads.map((_,i)=>margin+widths.slice(0,i).reduce((a,b)=>a+b,0));
+    const header=()=>{pdf.setFillColor(...blue);pdf.rect(margin,y,contentW,8,'F');pdf.setFont('helvetica','bold');pdf.setFontSize(6.3);pdf.setTextColor(255,255,255);heads.forEach((h,i)=>pdf.text(pdf.splitTextToSize(h,widths[i]-2)[0]||'',xs[i]+1,y+5.2));y+=8;};
+    header();
+    rows.forEach((row,i)=>{if(y>278){pdf.addPage();y=13;header();}pdf.setFillColor(...(i%2?[244,248,251]:[255,255,255]));pdf.rect(margin,y,contentW,7,'F');pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(...ink);row.forEach((v,j)=>pdf.text(pdf.splitTextToSize(String(v??''),widths[j]-2)[0]||'',xs[j]+1,y+4.8));y+=7;});
+    if(total){if(y>278){pdf.addPage();y=13;header();}pdf.setFillColor(232,241,247);pdf.rect(margin,y,contentW,8,'F');pdf.setFont('helvetica','bold');pdf.setFontSize(6.1);pdf.setTextColor(...blue);total.forEach((v,j)=>pdf.text(pdf.splitTextToSize(String(v??''),widths[j]-2)[0]||'',xs[j]+1,y+5.2));y+=8;}
+    y+=5;
+   };
+   const sum=items=>items.reduce((a,x)=>({txval:a.txval+x.txval,iamt:a.iamt+x.iamt,camt:a.camt+x.camt,samt:a.samt+x.samt,csamt:a.csamt+x.csamt}),{txval:0,iamt:0,camt:0,samt:0,csamt:0});
+   const supplies=data.flatMap(x=>x.supplies),sTotal=sum(supplies);
+   draw('OUTWARD SUPPLIES',['Return Period','Supply Type','Taxable Value','IGST','CGST','SGST/UTGST','Cess'],data.flatMap(x=>x.supplies.map(s=>[x.period,s.label,fmt3(s.txval),fmt3(s.iamt),fmt3(s.camt),fmt3(s.samt),fmt3(s.csamt)])),['GRAND TOTAL','',fmt3(sTotal.txval),fmt3(sTotal.iamt),fmt3(sTotal.camt),fmt3(sTotal.samt),fmt3(sTotal.csamt)]);
+   const inter=data.flatMap(x=>x.interstate),it=sum(inter);
+   draw('INTERSTATE SUPPLIES',['Return Period','Category','Place of Supply','Taxable Value','IGST'],data.flatMap(x=>x.interstate.map(s=>[x.period,s.category,s.pos,fmt3(s.txval),fmt3(s.iamt)])),['GRAND TOTAL','','',fmt3(it.txval),fmt3(it.iamt)]);
+   const avail=data.flatMap(x=>x.itc),av=sum(avail);
+   draw('ITC SUMMARY',['Return Period','ITC Section','Type','IGST','CGST','SGST/UTGST','Cess'],data.flatMap(x=>x.itc.map(s=>[x.period,s.section,s.type,fmt3(s.iamt),fmt3(s.camt),fmt3(s.samt),fmt3(s.csamt)])),['GRAND TOTAL','','',fmt3(av.iamt),fmt3(av.camt),fmt3(av.samt),fmt3(av.csamt)]);
+   draw('TAX PAYMENT',['Return Period','Mode','Date','IGST','CGST','SGST/UTGST','Cess','Debit ID'],data.flatMap(x=>x.payments.map(s=>[x.period,s.mode,s.date,fmt3(s.igst),fmt3(s.cgst),fmt3(s.sgst),fmt3(s.cess),s.debitId])));
+   draw('CASH & ITC LEDGER',['Return Period','Ledger','IGST','CGST','SGST/UTGST','Cess'],data.flatMap(x=>x.ledgers.map(s=>[x.period,s.ledger,fmt3(s.igst),fmt3(s.cgst),fmt3(s.sgst),fmt3(s.cess)])));
+   draw('INTEREST & LATE FEE',['Return Period','Type','IGST','CGST','SGST/UTGST','Cess'],data.flatMap(x=>[...x.fees.interest.map(s=>[x.period,'Interest',fmt3(s.iamt),fmt3(s.camt),fmt3(s.samt),fmt3(s.csamt)]),...x.fees.lateFee.map(s=>[x.period,'Late Fee',fmt3(s.iamt),fmt3(s.camt),fmt3(s.samt),fmt3(s.csamt)])]));
+   const eco=data.flatMap(x=>x.ecommerce),et=sum(eco);
+   draw('E-COMMERCE SUPPLIES',['Return Period','Supply Type','Taxable Value','IGST','CGST','SGST/UTGST','Cess'],eco.map(s=>[data.find(x=>x.ecommerce.includes(s))?.period||'',s.label,fmt3(s.txval),fmt3(s.iamt),fmt3(s.camt),fmt3(s.samt),fmt3(s.csamt)]),['GRAND TOTAL','',fmt3(et.txval),fmt3(et.iamt),fmt3(et.camt),fmt3(et.samt),fmt3(et.csamt)]);
+   const pages=pdf.internal.getNumberOfPages();for(let p=1;p<=pages;p++){pdf.setPage(p);pdf.setDrawColor(205,218,229);pdf.line(margin,287,W-margin,287);pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.setTextColor(...blue);pdf.text('K MAHESH MANICKHAM AND CO. | CHARTERED ACCOUNTANTS',margin,292);pdf.setFont('helvetica','normal');pdf.setTextColor(...ink);pdf.text('Page '+p+' of '+pages,W-margin,292,{align:'right'});}
+   const gstin=String(data[0]?.gstin||'GSTIN');pdf.save(gstin+'_GSTR3B_Report.pdf');status('Formatted GSTR-3B PDF report downloaded.','success');return;
+  }
+const exportPdf=async()=>{
   const batch=window.__kmmcGstBatch,JsPDF=window.jspdf&&window.jspdf.jsPDF;if(!batch||!JsPDF){status('PDF export library is unavailable.','error');return;}
   const meta=getGstReportMeta(batch),logo=await getGstLogoData();
   const pdf=new JsPDF({orientation:'landscape',unit:'mm',format:'a3'}),W=420,margin=8,contentW=W-margin*2,blue=[23,81,120],ink=[37,57,73],muted=[91,113,130];
