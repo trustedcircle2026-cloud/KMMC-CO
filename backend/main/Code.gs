@@ -628,7 +628,11 @@ function driveRename_(u,q){
 }
 function listTransferEmployees_(u){
   if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
-  return rows_('employees').filter(e=>String(e.id)!==String(u.employeeId)&&String(e.status||'ACTIVE').toUpperCase()==='ACTIVE'&&String(e.approvalStatus||'APPROVED').toUpperCase()==='APPROVED').map(e=>({id:e.id,employeeCode:e.employeeCode||'',name:e.name||'',designation:e.designation||''})).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  const users=rows_('users'),accounts=new Map(users.filter(x=>x.role==='EMPLOYEE'&&x.status==='ACTIVE'&&x.employeeId).map(x=>[String(x.employeeId),x]));
+  return rows_('employees')
+    .filter(e=>String(e.id)!==String(u.employeeId)&&String(e.status||'ACTIVE').toUpperCase()==='ACTIVE'&&String(e.approvalStatus||'APPROVED').toUpperCase()==='APPROVED'&&accounts.has(String(e.id)))
+    .map(e=>{const account=accounts.get(String(e.id));return {id:e.id,employeeCode:e.employeeCode||'',name:e.name||account.name||account.username||'Employee',designation:e.designation||''};})
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
 }
 function transferTask_(u,q){
   if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
@@ -636,15 +640,19 @@ function transferTask_(u,q){
   try{
     const task=rows_('tasks').find(x=>String(x.id)===String(q.id));
     if(!task||!visible_(u,'tasks',task)||String(task.employeeId)!==String(u.employeeId))throw Error('Assignment not found or not assigned to you.');
-    if(['IN_PROGRESS','SUBMITTED_FOR_VERIFICATION','COMPLETED','CANCELLED'].includes(String(task.status||'').toUpperCase()))throw Error('Only a new or not-yet-started assignment can be transferred.');
+    const status=String(task.status||'').toUpperCase();
+    if(!['OPEN','PENDING','ASSIGNED'].includes(status))throw Error('Only a new assignment that has not been accepted or started can be transferred.');
     const targetId=String(q.employeeId||'').trim();
     if(!targetId||targetId===String(u.employeeId))throw Error('Select another employee for transfer.');
     const target=rows_('employees').find(e=>String(e.id)===targetId&&String(e.status||'ACTIVE').toUpperCase()==='ACTIVE'&&String(e.approvalStatus||'APPROVED').toUpperCase()==='APPROVED');
     if(!target)throw Error('The selected employee is not active or approved.');
+    const targetUser=rows_('users').find(x=>x.role==='EMPLOYEE'&&String(x.employeeId)===targetId&&x.status==='ACTIVE');
+    if(!targetUser)throw Error('The selected employee does not have an active portal account.');
+    const previousEmployeeId=String(task.employeeId);
     task.employeeId=target.id;task.status='ASSIGNED';task.updatedAt=iso_();
     write_('tasks',task.id,task);
-    activity_(u,'TASK_TRANSFERRED','tasks',task.id,'Transferred to '+(target.employeeCode||target.name));
-    return {task:task,employee:{id:target.id,employeeCode:target.employeeCode||'',name:target.name||''}};
+    activity_(u,'TASK_TRANSFERRED','tasks',task.id,'Transferred '+(task.jobNumber||task.title||task.id)+' from '+previousEmployeeId+' to '+(target.employeeCode||target.name||target.id));
+    return {task:task,employee:{id:target.id,employeeCode:target.employeeCode||'',name:target.name||targetUser.name||targetUser.username||''}};
   }finally{lock.releaseLock();}
 }
 function setTaskStatus_(u,q){if(!(isAdmin_(u)||u.role==='EMPLOYEE'))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ASSIGNED','ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'){const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);if(!rows_('attendance').some(a=>String(a.employeeId)===String(u.employeeId)&&dateKey_(a.workDate)===day&&!a.checkOut))throw Error('Clock in before starting work on an assignment.');if(r.clientId){const client=rows_('clients').find(c=>String(c.id)===String(r.clientId)&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));if(!client)throw Error('Client is not assigned or accessible to you.');ensureClientFolder_(r.clientId);}switchWorkToTask_(u,r);}write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
