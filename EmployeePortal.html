@@ -2506,7 +2506,7 @@ const dateText=t=>t?dateForLog(t):'';
    card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
   });
   root.querySelectorAll('[data-dashboard-panel]').forEach(panel=>{
-   panel.addEventListener('click',e=>{if(e.target.closest('[data-employee-go]'))return;const key=panel.dataset.dashboardPanel;if(dashboardDetails[key])showTaskDetails(key);});
+   panel.addEventListener('click',e=>{if(e.target.closest('[data-employee-go],[data-dashboard-add-assignment]'))return;const key=panel.dataset.dashboardPanel;if(dashboardDetails[key])showTaskDetails(key);});
    panel.style.cursor='pointer';
   });
   let draggedTaskId='';
