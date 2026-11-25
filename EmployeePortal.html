@@ -2370,7 +2370,7 @@ const dateText=t=>t?dateForLog(t):'';
     '<article class="employee-overview-card pending" role="button" tabindex="0" data-dashboard-detail="pending" data-dashboard-drop-target="pending"><span class="dash-kpi-icon">'+dashIcon('pending')+'</span><div class="dash-kpi-content"><span>Pending Task</span><strong>'+activePendingTasks.length+'</strong></div></article>'+
     '<article class="employee-overview-card review" role="button" tabindex="0" data-dashboard-detail="review" data-dashboard-drop-target="review"><span class="dash-kpi-icon">'+dashIcon('review')+'</span><div class="dash-kpi-content"><span>Submit for Review</span><strong>'+submittedTasks.length+'</strong></div></article>'+
     '<article class="employee-overview-card completed" role="button" tabindex="0" data-dashboard-detail="completed" data-dashboard-drop-target="completed"><span class="dash-kpi-icon">'+dashIcon('completed')+'</span><div class="dash-kpi-content"><span>Completed</span><strong>'+completedTasks.length+'</strong></div></article>'+
-   '</section>+
+   '</section>'+
    '<div class="dash-section-heading"><div><h3>My assignments</h3><p>Track your work by current status</p></div><span>'+tasks.length+' total</span></div>'+
    '<section class="employee-dash-lists employee-dash-task-columns">'+taskPanelV2('Pending Tasks','Tasks waiting for your action',dueSorted,'pending')+taskPanelV2('Completed Tasks','Successfully completed assignments',completedSorted,'completed')+taskPanelV2('Submitted for Review','Assignments awaiting verification',reviewSorted,'review')+'</section>'+
   '</div>';
