@@ -2342,7 +2342,8 @@ async function renderEmployeeDashboard(){
   const submittedTasks=tasks.filter(t=>reviewStatuses.includes(String(t.status||'').toUpperCase()));
   const completedTasks=tasks.filter(t=>String(t.status||'').toUpperCase()==='COMPLETED');
   const newAssignments=tasks.filter(t=>['OPEN','ASSIGNED'].includes(String(t.status||'').toUpperCase()));
-  const pendingTasks=tasks.filter(t=>['PENDING','ACCEPTED','PAUSED','WORK_PAUSED','TRANSFERRED','IN_PROGRESS'].includes(String(t.status||'').toUpperCase()));
+  const activePendingTasks=tasks.filter(t=>['PENDING','ACCEPTED','PAUSED','WORK_PAUSED','TRANSFERRED','IN_PROGRESS'].includes(String(t.status||'').toUpperCase()));
+  const pendingTasks=[...newAssignments,...activePendingTasks];
   const dueTodayTasks=tasks.filter(t=>String(t.dueDate||'').slice(0,10)===today&&!['COMPLETED','CANCELLED'].includes(String(t.status||'').toUpperCase()));
   const overdueTasks=tasks.filter(t=>{const st=String(t.status||'').toUpperCase(),due=String(t.dueDate||'').slice(0,10);return due&&due<today&&!['COMPLETED','CANCELLED'].includes(st);});
   const activeLog=todayLogs.find(r=>!r.endTime&&String(r.entryType||'').toUpperCase()==='WORK');
@@ -2366,7 +2367,7 @@ const dateText=t=>t?dateForLog(t):'';
    '<section class="employee-overview-grid employee-overview-grid-five">'+
     '<article class="employee-overview-card new" role="button" tabindex="0" data-dashboard-detail="new" data-dashboard-drop-target="new"><span class="dash-kpi-icon">'+dashIcon('new')+'</span><div class="dash-kpi-content"><span>New Assignments</span><strong>'+newAssignments.length+'</strong></div></article>'+
     '<article class="employee-overview-card due" role="button" tabindex="0" data-dashboard-detail="due" data-dashboard-drop-target="due"><span class="dash-kpi-icon">'+dashIcon('due')+'</span><div class="dash-kpi-content"><span>Due by Today</span><strong>'+dueTodayTasks.length+'</strong></div></article>'+
-    '<article class="employee-overview-card pending" role="button" tabindex="0" data-dashboard-detail="pending" data-dashboard-drop-target="pending"><span class="dash-kpi-icon">'+dashIcon('pending')+'</span><div class="dash-kpi-content"><span>Pending Task</span><strong>'+pendingTasks.length+'</strong></div></article>'+
+    '<article class="employee-overview-card pending" role="button" tabindex="0" data-dashboard-detail="pending" data-dashboard-drop-target="pending"><span class="dash-kpi-icon">'+dashIcon('pending')+'</span><div class="dash-kpi-content"><span>Pending Task</span><strong>'+activePendingTasks.length+'</strong></div></article>'+
     '<article class="employee-overview-card review" role="button" tabindex="0" data-dashboard-detail="review" data-dashboard-drop-target="review"><span class="dash-kpi-icon">'+dashIcon('review')+'</span><div class="dash-kpi-content"><span>Submit for Review</span><strong>'+submittedTasks.length+'</strong></div></article>'+
     '<article class="employee-overview-card completed" role="button" tabindex="0" data-dashboard-detail="completed" data-dashboard-drop-target="completed"><span class="dash-kpi-icon">'+dashIcon('completed')+'</span><div class="dash-kpi-content"><span>Completed</span><strong>'+completedTasks.length+'</strong></div></article>'+
    '</section>+
@@ -2394,7 +2395,7 @@ const dateText=t=>t?dateForLog(t):'';
    total:{title:'All Tasks',subtitle:'Every assignment assigned to you',items:tasks},
    new:{title:'New Assignments',subtitle:'Newly assigned work waiting to be accepted',items:newAssignments},
    due:{title:'Due by Today',subtitle:'Active assignments due today',items:dueTodayTasks},
-   pending:{title:'Pending Tasks',subtitle:'Accepted and active assignments waiting for action',items:pendingTasks},
+   pending:{title:'Pending Tasks',subtitle:'Accepted and active assignments waiting for action',items:activePendingTasks},
    completed:{title:'Completed Tasks',subtitle:'Successfully completed assignments',items:completedTasks},
    review:{title:'Submitted for Review',subtitle:'Assignments awaiting verification',items:submittedTasks}
   };
