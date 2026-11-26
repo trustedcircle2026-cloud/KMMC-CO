@@ -563,7 +563,20 @@ function startBreak_(u){if(!(isAdmin_(u)||u.role==='EMPLOYEE')||!u.employeeId)th
 function stopBreak_(u){if(!(isAdmin_(u)||u.role==='EMPLOYEE')||!u.employeeId)throw Error('Employee access required.');const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);if(!rows_('attendance').some(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut))throw Error('Clock in before stopping a break.');const open=openTimerSegment_(u.employeeId,day);if(!open||String(open.entryType).toUpperCase()!=='BREAK')throw Error('No running break timer.');closeTimerSegment_(open,now);addTimerEvent_(u,'BREAK_STOP',now,open);addTimerSegment_(u,'WORK',now,open);activity_(u,'BREAK_STOP','time',open.id,'');return timerStatus_(u);}
 function installAutoClockOutTrigger_(){const name='autoCloseSessionsAtNinePm';ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()===name).forEach(t=>ScriptApp.deleteTrigger(t));ScriptApp.newTrigger(name).timeBased().everyMinutes(5).create();}
 function autoCloseSessionsAtNinePm(){const now=new Date();if(localClock_(now)<'21:00:00')return 'Before 9 PM IST.';const day=localDay_(now),open=rows_('attendance').filter(x=>!x.checkOut&&dateKey_(x.workDate)<=day);open.forEach(att=>closeAttendance_(att,ninePm_(dateKey_(att.workDate)),true));return 'Auto clock-out processed for '+open.length+' session(s).';}
-function switchWorkToTask_(u,task){if(u.role!=='EMPLOYEE'||!u.employeeId)return;const now=new Date(),day=localDay_(now);if(!rows_('attendance').some(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut))throw Error('Clock in before starting work on an assignment.');const open=enforceSingleOpenTimer_(u,day,now);if(open&&String(open.entryType).toUpperCase()==='BREAK')throw Error('Stop your break before starting an assignment.');if(open&&String(open.taskId||'')===String(task.id||''))return;if(open)closeTimerSegment_(open,now);addTimerSegment_(u,'WORK',now,task);}
+function switchWorkToTask_(u,task){
+  if(u.role!=='EMPLOYEE'||!u.employeeId)return;
+  const now=new Date(),day=localDay_(now);
+  if(!rows_('attendance').some(x=>String(x.employeeId)===String(u.employeeId)&&dateKey_(x.workDate)===day&&!x.checkOut))throw Error('Clock in before starting work on an assignment.');
+  const open=enforceSingleOpenTimer_(u,day,now);
+  if(open&&String(open.entryType).toUpperCase()==='BREAK')throw Error('Stop your break before starting an assignment.');
+  const sameTask=open&&String(open.taskId||'')===String(task.id||'');
+  if(open&&!sameTask)closeTimerSegment_(open,now);
+  rows_('tasks').filter(x=>String(x.employeeId)===String(u.employeeId)&&String(x.id)!==String(task.id)&&String(x.status||'').toUpperCase()==='IN_PROGRESS').forEach(previous=>{
+    previous.status='PAUSED';previous.updatedAt=iso_();write_('tasks',previous.id,previous);
+    activity_(u,'TASK_AUTO_PAUSED','tasks',previous.id,'Paused because another assignment was started.');
+  });
+  if(!sameTask)addTimerSegment_(u,'WORK',now,task);
+}
  function startTaskTimer_(u,q){if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');const lock=LockService.getScriptLock();lock.waitLock(10000);try{const task=rows_('tasks').find(x=>String(x.id)===String(q.id));if(!task||!visible_(u,'tasks',task)||String(task.employeeId)!==String(u.employeeId))throw Error('Assignment not found or not assigned to you.');const taskStatus=String(task.status||'').toUpperCase(),selfCreated=String(task.createdBy||'')===String(u.id);if(!['ACCEPTED','PAUSED','WORK_PAUSED'].includes(taskStatus)&&!(selfCreated&&['OPEN','PENDING','ASSIGNED'].includes(taskStatus)))throw Error('Accept this assignment before starting work.');if(task.clientId){const c=rows_('clients').find(x=>String(x.id)===String(task.clientId));if(!c)throw Error('The client linked to this assignment no longer exists.');ensureClientFolder_(task.clientId,u);}switchWorkToTask_(u,task);task.status='IN_PROGRESS';task.updatedAt=iso_();write_('tasks',task.id,task);activity_(u,'TASK_TIMER_START','tasks',task.id,task.jobNumber||task.title);return {task:task,timer:timerStatus_(u)};}finally{lock.releaseLock();}}
 function taskTransition_(u,q){
   if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
@@ -655,8 +668,42 @@ function transferTask_(u,q){
     return {task:task,employee:{id:target.id,employeeCode:target.employeeCode||'',name:target.name||targetUser.name||targetUser.username||''}};
   }finally{lock.releaseLock();}
 }
-function setTaskStatus_(u,q){if(!(isAdmin_(u)||u.role==='EMPLOYEE'))throw Error('Employee access required.');const r=rows_('tasks').find(x=>x.id===String(q.id));if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');const status=String(q.status||'').toUpperCase();if(!['ASSIGNED','ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');r.status=status;r.updatedAt=iso_();if(status==='COMPLETED')r.completedAt=iso_();if(status==='IN_PROGRESS'&&u.role==='EMPLOYEE'){const now=new Date(),day=localDay_(now);reconcileAttendance_(u.employeeId,now);if(!rows_('attendance').some(a=>String(a.employeeId)===String(u.employeeId)&&dateKey_(a.workDate)===day&&!a.checkOut))throw Error('Clock in before starting work on an assignment.');if(r.clientId){const client=rows_('clients').find(c=>String(c.id)===String(r.clientId)&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));if(!client)throw Error('Client is not assigned or accessible to you.');ensureClientFolder_(r.clientId);}switchWorkToTask_(u,r);}write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;}
-function setTaskDueToday_(u,q){if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');const r=rows_('tasks').find(x=>String(x.id)===String(q.id));if(!r||!visible_(u,'tasks',r)||String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');if(['COMPLETED','CANCELLED','SUBMITTED_FOR_VERIFICATION'].includes(String(r.status||'').toUpperCase()))throw Error('This task cannot be rescheduled.');r.dueDate=localDay_(new Date());r.updatedAt=iso_();write_('tasks',r.id,r);activity_(u,'TASK_DUE_TODAY','tasks',r.id,r.jobNumber||r.title);return r;}
+function setTaskStatus_(u,q){
+  if(!(isAdmin_(u)||u.role==='EMPLOYEE'))throw Error('Employee access required.');
+  const r=rows_('tasks').find(x=>String(x.id)===String(q.id));
+  if(!r||!visible_(u,'tasks',r))throw Error('Task not found/access denied.');
+  if(u.role==='EMPLOYEE'&&String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
+  const status=String(q.status||'').toUpperCase();
+  if(!['ASSIGNED','ACCEPTED','IN_PROGRESS','PAUSED','TRANSFERRED','COMPLETED','CANCELLED'].includes(status))throw Error('Invalid task status.');
+  if(u.role==='EMPLOYEE'){
+    const now=new Date(),day=localDay_(now);
+    if(status==='IN_PROGRESS'){
+      reconcileAttendance_(u.employeeId,now);
+      if(!rows_('attendance').some(a=>String(a.employeeId)===String(u.employeeId)&&dateKey_(a.workDate)===day&&!a.checkOut))throw Error('Clock in before starting work on an assignment.');
+      if(r.clientId){const client=rows_('clients').find(c=>String(c.id)===String(r.clientId)&&(!c.assignedEmployeeId||String(c.assignedEmployeeId)===String(u.employeeId)));if(!client)throw Error('Client is not assigned or accessible to you.');ensureClientFolder_(r.clientId);}
+      switchWorkToTask_(u,r);
+    }else{
+      const open=openTimerSegment_(u.employeeId,day);
+      if(open&&String(open.taskId||'')===String(r.id))closeTimerSegment_(open,now);
+    }
+  }
+  r.status=status;r.updatedAt=iso_();
+  if(status==='COMPLETED')r.completedAt=iso_();else r.completedAt='';
+  write_('tasks',r.id,r);activity_(u,'TASK_STATUS','tasks',r.id,status);return r;
+}
+function setTaskDueToday_(u,q){
+  if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
+  const r=rows_('tasks').find(x=>String(x.id)===String(q.id));
+  if(!r||!visible_(u,'tasks',r)||String(r.employeeId)!==String(u.employeeId))throw Error('Task is not assigned to you.');
+  if(['COMPLETED','CANCELLED','SUBMITTED_FOR_VERIFICATION'].includes(String(r.status||'').toUpperCase()))throw Error('This task cannot be rescheduled.');
+  const now=new Date(),open=openTimerSegment_(u.employeeId,localDay_(now));
+  if(open&&String(open.taskId||'')===String(r.id)){
+    closeTimerSegment_(open,now);
+    if(String(r.status||'').toUpperCase()==='IN_PROGRESS')r.status='PAUSED';
+  }
+  r.dueDate=localDay_(now);r.updatedAt=iso_();write_('tasks',r.id,r);
+  activity_(u,'TASK_DUE_TODAY','tasks',r.id,r.jobNumber||r.title);return r;
+}
 function submitTaskForVerification_(u,q){
   if(u.role!=='EMPLOYEE'||!u.employeeId)throw Error('Employee access required.');
   const lock=LockService.getScriptLock();lock.waitLock(10000);
