@@ -833,6 +833,13 @@ body[data-active-module="dashboard"] .employee-dash-task-columns .employee-statu
 .dashboard-confirm-copy{margin:14px 0 2px;color:#526477;font-size:13px;line-height:1.55}
 .dashboard-confirm-modal .employee-detail-foot{justify-content:flex-end;gap:9px}
 .dashboard-task-action-table{min-width:900px}
+.dashboard-new-task-table{min-width:1120px}
+.dashboard-new-task-table th,.dashboard-new-task-table td{vertical-align:middle;white-space:nowrap}
+.dashboard-new-task-table td:nth-child(4){white-space:normal;min-width:170px;max-width:240px}
+.dashboard-new-task-row-actions{display:flex;align-items:center;gap:6px}
+.dashboard-new-task-row-actions .btn{min-width:68px;padding:5px 9px}
+.dashboard-new-task-row-actions .dashboard-cancel-task{color:#b42318;border-color:#e8c4c4;background:#fff}
+
 .dashboard-new-assignment-modal{max-width:920px!important}
 .dashboard-new-task-list{display:grid;gap:12px}
 .dashboard-new-task-detail{border:1px solid #dbe5ed;border-radius:9px;background:#fff;padding:15px}
@@ -2422,8 +2429,8 @@ const dateText=t=>t?dateForLog(t):'';
    const close=()=>{modal.remove();document.removeEventListener('keydown',onKey);};
    const onKey=e=>{if(e.key==='Escape')close();};
    if(key==='new'){
-    const cards=d.items.map(t=>'<article class="dashboard-new-task-detail"><div class="dashboard-new-task-title"><div><h3>'+esc(t.title||'Assignment')+'</h3><p>'+esc(t.jobNumber||'No job number')+' · '+esc(clientName(t)||'No client')+'</p></div><span class="employee-status">'+esc(status(t))+'</span></div><div class="dashboard-new-task-grid"><div><small>Client</small><strong>'+esc(clientName(t)||'—')+'</strong></div><div><small>Priority</small><strong>'+esc(t.priority||'NORMAL')+'</strong></div><div><small>Start date</small><strong>'+esc(t.startDate||'—')+'</strong></div><div><small>Due date</small><strong>'+esc(t.dueDate||'—')+'</strong></div></div><div class="dashboard-new-task-description"><small>Work details</small><p>'+esc(t.description||'No additional details provided.')+'</p></div><div class="dashboard-new-task-actions"><button type="button" class="btn primary" data-new-task-start="'+esc(t.id)+'">Start</button><button type="button" class="btn" data-new-task-transfer="'+esc(t.id)+'">Transfer</button><button type="button" class="btn dashboard-cancel-task" data-new-task-cancel="'+esc(t.id)+'">Cancel</button></div></article>').join('');
-    const body=d.items.length?'<div class="dashboard-new-task-list">'+cards+'</div>':'<div class="employee-detail-empty">No new assignments are waiting to be accepted.</div>';
+    const rows=d.items.map(t=>'<tr><td>'+esc(t.jobNumber||'—')+'</td><td><strong>'+esc(t.title||'Assignment')+'</strong></td><td>'+esc(clientName(t)||'—')+'</td><td>'+esc(t.description||'—')+'</td><td>'+esc(t.priority||'NORMAL')+'</td><td><span class="employee-status">'+esc(status(t))+'</span></td><td>'+esc(t.dueDate||'—')+'</td><td class="dashboard-new-task-row-actions"><button type="button" class="btn btn-sm primary" data-new-task-start="'+esc(t.id)+'">Start</button><button type="button" class="btn btn-sm" data-new-task-transfer="'+esc(t.id)+'">Transfer</button><button type="button" class="btn btn-sm dashboard-cancel-task" data-new-task-cancel="'+esc(t.id)+'">Cancel</button></td></tr>').join('');
+    const body=d.items.length?'<div class="employee-detail-table-wrap"><table class="employee-detail-table dashboard-task-action-table dashboard-new-task-table"><thead><tr>'+['Job No.','Assignment','Client','Work Details','Priority','Status','Due Date','Action'].map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="employee-detail-empty">No new assignments are waiting to be accepted.</div>';
     modal.innerHTML='<section class="employee-detail-modal dashboard-new-assignment-modal" role="dialog" aria-modal="true" aria-labelledby="employeeDetailTitle"><header class="employee-detail-head"><div><h2 id="employeeDetailTitle">'+esc(d.title)+'</h2><p>'+esc(d.subtitle)+' · '+d.items.length+' record(s)</p></div><button type="button" class="employee-detail-close" aria-label="Close">×</button></header><div class="employee-detail-body">'+body+'</div><footer class="employee-detail-foot"><button type="button" class="btn" data-detail-close>Close</button></footer></section>';
    }else{
     const rows=d.items.map(t=>'<tr><td>'+esc(t.jobNumber||'—')+'</td><td>'+esc(t.title||'Assignment')+'</td><td>'+esc(clientName(t)||'—')+'</td><td>'+esc(t.description||'—')+'</td><td>'+esc(t.priority||'—')+'</td><td>'+esc(status(t))+'</td><td>'+esc(t.dueDate||'—')+'</td><td><button type="button" class="btn btn-sm dashboard-task-move" data-dashboard-move-task="'+esc(t.id)+'" data-dashboard-source="'+key+'">Move</button></td></tr>').join('');
