@@ -2731,12 +2731,14 @@ body[data-active-module="dashboard"] #dashboardView{height:auto!important;min-he
 .employee-dashboard-v2 .dash-panel-title p{margin:3px 0 0!important;color:#7c8d9b!important;font-size:9px!important;}
 .employee-dashboard-v2 .employee-list-count{min-width:27px!important;height:27px!important;border-radius:8px!important;background:#e1eaf1!important;color:#1d5279!important;font-weight:800!important;}
 .employee-dashboard-v2 .employee-compact-list{overflow:auto!important;}
-/* Dashboard assignment panels: show more rows and expand downward */
-.employee-dashboard-v2 .employee-dash-task-columns{align-items:stretch!important;}
-.employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{height:auto!important;min-height:380px!important;max-height:none!important;overflow:visible!important;}
-.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-list{flex:0 0 auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}
-.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-task{min-height:61px!important;}
-@media(max-width:900px){.employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{min-height:260px!important;}}
+/* Dashboard assignment panels: balanced two-row layout with contained task lists */
+.employee-dashboard-v2 .employee-dash-task-columns{align-items:stretch!important;grid-auto-rows:250px!important;gap:12px!important;}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{height:250px!important;min-height:250px!important;max-height:250px!important;overflow:hidden!important;box-sizing:border-box!important;}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-list{flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;overscroll-behavior:contain!important;}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-task{min-height:52px!important;padding:8px 11px!important;}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-empty{min-height:110px!important;}
+@media(max-width:1000px){.employee-dashboard-v2 .employee-dash-task-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:230px!important;}.employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{height:230px!important;min-height:230px!important;max-height:230px!important;}}
+@media(max-width:560px){.employee-dashboard-v2 .employee-dash-task-columns{grid-template-columns:1fr!important;grid-auto-rows:auto!important;}.employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{height:230px!important;min-height:230px!important;max-height:230px!important;}}
 
 .employee-dashboard-v2 .employee-compact-task{min-height:66px!important;padding:10px 13px!important;border-bottom:1px solid #edf1f4!important;}
 .employee-dashboard-v2 .employee-compact-task-main strong{font-size:11px!important;color:#203e56!important;}
@@ -2755,8 +2757,11 @@ body[data-active-module="dashboard"] #dashboardView{height:auto!important;min-he
 .employee-dashboard-v2 .employee-list-footer button{font-size:10px!important;color:#1b5b87!important;}
 @media(max-width:1000px){
  .employee-dashboard-v2 .employee-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+ .employee-dashboard-v2 .employee-dash-lists{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+ .employee-dashboard-v2 .employee-dash-list-panel{min-height:230px!important;}
+}
+@media(max-width:560px){
  .employee-dashboard-v2 .employee-dash-lists{grid-template-columns:1fr!important;}
- .employee-dashboard-v2 .employee-dash-list-panel{min-height:190px!important;}
 }
 @media(max-width:760px){
  body[data-active-module="dashboard"] .app-layout>main{padding:12px!important;}
