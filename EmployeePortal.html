@@ -2513,7 +2513,9 @@ const dateText=t=>t?dateForLog(t):'';
   const applyDashboardTaskMove=async(task,target)=>{
    const dest=dashboardMoveTargets[target];if(!dest)throw Error('Invalid task destination.');
    if(dest.action==='working'){
-    if(String(task.status||'').toUpperCase()!=='IN_PROGRESS')await api('setTaskStatus',{id:task.id,status:'ACCEPTED'});
+    const alreadyRunning=String(task.status||'').toUpperCase()==='IN_PROGRESS'&&activeLog&&String(activeLog.taskId||'')===String(task.id);
+    if(alreadyRunning)return {task:task,alreadyRunning:true};
+    await api('setTaskStatus',{id:task.id,status:'ACCEPTED'});
     return api('startTaskTimer',{id:task.id});
    }
    if(dest.action==='due')return api('setTaskDueToday',{id:task.id});
