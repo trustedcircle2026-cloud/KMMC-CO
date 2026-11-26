@@ -2383,7 +2383,7 @@ async function renderEmployeeDashboard(){
   const clientName=t=>t.clientName||clientLookup[String(t.clientId)]?.name||clients.find(c=>String(c.id)===String(t.clientId))?.name||'—';
   const status=t=>String(t.status||'OPEN').replace(/_/g,' ');
 const dateText=t=>t?dateForLog(t):'';
-  const dueSorted=[...pendingTasks].sort((a,b)=>String(a.dueDate||'9999-12-31').localeCompare(String(b.dueDate||'9999-12-31')));
+  const dueSorted=[...activePendingTasks].sort((a,b)=>String(a.dueDate||'9999-12-31').localeCompare(String(b.dueDate||'9999-12-31')));
   const completedSorted=[...completedTasks].sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   const reviewSorted=[...submittedTasks].sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   const taskItem=(t,kind)=>'<div class="employee-compact-task" draggable="true" data-dashboard-drag-task="'+esc(t.id)+'"><div class="employee-compact-task-main"><strong>'+esc(t.title||'Assignment')+'</strong><small>'+esc(t.jobNumber||'No job number')+' · '+esc(clientName(t))+'</small></div><div class="employee-compact-task-meta"><span class="employee-status '+(String(t.status||'').toUpperCase()==='IN_PROGRESS'?'is-active':'')+'">'+esc(kind==='working'?'TIMER RUNNING':status(t))+'</span><small>'+esc(kind==='working'?(activeLog?fmtTimer(logSeconds(activeLog)):'Timer not active'):t.dueDate||'No due date')+'</small></div></div>';
