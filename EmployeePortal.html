@@ -2394,7 +2394,7 @@ const dateText=t=>t?dateForLog(t):'';
   const workHours=Math.floor(workSeconds/3600),workMins=Math.floor((workSeconds%3600)/60);
   const taskPanelV2=(title,subtitle,list,kind)=>'<section class="employee-dash-list-panel dash-panel-'+kind+'" data-dashboard-panel="'+kind+'" data-dashboard-drop-target="'+kind+'"><div class="employee-dash-list-head"><div class="dash-panel-title">'+(kind==='new'?'<button type="button" class="dash-panel-icon dashboard-add-assignment" data-dashboard-add-assignment aria-label="Add new assignment" title="Add new assignment">'+dashIcon('new')+'</button>':'<span class="dash-panel-icon">'+dashIcon(kind==='review'?'review':kind)+'</span>')+'<div><h3>'+title+'</h3><p>'+subtitle+'</p></div></div><strong class="employee-list-count">'+list.length+'</strong></div><div class="employee-compact-list">'+(list.length?list.slice(0,8).map(t=>taskItem(t,kind)).join(''):'<div class="employee-compact-empty"><span class="dash-empty-icon">'+dashIcon(kind==='completed'?'completed':kind)+'</span><strong>'+(kind==='working'?'No active task':kind==='new'?'No new assignments':kind==='due'?'No tasks due today':kind==='pending'?'No pending assignments':kind==='review'?'No submitted assignments':'No completed assignments')+'</strong><small>Nothing to display right now</small></div>')+'</div>'+(list.length>8?'<div class="employee-list-footer"><button type="button" data-employee-go="task">View all assignments <span>→</span></button></div>':'')+'</section>';
   root.innerHTML='<div class="employee-dashboard-shell employee-dashboard-v2">'+
-   '<div class="dash-section-heading"><div><h3>My assignments</h3><p>Track your work by current status</p></div><span>'+tasks.length+' total</span></div>'+
+   '<div class="dash-section-heading dash-section-heading-compact"><span>'+tasks.length+' total</span></div>'+
    '<section class="employee-dash-lists employee-dash-task-columns employee-dash-six-grid">'+
     taskPanelV2('Currently Working','Only one active timer at a time',workingTasks,'working')+
     taskPanelV2('Pending Task','Accepted work waiting for action',activePendingTasks,'pending')+
@@ -2703,17 +2703,19 @@ body[data-active-module="dashboard"] #dashboardView{height:auto!important;min-he
 @media(max-width:1150px){.employee-dashboard-v2 .employee-dash-five-columns{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media(max-width:760px){.employee-dashboard-v2 .employee-dash-five-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
 @media(max-width:480px){.employee-dashboard-v2 .employee-dash-five-columns{grid-template-columns:1fr!important;}}
-.employee-dashboard-v2 .employee-dash-six-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(255px,auto);gap:12px!important;align-items:stretch;}
-.employee-dashboard-v2 .employee-dash-six-grid .employee-dash-list-panel{min-width:0;height:270px;min-height:270px;max-height:270px;display:flex;flex-direction:column;}
+.employee-dashboard-v2 .dash-section-heading-compact{display:flex;justify-content:flex-end;align-items:center;min-height:14px;margin:0 2px 5px;padding:0;}
+.employee-dashboard-v2 .dash-section-heading-compact>span{padding:3px 8px;border-radius:20px;background:#eaf0f5;color:#526d82;font-size:9px;font-weight:700;}
+.employee-dashboard-v2 .employee-dash-six-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:220px;gap:10px!important;align-items:stretch;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-dash-list-panel{min-width:0;height:220px;min-height:220px;max-height:220px;display:flex;flex-direction:column;}
 .employee-dashboard-v2 .employee-dash-six-grid .employee-compact-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
 .employee-dashboard-v2 .employee-dash-six-grid .employee-list-footer{margin-top:auto;}
-.employee-dashboard-v2 .employee-dash-six-grid .employee-dash-list-head{padding:11px 12px!important;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-dash-list-head{padding:8px 10px!important;}
 .employee-dashboard-v2 .employee-dash-six-grid .dash-panel-title h3{font-size:12px;line-height:1.25;}
 .employee-dashboard-v2 .employee-dash-six-grid .dash-panel-title p{font-size:9px;}
-.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-task{padding:10px 11px;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-task{padding:7px 10px;}
 .employee-dashboard-v2 .employee-dash-six-grid .employee-compact-task strong{font-size:11px;}
 .employee-dashboard-v2 .employee-dash-six-grid .employee-compact-task small{font-size:9px;}
-.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-empty{padding:28px 8px;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-empty{padding:18px 8px;}
 .employee-dashboard-v2 .employee-dash-six-grid [data-dashboard-drop-target].is-drop-ready{outline:2px dashed #2f79b9;outline-offset:2px;background:#f0f7ff;}
 .employee-dashboard-v2 .dash-panel-working .dash-panel-icon{background:#dce9f3;color:#17517c;}
 @media(max-width:900px){.employee-dashboard-v2 .employee-dash-six-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
