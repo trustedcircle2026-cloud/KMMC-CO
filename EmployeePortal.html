@@ -2362,15 +2362,22 @@ async function renderEmployeeDashboard(){
   const logs=timeData.logs||[],attendance=timeData.attendance||[],clients=clientData.records||[];
   const today=istDateInput(),todayLogs=logs.filter(r=>dateKeyForPortal(r.workDate)===today);
   const todayAttendance=attendance.filter(r=>dateKeyForPortal(r.workDate)===today).sort((a,b)=>String(a.checkIn||'').localeCompare(String(b.checkIn||'')));
+  const activeLog=todayLogs.find(r=>!r.endTime&&String(r.entryType||'').toUpperCase()==='WORK');
+  const activeTaskId=String(activeLog&&activeLog.taskId||'');
+  const workingTask=tasks.find(t=>activeTaskId&&String(t.id)===activeTaskId)||tasks.find(t=>String(t.status||'').toUpperCase()==='IN_PROGRESS');
+  const workingTasks=workingTask?[workingTask]:[];
+  const workingIds=new Set(workingTasks.map(t=>String(t.id)));
   const reviewStatuses=['SUBMITTED_FOR_VERIFICATION','SUBMITTED_FOR_REVIEW','PENDING_VERIFICATION','UNDER_REVIEW'];
   const submittedTasks=tasks.filter(t=>reviewStatuses.includes(String(t.status||'').toUpperCase()));
   const completedTasks=tasks.filter(t=>String(t.status||'').toUpperCase()==='COMPLETED');
   const newAssignments=tasks.filter(t=>['OPEN','ASSIGNED'].includes(String(t.status||'').toUpperCase()));
-  const activePendingTasks=tasks.filter(t=>['PENDING','ACCEPTED','PAUSED','WORK_PAUSED','TRANSFERRED','IN_PROGRESS'].includes(String(t.status||'').toUpperCase()));
-  const pendingTasks=[...newAssignments,...activePendingTasks];
-  const dueTodayTasks=tasks.filter(t=>String(t.dueDate||'').slice(0,10)===today&&!['COMPLETED','CANCELLED'].includes(String(t.status||'').toUpperCase()));
+  const reviewIds=new Set(submittedTasks.map(t=>String(t.id)));
+  const newIds=new Set(newAssignments.map(t=>String(t.id)));
+  const completedIds=new Set(completedTasks.map(t=>String(t.id)));
+  const dueTodayTasks=tasks.filter(t=>String(t.dueDate||'').slice(0,10)===today&&!['COMPLETED','CANCELLED'].includes(String(t.status||'').toUpperCase())&&!workingIds.has(String(t.id))&&!reviewIds.has(String(t.id))&&!newIds.has(String(t.id)));
+  const dueIds=new Set(dueTodayTasks.map(t=>String(t.id)));
+  const activePendingTasks=tasks.filter(t=>['PENDING','ACCEPTED','PAUSED','WORK_PAUSED'].includes(String(t.status||'').toUpperCase())&&!workingIds.has(String(t.id))&&!reviewIds.has(String(t.id))&&!newIds.has(String(t.id))&&!dueIds.has(String(t.id)));
   const overdueTasks=tasks.filter(t=>{const st=String(t.status||'').toUpperCase(),due=String(t.dueDate||'').slice(0,10);return due&&due<today&&!['COMPLETED','CANCELLED'].includes(st);});
-  const activeLog=todayLogs.find(r=>!r.endTime&&String(r.entryType||'').toUpperCase()==='WORK');
   const firstAttendance=todayAttendance[0];
   const fmt=v=>v?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(v)).toUpperCase():'—';
   const clientName=t=>t.clientName||clientLookup[String(t.clientId)]?.name||clients.find(c=>String(c.id)===String(t.clientId))?.name||'—';
@@ -2379,7 +2386,7 @@ const dateText=t=>t?dateForLog(t):'';
   const dueSorted=[...pendingTasks].sort((a,b)=>String(a.dueDate||'9999-12-31').localeCompare(String(b.dueDate||'9999-12-31')));
   const completedSorted=[...completedTasks].sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   const reviewSorted=[...submittedTasks].sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
-  const taskItem=(t,kind)=>'<div class="employee-compact-task" draggable="true" data-dashboard-drag-task="'+esc(t.id)+'"><div class="employee-compact-task-main"><strong>'+esc(t.title||'Assignment')+'</strong><small>'+esc(t.jobNumber||'No job number')+' · '+esc(clientName(t))+'</small></div><div class="employee-compact-task-meta"><span class="employee-status '+(String(t.status||'').toUpperCase()==='IN_PROGRESS'?'is-active':'')+'">'+esc(status(t))+'</span><small>'+esc(t.dueDate||'No due date')+'</small></div></div>';
+  const taskItem=(t,kind)=>'<div class="employee-compact-task" draggable="true" data-dashboard-drag-task="'+esc(t.id)+'"><div class="employee-compact-task-main"><strong>'+esc(t.title||'Assignment')+'</strong><small>'+esc(t.jobNumber||'No job number')+' · '+esc(clientName(t))+'</small></div><div class="employee-compact-task-meta"><span class="employee-status '+(String(t.status||'').toUpperCase()==='IN_PROGRESS'?'is-active':'')+'">'+esc(kind==='working'?'TIMER RUNNING':status(t))+'</span><small>'+esc(kind==='working'?fmtTimer(logSeconds(activeLog)):t.dueDate||'No due date')+'</small></div></div>';
   const taskPanel=(title,subtitle,list,kind)=>'<section class="employee-dash-list-panel" data-dashboard-panel="'+kind+'" '+(kind==='completed'?'data-dashboard-drop-target="completed"':'')+'><div class="employee-dash-list-head"><div><h3>'+title+'</h3><p>'+subtitle+'</p></div><strong class="employee-list-count">'+list.length+'</strong></div><div class="employee-compact-list">'+(list.length?list.slice(0,3).map(t=>taskItem(t,kind)).join(''):'<div class="employee-compact-empty">No '+(kind==='pending'?'pending':'recent')+' assignments to show.</div>')+'</div>'+(list.length>3?'<div class="employee-list-footer"><button type="button" data-employee-go="task">More assignments <span>→</span></button></div>':'')+'</section>';
   if(!root.isConnected||activeModule!=='dashboard')return;
   const workSeconds=todayLogs.filter(r=>String(r.entryType||'WORK').toUpperCase()==='WORK').reduce((n,r)=>n+logSeconds(r),0);
@@ -2388,12 +2395,13 @@ const dateText=t=>t?dateForLog(t):'';
   const taskPanelV2=(title,subtitle,list,kind)=>'<section class="employee-dash-list-panel dash-panel-'+kind+'" data-dashboard-panel="'+kind+'" data-dashboard-drop-target="'+kind+'"><div class="employee-dash-list-head"><div class="dash-panel-title">'+(kind==='new'?'<button type="button" class="dash-panel-icon dashboard-add-assignment" data-dashboard-add-assignment aria-label="Add new assignment" title="Add new assignment">'+dashIcon('new')+'</button>':'<span class="dash-panel-icon">'+dashIcon(kind==='review'?'review':kind)+'</span>')+'<div><h3>'+title+'</h3><p>'+subtitle+'</p></div></div><strong class="employee-list-count">'+list.length+'</strong></div><div class="employee-compact-list">'+(list.length?list.slice(0,8).map(t=>taskItem(t,kind)).join(''):'<div class="employee-compact-empty"><span class="dash-empty-icon">'+dashIcon(kind==='completed'?'completed':kind)+'</span><strong>'+(kind==='new'?'No new assignments':kind==='due'?'No tasks due today':kind==='pending'?'No pending assignments':kind==='review'?'No submitted assignments':'No completed assignments')+'</strong><small>Nothing to display right now</small></div>')+'</div>'+(list.length>8?'<div class="employee-list-footer"><button type="button" data-employee-go="task">View all assignments <span>→</span></button></div>':'')+'</section>';
   root.innerHTML='<div class="employee-dashboard-shell employee-dashboard-v2">'+
    '<div class="dash-section-heading"><div><h3>My assignments</h3><p>Track your work by current status</p></div><span>'+tasks.length+' total</span></div>'+
-   '<section class="employee-dash-lists employee-dash-task-columns employee-dash-five-columns">'+
-    taskPanelV2('New Assignments','Newly assigned work',newAssignments,'new')+
+   '<section class="employee-dash-lists employee-dash-task-columns employee-dash-six-grid">'+
+    taskPanelV2('Currently Working','Only one active timer at a time',workingTasks,'working')+
+    taskPanelV2('Pending Task','Accepted work waiting for action',activePendingTasks,'pending')+
     taskPanelV2('Due by Today','Assignments due today',dueTodayTasks,'due')+
-    taskPanelV2('Pending Task','Tasks waiting for your action',activePendingTasks,'pending')+
-    taskPanelV2('Submit for Review','Assignments awaiting verification',reviewSorted,'review')+
-    taskPanelV2('Completed','Successfully completed assignments',completedSorted,'completed')+
+    taskPanelV2('New Assignments','Newly assigned work',newAssignments,'new')+
+    taskPanelV2('Submitted for Review','Assignments awaiting verification',reviewSorted,'review')+
+    taskPanelV2('Completed Work','Successfully completed assignments',completedSorted,'completed')+
    '</section>'+
   '</div>';
   root.querySelectorAll('[data-employee-go]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.employeeGo)));
@@ -2416,6 +2424,7 @@ const dateText=t=>t?dateForLog(t):'';
   root.querySelector('#showAssignments')?.addEventListener('click',()=>openDashboardDetail('Assignments','All assignments assigned to you',['Job No.','Assignment','Client','Description','Priority','Status','Due Date'],tasks.map(t=>[t.jobNumber||'',t.title||'Assignment',clientName(t),t.description||'',t.priority||'',status(t),t.dueDate||''])));
   const dashboardDetails={
    total:{title:'All Tasks',subtitle:'Every assignment assigned to you',items:tasks},
+   working:{title:'Currently Working',subtitle:'The single assignment with the active work timer',items:workingTasks},
    new:{title:'New Assignments',subtitle:'Newly assigned work waiting to be accepted',items:newAssignments},
    due:{title:'Due by Today',subtitle:'Active assignments due today',items:dueTodayTasks},
    pending:{title:'Pending Tasks',subtitle:'Accepted and active assignments waiting for action',items:activePendingTasks},
@@ -2487,7 +2496,7 @@ const dateText=t=>t?dateForLog(t):'';
     catch(error){showNotice('Could not move task: '+error.message,'error');}
    }));
   };
-  const dashboardMoveTargets={new:{label:'New Assignments',status:'ASSIGNED'},due:{label:'Due by Today',action:'due'},pending:{label:'Pending Task',status:'PAUSED'},review:{label:'Submit for Review',action:'review'},completed:{label:'Completed',status:'COMPLETED'}};
+  const dashboardMoveTargets={working:{label:'Currently Working',action:'working'},pending:{label:'Pending Task',status:'PAUSED'},due:{label:'Due by Today',action:'due'},new:{label:'New Assignments',status:'ASSIGNED'},review:{label:'Submitted for Review',action:'review'},completed:{label:'Completed Work',status:'COMPLETED'}};
   const showDashboardMoveDialog=(task,sourceKey,preselected)=>new Promise(resolve=>{
    document.getElementById('dashboardMoveConfirm')?.remove();
    const options=Object.entries(dashboardMoveTargets).filter(([key])=>key!==sourceKey).map(([key,v])=>'<option value="'+key+'" '+(key===preselected?'selected':'')+'>'+v.label+'</option>').join('');
@@ -2503,6 +2512,10 @@ const dateText=t=>t?dateForLog(t):'';
   });
   const applyDashboardTaskMove=async(task,target)=>{
    const dest=dashboardMoveTargets[target];if(!dest)throw Error('Invalid task destination.');
+   if(dest.action==='working'){
+    if(String(task.status||'').toUpperCase()!=='IN_PROGRESS')await api('setTaskStatus',{id:task.id,status:'ACCEPTED'});
+    return api('startTaskTimer',{id:task.id});
+   }
    if(dest.action==='due')return api('setTaskDueToday',{id:task.id});
    if(dest.action==='review')return api('submitTaskForVerification',{id:task.id});
    return api('setTaskStatus',{id:task.id,status:dest.status});
@@ -2688,6 +2701,20 @@ body[data-active-module="dashboard"] #dashboardView{height:auto!important;min-he
 @media(max-width:1150px){.employee-dashboard-v2 .employee-dash-five-columns{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media(max-width:760px){.employee-dashboard-v2 .employee-dash-five-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
 @media(max-width:480px){.employee-dashboard-v2 .employee-dash-five-columns{grid-template-columns:1fr!important;}}
+.employee-dashboard-v2 .employee-dash-six-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(255px,auto);gap:12px!important;align-items:stretch;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-dash-list-panel{min-width:0;min-height:255px;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-dash-list-head{padding:11px 12px!important;}
+.employee-dashboard-v2 .employee-dash-six-grid .dash-panel-title h3{font-size:12px;line-height:1.25;}
+.employee-dashboard-v2 .employee-dash-six-grid .dash-panel-title p{font-size:9px;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-task{padding:10px 11px;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-task strong{font-size:11px;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-task small{font-size:9px;}
+.employee-dashboard-v2 .employee-dash-six-grid .employee-compact-empty{padding:28px 8px;}
+.employee-dashboard-v2 .employee-dash-six-grid [data-dashboard-drop-target].is-drop-ready{outline:2px dashed #2f79b9;outline-offset:2px;background:#f0f7ff;}
+.employee-dashboard-v2 .dash-panel-working .dash-panel-icon{background:#dce9f3;color:#17517c;}
+@media(max-width:900px){.employee-dashboard-v2 .employee-dash-six-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
+@media(max-width:560px){.employee-dashboard-v2 .employee-dash-six-grid{grid-template-columns:1fr!important;grid-auto-rows:auto;}.employee-dashboard-v2 .employee-dash-six-grid .employee-dash-list-panel{min-height:190px;}}
+
 .employee-dashboard-v2 .employee-dash-list-panel{border:1px solid #dce5ed!important;border-radius:11px!important;background:#fff!important;box-shadow:0 3px 10px rgba(19,48,72,.04)!important;}
 .employee-dashboard-v2 .employee-dash-list-head{min-height:65px;padding:11px 13px!important;background:#f0f4f7!important;border-bottom:1px solid #e0e8ee!important;}
 .employee-dashboard-v2 .dash-panel-title{display:flex;align-items:center;gap:10px;min-width:0;}
