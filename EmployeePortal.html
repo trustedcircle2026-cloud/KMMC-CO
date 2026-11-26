@@ -3301,3 +3301,78 @@ body[data-active-module="dashboard"] .app-layout>main{
   }
 }
 </style>
+
+<style id="employee-dashboard-five-task-no-inner-scroll">
+/* Show a maximum of five rows in each dashboard panel; let the document scroll. */
+body[data-active-module="dashboard"]{
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+body[data-active-module="dashboard"] .app-layout{
+  min-height:100vh!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+body[data-active-module="dashboard"] .app-layout>main{
+  height:auto!important;
+  min-height:calc(100vh - 140px)!important;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:visible!important;
+}
+body[data-active-module="dashboard"] #dashboardView{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns{
+  grid-auto-rows:auto!important;
+  align-items:stretch!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:hidden!important;
+  display:flex!important;
+  flex-direction:column!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-list{
+  flex:0 0 auto!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overflow-y:visible!important;
+  overscroll-behavior:auto!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-task{
+  min-height:52px!important;
+  height:52px!important;
+  flex:0 0 52px!important;
+  padding:7px 12px!important;
+  box-sizing:border-box!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-empty{
+  min-height:150px!important;
+  height:auto!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-list-footer{
+  display:flex!important;
+  min-height:38px!important;
+  margin-top:0!important;
+  flex:0 0 auto!important;
+  align-items:center!important;
+}
+@media(max-width:1000px){
+  .employee-dashboard-v2 .employee-dash-task-columns{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:560px){
+  .employee-dashboard-v2 .employee-dash-task-columns{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+}
+</style>
