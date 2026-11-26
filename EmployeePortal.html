@@ -3227,3 +3227,77 @@ body[data-active-module="leave"] #moduleView>.panel>.panel-body,
 @media(max-width:900px){.support-request-history{padding:12px}.support-history-tools{flex-wrap:wrap}}
 \n/* GST workspace: full-width layout and viewport-level upload dialog */\n.employee-gst-workspace{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;gap:12px!important}\n.employee-gst-workspace .employee-gst-card,.employee-gst-workspace .employee-gst-upload-card{width:100%;box-sizing:border-box}\n.employee-gst-modal{position:fixed!important;inset:0!important;z-index:99999!important;display:grid;place-items:center;padding:18px;background:rgba(13,35,52,.58)}\n.employee-gst-modal.hidden{display:none!important}\n.employee-gst-modal:not(.hidden){display:grid!important}\n.employee-gst-modal-panel{width:min(820px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto}\n@media(max-width:760px){.employee-gst-workspace{padding:0!important}.employee-gst-file-row{grid-template-columns:1fr 1fr}.employee-gst-file-main{grid-column:1/-1}}\n</style>
 <style id="kmmc-gst-import-status-persistent">\n#employeeGstStatus{position:sticky;top:8px;z-index:120;display:block!important;min-height:42px;margin:10px 0;padding:12px 16px;border:1px solid #c8d9e6;border-left:4px solid #2475a8;border-radius:8px;background:#f4f9fd;color:#17466f;font-size:12px;font-weight:700;line-height:1.45;box-shadow:0 4px 14px #173b5918;opacity:1!important;visibility:visible!important}\n#employeeGstStatus.is-processing{border-left-color:#d18a22;background:#fff9ed;color:#80510b}\n#employeeGstStatus.is-processing:before{content:'';display:inline-block;width:8px;height:8px;margin-right:9px;border-radius:50%;background:#d18a22;vertical-align:1px;animation:kmmcGstStatusPulse 1s ease-in-out infinite}\n#employeeGstStatus.success{border-left-color:#278453;background:#f0faf4;color:#17633d}\n#employeeGstStatus.error{border-left-color:#bd3e3e;background:#fff4f3;color:#8f2929}\n@keyframes kmmcGstStatusPulse{50%{opacity:.25;box-shadow:0 0 0 5px #d18a2225}}\n</style>
+
+<style id="kmmc-dashboard-page-scroll-five-task-layout">
+/* Dashboard: show five tasks and the View More footer without nested panel scrolling. */
+body[data-active-module="dashboard"] .app-layout,
+body[data-active-module="dashboard"] .app-layout>main,
+body[data-active-module="dashboard"] #dashboardView,
+body[data-active-module="dashboard"] .employee-dashboard-shell{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+body[data-active-module="dashboard"] .app-layout{
+  min-height:calc(100dvh - 124px)!important;
+}
+body[data-active-module="dashboard"] .app-layout>main{
+  overflow-x:hidden!important;
+  overflow-y:visible!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-auto-rows:auto!important;
+  align-items:stretch!important;
+  gap:12px!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{
+  height:auto!important;
+  min-height:430px!important;
+  max-height:none!important;
+  overflow:visible!important;
+  display:flex!important;
+  flex-direction:column!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-list{
+  flex:0 0 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  height:auto!important;
+  overflow:visible!important;
+  overscroll-behavior:auto!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-task{
+  min-height:66px!important;
+  box-sizing:border-box!important;
+  flex:0 0 auto!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-compact-empty{
+  min-height:300px!important;
+}
+.employee-dashboard-v2 .employee-dash-task-columns .employee-list-footer{
+  display:flex!important;
+  flex:0 0 auto!important;
+  min-height:40px!important;
+  margin-top:auto!important;
+  box-sizing:border-box!important;
+  align-items:center!important;
+}
+@media(max-width:1000px){
+  .employee-dashboard-v2 .employee-dash-task-columns{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:560px){
+  .employee-dashboard-v2 .employee-dash-task-columns{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  .employee-dashboard-v2 .employee-dash-task-columns .employee-dash-list-panel{
+    min-height:0!important;
+  }
+  .employee-dashboard-v2 .employee-dash-task-columns .employee-compact-empty{
+    min-height:160px!important;
+  }
+}
+</style>
