@@ -2279,12 +2279,16 @@ async function renderWorkdoneReportMode(host){
  const classify=r=>{const br=String(r.entryType||'').toUpperCase()==='BREAK';if(br)return 'Break';const assigned=!!(String(r.jobNumber||'').trim()||String(r.clientId||'').trim()||String(r.taskId||'').trim());return assigned?'Productive':'Unallotted Work';};
  const taskLabel=r=>{const id=String(r.taskId||'').trim(),resolved=taskNames.get(id);if(resolved)return resolved;const direct=String(r.taskName||r.taskTitle||r.task||'').trim();if(direct&&!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(direct))return direct;return id?'Task details unavailable':'—';};
  const inOut=day=>{
-  // Same published Workdone source used by the Main Workdone sheet.
+  // Workdone In/Out come only from published work-line timestamps.
+  // Software Clock In/Out remain sourced from attendance records.
   const rows=allLogs.filter(r=>toDate(r.workDate)===day&&String(r.publicationStatus||'PUBLISHED').toUpperCase()==='PUBLISHED')
    .slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
   const first=rows.find(r=>r.startTime&&formatWorkdoneTime(r.startTime));
   const last=rows.slice().reverse().find(r=>r.endTime&&formatWorkdoneTime(r.endTime));
-  return {workdoneIn:first?first.startTime:'',workdoneOut:last?last.endTime:'',clockIn:'',clockOut:''};
+  const at=allAttendance.filter(a=>toDate(a.workDate)===day).sort((a,b)=>String(a.checkIn||'').localeCompare(String(b.checkIn||'')));
+  const clockIn=at.find(a=>a.checkIn)?.checkIn||'';
+  const clockOut=at.slice().reverse().find(a=>a.checkOut)?.checkOut||'';
+  return {workdoneIn:first?first.startTime:'',workdoneOut:last?last.endTime:'',clockIn,clockOut};
  };
  const filtered=()=>{const r=getRange();return {range:r,logs:allLogs.filter(x=>{const d=toDate(x.workDate);return d>=r.from&&d<=r.to;}).sort((a,b)=>String(a.workDate).localeCompare(String(b.workDate))||String(a.startTime||'').localeCompare(String(b.startTime||'')))};};
  const dayTotals=rows=>{
