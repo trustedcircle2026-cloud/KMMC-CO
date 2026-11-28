@@ -2081,7 +2081,7 @@ const timeInputValue=v=>{const t=timeParts(v);return t?String(t.hour).padStart(2
   const rows=(c.by[d]||[]).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
   const allDay=(data.logs||[]).filter(r=>dateKeyForPortal(r.workDate)===d)
    .sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
-  const candidates=allDay.length?allDay:rows;
+  const candidates=[...allDay,...rows].sort((x,y)=>String(x.startTime||'').localeCompare(String(y.startTime||'')));
   const read=(r,keys)=>{for(const k of keys){const v=r?.[k];if(v!==undefined&&v!==null&&String(v).trim()!=='')return String(v);}return '';};
   const inKeys=['workdoneInTime','revisionWorkdoneInTime','workdoneIn','workdoneStartTime','manualWorkdoneInTime','inTime'];
   const outKeys=['workdoneOutTime','revisionWorkdoneOutTime','workdoneOut','workdoneEndTime','manualWorkdoneOutTime','outTime'];
